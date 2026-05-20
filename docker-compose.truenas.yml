@@ -5,7 +5,7 @@ services:
     volumes:
       - /dev:/dev
       - /run/udev:/run/udev:ro
-      - "/mnt/Core Storage/Containers/drivemap/data:/app/data"
+      - drivemap_data:/app/data
     cap_add:
       - SYS_RAWIO
       - SYS_ADMIN
@@ -18,20 +18,20 @@ services:
       # Optional — fill in to enable Telegram alerts:
       # TELEGRAM_BOT_TOKEN: ""
       # TELEGRAM_CHAT_ID: ""
-    expose:
-      - "8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 30s
 
   frontend:
     image: danielgt/drivemap-frontend:latest
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-8080}:80"
+      - "8585:80"
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
+
+volumes:
+  drivemap_data:

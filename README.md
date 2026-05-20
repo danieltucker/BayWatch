@@ -43,7 +43,7 @@ services:
     volumes:
       - /dev:/dev
       - /run/udev:/run/udev:ro
-      - "/mnt/Core Storage/Containers/drivemap/data:/app/data"
+      - drivemap_data:/app/data
     cap_add:
       - SYS_RAWIO
       - SYS_ADMIN
@@ -56,35 +56,37 @@ services:
       # Optional — fill in to enable Telegram alerts:
       # TELEGRAM_BOT_TOKEN: ""
       # TELEGRAM_CHAT_ID: ""
-    expose:
-      - "8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 30s
 
   frontend:
     image: danielgt/drivemap-frontend:latest
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-8080}:80"
+      - "8585:80"
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
+
+volumes:
+  drivemap_data:
 ```
 
 4. Click **Install**
 
-> **Note:** The `networks:` block is intentionally omitted. TrueNAS Scale manages its own bridge network — adding an explicit `driver: bridge` causes the app to fail to start.
+> **Why a named volume instead of a bind mount?** TrueNAS Scale's Custom App UI does not process `.env` files or `${VAR:-default}` syntax, and its compose runner can mishandle bind mount paths that contain spaces. A named volume avoids both issues. TrueNAS manages it under `.ix-apps` on your pool — it persists across restarts and upgrades.
+>
+> **Why no `networks:` block?** TrueNAS Scale manages its own bridge network. An explicit `driver: bridge` causes the deploy to fail.
 
 ### 3. Access the app
 
 Once both containers are running, open:
 
 ```
-http://<truenas-ip>:8080
+http://<truenas-ip>:8585
 ```
 
 ### 4. First-time setup
@@ -107,13 +109,13 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Then open `http://localhost:8080`.
+Then open `http://localhost:8585`.
 
 ### Environment Variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `APP_PORT` | `8080` | Port the web UI listens on |
+| `APP_PORT` | `8585` | Port the web UI listens on |
 | `DATABASE_URL` | `sqlite:////app/data/drivemap.db` | SQLite path inside the container |
 | `SCAN_INTERVAL_MINUTES` | `60` | How often background scan runs |
 | `TEMP_ALERT_THRESHOLD_C` | `55` | Temperature (°C) that triggers a critical alert |
