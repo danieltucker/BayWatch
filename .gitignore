@@ -28,6 +28,7 @@ frontend/.vite/
 # OS
 .DS_Store
 Thumbs.db
+.zshrc
 
 # IDE
 .vscode/
