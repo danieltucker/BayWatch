@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
-import { Plus, Trash2, Save, Server } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Plus, Trash2, Save, Server, Upload, CheckCircle2, AlertCircle } from 'lucide-react'
 import {
   getEnclosures, createEnclosure, deleteEnclosure,
   createBayArray, deleteBayArray,
   getAlertConfig, updateAlertConfig,
+  importCSV,
 } from '../api/client'
 
 export default function Settings() {
@@ -16,6 +17,10 @@ export default function Settings() {
     critical_enabled: true, warranty_warning_days: 90,
   })
   const [alertSaved, setAlertSaved] = useState(false)
+  const [importResult, setImportResult] = useState(null)
+  const [importError, setImportError] = useState(null)
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef(null)
 
   async function load() {
     const [encs, cfg] = await Promise.all([getEnclosures(), getAlertConfig()])
@@ -62,6 +67,23 @@ export default function Settings() {
     if (!confirm('Delete this bay array? Bay assignments will be lost.')) return
     await deleteBayArray(enclosureId, arrayId)
     load()
+  }
+
+  async function handleImport(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    setImportResult(null)
+    setImportError(null)
+    try {
+      const result = await importCSV(file)
+      setImportResult(result)
+    } catch (err) {
+      setImportError(err.response?.data?.detail || 'Import failed')
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
   }
 
   async function handleSaveAlerts(e) {
@@ -141,6 +163,72 @@ export default function Settings() {
             <Plus size={16} /> Add Enclosure
           </button>
         </form>
+      </section>
+
+      {/* ── CSV Import ── */}
+      <section className="flex flex-col gap-4">
+        <h2 className="text-base font-semibold text-gray-200 flex items-center gap-2">
+          <Upload size={16} /> Import Drives from CSV
+        </h2>
+        <div className="rounded-xl bg-gray-900 border border-gray-800 p-4 flex flex-col gap-4">
+          <p className="text-sm text-gray-400">
+            Upload a CSV with any of these columns:{' '}
+            <span className="font-mono text-gray-300 text-xs">
+              Position, Dev Name, Make, Model, Serial, Size, Mfg Date, Source, Warranty, Notes
+            </span>
+            . Serial is required. Position matches an existing bay label.
+          </p>
+          <div className="flex items-center gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleImport}
+              className="hidden"
+              id="csv-upload"
+            />
+            <label
+              htmlFor="csv-upload"
+              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium cursor-pointer transition-colors ${
+                importing
+                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-500 text-white'
+              }`}
+            >
+              <Upload size={14} />
+              {importing ? 'Importing…' : 'Choose CSV'}
+            </label>
+          </div>
+
+          {importResult && (
+            <div className="rounded-lg bg-emerald-950/40 border border-emerald-700/40 p-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-emerald-400 text-sm font-medium">
+                <CheckCircle2 size={15} />
+                Import complete
+              </div>
+              <p className="text-xs text-gray-300">
+                {importResult.imported} new &nbsp;·&nbsp; {importResult.updated} updated &nbsp;·&nbsp; {importResult.assigned} assigned to bays
+              </p>
+              {importResult.skipped.length > 0 && (
+                <div className="mt-1">
+                  <p className="text-xs text-amber-400 mb-1">{importResult.skipped.length} row(s) skipped:</p>
+                  <ul className="text-xs text-gray-500 space-y-0.5 pl-2">
+                    {importResult.skipped.map((s, i) => (
+                      <li key={i}>Row {s.row}{s.serial ? ` (${s.serial})` : ''}: {s.reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {importError && (
+            <div className="flex items-center gap-2 rounded-lg bg-red-950/40 border border-red-700/40 p-3 text-sm text-red-400">
+              <AlertCircle size={15} />
+              {importError}
+            </div>
+          )}
+        </div>
       </section>
 
       {/* ── Notifications ── */}

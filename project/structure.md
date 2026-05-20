@@ -1,7 +1,7 @@
 # Project Structure
 
-> Last updated: 2026-05-18
-> Status: v0.3.0 — Full MVP implemented
+> Last updated: 2026-05-19
+> Status: v0.4.0 — CSV import + TrueNAS deploy fix
 
 ## Current Layout
 
@@ -9,6 +9,7 @@
 drive-position/
 ├── README.md                       # Project overview and quick start
 ├── docker-compose.yml              # Production: backend + frontend services
+├── docker-compose.truenas.yml      # TrueNAS Scale custom app YAML (no custom network block)
 ├── docker-compose.dev.yml          # Dev overrides (hot reload, port exposure)
 ├── .env.example                    # Environment variable template
 ├── .gitignore
@@ -44,7 +45,8 @@ drive-position/
 │   │   ├── lsblk.py                # lsblk subprocess wrapper
 │   │   ├── nvme.py                 # nvme-cli wrapper
 │   │   ├── ses.py                  # SES enclosure slot detection (best-effort)
-│   │   └── notifications.py        # Pluggable notification dispatch
+│   │   ├── notifications.py        # Pluggable notification dispatch
+│   │   └── csv_import.py           # CSV bulk import: Drive + DriveProfile upsert + bay assignment
 │   ├── db/
 │   │   └── base.py                 # SQLAlchemy engine + SessionLocal + Base
 │   └── tests/

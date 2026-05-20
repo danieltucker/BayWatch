@@ -81,6 +81,7 @@ This means the app works on TrueNAS Scale, Unraid, or any Linux host — it does
 ### DriveProfile (user-entered)
 - `serial` (PK, FK → Drive)
 - `purchase_date`
+- `mfg_date` — manufacturing date (populated via CSV import or manual entry)
 - `warranty_months`
 - `warranty_expiry` — computed: purchase_date + warranty_months
 - `purchase_price`
@@ -154,3 +155,5 @@ Additional channels (email, Slack, etc.) are a future extension — architecture
 | 4 | Telegram as default notification channel | Pluggable — more channels added later |
 | 5 | No authentication in v1 | LAN-only deployment; add later if needed |
 | 6 | Docker with `SYS_RAWIO` + `SYS_ADMIN` capabilities | Safer than `privileged: true`; grants needed device access |
+| 7 | CSV import via `POST /api/drives/import` | Lets users bulk-load inventory from spreadsheets; serial is the key; all other fields are optional |
+| 8 | TrueNAS: no custom `networks:` block | TrueNAS Scale manages its own bridge; explicit `driver: bridge` causes deploy failure |

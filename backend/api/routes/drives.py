@@ -1,10 +1,11 @@
 import time
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from api.deps import get_db
 from api.schemas import DriveRead
 from models.drive import Drive
+from services import csv_import as csv_import_svc
 from services import scanner
 
 router = APIRouter()
@@ -46,3 +47,11 @@ def trigger_scan(background_tasks: BackgroundTasks, db: Session = Depends(get_db
 def trigger_scan_sync(db: Session = Depends(get_db)):
     _check_scan_cooldown()
     return scanner.run_scan(db)
+
+
+@router.post("/import")
+async def import_drives(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    if not (file.filename or '').lower().endswith('.csv'):
+        raise HTTPException(status_code=422, detail="File must be a .csv")
+    content = await file.read()
+    return csv_import_svc.run_import(content, db)

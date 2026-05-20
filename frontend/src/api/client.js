@@ -29,6 +29,13 @@ export const getDrives = () => api.get('/drives').then(r => r.data)
 export const getDrive = (serial) => api.get(`/drives/${serial}`).then(r => r.data)
 export const triggerScan = () => api.post('/drives/scan').then(r => r.data)
 export const triggerScanSync = () => api.post('/drives/scan/sync').then(r => r.data)
+export const importCSV = (file) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post('/drives/import', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data)
+}
 
 // ── Profiles ──────────────────────────────────────────────────────────────────
 export const getProfile = (serial) => api.get(`/profiles/${serial}`).then(r => r.data)

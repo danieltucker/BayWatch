@@ -16,6 +16,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.4.0] — 2026-05-19
+
+### Fixed
+- **TrueNAS deployment** — removed explicit `networks: driver: bridge` block from `docker-compose.truenas.yml`; TrueNAS Scale manages its own bridge network and rejected the override. All services remain reachable by name on Docker's default network.
+
+### Added
+- **`docker-compose.truenas.yml`** — dedicated compose file for TrueNAS Scale; no custom network block, path quoted for pool name with spaces
+- **CSV import** — `POST /api/drives/import` accepts a `.csv` file and upserts Drive + DriveProfile records, with optional bay assignment by position label
+  - Supported columns: Position, Dev Name, Make, Model, Serial, Size, Mfg Date, Source, Warranty, Notes (all optional except Serial)
+  - Size parsed from `4 TB` / `500 GB` / `4000 GB` etc.
+  - Warranty parsed from plain integer months, `24 months`, `2 years`
+  - Mfg Date parsed from `YYYY-MM-DD`, `MM/DD/YYYY`, `DD/MM/YYYY`
+  - Position matched case-insensitively to bay labels; ambiguous or missing matches reported in response
+  - Returns `{imported, updated, assigned, skipped}` summary
+- **`mfg_date` field** on `DriveProfile` — stores manufacturing date imported from CSV or entered manually
+- **CSV import UI** in Settings page — file picker with upload button, success summary (new/updated/assigned counts), skipped-row detail, and error display
+- **`python-multipart`** dependency added to backend for multipart file upload support
+
+---
+
 ## [0.3.0] — 2026-05-18
 
 ### Added

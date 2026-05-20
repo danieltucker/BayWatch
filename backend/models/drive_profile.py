@@ -19,6 +19,7 @@ class DriveProfile(Base):
         String(64), ForeignKey("drives.serial", ondelete="CASCADE"), primary_key=True
     )
     purchase_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
+    mfg_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
     warranty_months: Mapped[int | None] = mapped_column(nullable=True)
     purchase_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     vendor: Mapped[str | None] = mapped_column(String(128), nullable=True)

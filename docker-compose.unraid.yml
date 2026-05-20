@@ -1,0 +1,37 @@
+services:
+  backend:
+    image: danielgt/drivemap-backend:latest
+    restart: unless-stopped
+    volumes:
+      - /dev:/dev
+      - /run/udev:/run/udev:ro
+      - /mnt/user/appdata/drivemap:/app/data
+    cap_add:
+      - SYS_RAWIO
+      - SYS_ADMIN
+    env_file: .env
+    expose:
+      - "8000"
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    image: danielgt/drivemap-frontend:latest
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge

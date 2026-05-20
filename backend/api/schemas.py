@@ -76,6 +76,7 @@ class DriveRead(BaseModel):
 
 class DriveProfileBase(BaseModel):
     purchase_date: Optional[datetime.date] = None
+    mfg_date: Optional[datetime.date] = None
     warranty_months: Optional[int] = None
     purchase_price: Optional[float] = None
     vendor: Optional[str] = None
