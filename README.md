@@ -1,4 +1,4 @@
-# Drive Position
+# DriveMap
 
 A Docker-hosted web application for TrueNAS Scale (and similar NAS systems) that creates a visual map of drive bays, tracks drive metadata, and surfaces automated SMART/disk health data — so you never have to manually pull drives to identify them again.
 

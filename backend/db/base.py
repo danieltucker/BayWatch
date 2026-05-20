@@ -4,7 +4,7 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////app/data/drive_position.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////app/data/drivemap.db")
 
 # Ensure data directory exists (matters when running locally outside Docker)
 if DATABASE_URL.startswith("sqlite:////"):

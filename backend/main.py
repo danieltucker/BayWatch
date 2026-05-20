@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
     scheduler.stop()
 
 
-app = FastAPI(title="Drive Position API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="DriveMap API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

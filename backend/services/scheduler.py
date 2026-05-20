@@ -117,7 +117,7 @@ def _should_send_today(frequency: str, today: datetime.date) -> bool:
 
 def _build_status_message(db: Session, warranty_warning_days: int) -> str:
     drives = db.query(Drive).all()
-    lines = ["<b>Drive Position — Status Report</b>"]
+    lines = ["<b>DriveMap — Status Report</b>"]
 
     failed = [d for d in drives if d.smart_status == "FAILED"]
     if failed:

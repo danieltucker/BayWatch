@@ -2,10 +2,22 @@ import clsx from 'clsx'
 import { useDroppable } from '@dnd-kit/core'
 import { HardDrive } from 'lucide-react'
 
-function smartColor(status) {
-  if (status === 'PASSED') return 'border-green-700 bg-green-950/40'
-  if (status === 'FAILED') return 'border-red-600 bg-red-950/60'
-  return 'border-gray-600 bg-gray-800/60'
+function slotStyle(status) {
+  if (status === 'PASSED') return {
+    outer: 'border-emerald-700/60 bg-emerald-950/30 hover:border-emerald-500/80 hover:bg-emerald-950/50',
+    icon: 'text-emerald-400',
+    dot: 'bg-emerald-400 shadow-emerald-400/60',
+  }
+  if (status === 'FAILED') return {
+    outer: 'border-red-600/70 bg-red-950/40 hover:border-red-500 hover:bg-red-950/60 animate-pulse',
+    icon: 'text-red-400',
+    dot: 'bg-red-400 shadow-red-400/60',
+  }
+  return {
+    outer: 'border-gray-600/50 bg-gray-800/40 hover:border-gray-500/70',
+    icon: 'text-gray-500',
+    dot: 'bg-gray-500',
+  }
 }
 
 export default function BaySlot({ bay, drive, isSelected, onClick }) {
@@ -13,40 +25,50 @@ export default function BaySlot({ bay, drive, isSelected, onClick }) {
 
   const isEmpty = !drive
   const label = bay.label || `${bay.row + 1}-${bay.col + 1}`
+  const style = drive ? slotStyle(drive.smart_status) : null
 
   return (
     <div
       ref={setNodeRef}
       onClick={() => onClick?.(bay)}
       className={clsx(
-        'relative flex flex-col items-center justify-center rounded-lg border-2 cursor-pointer transition-all select-none',
-        'w-16 h-16 sm:w-20 sm:h-20',
+        'relative flex flex-col items-center justify-center rounded-xl border cursor-pointer transition-all duration-150 select-none group',
+        'w-16 h-16 sm:w-[72px] sm:h-[72px]',
         isEmpty
-          ? 'border-dashed border-gray-700 bg-gray-900/40 hover:border-gray-500'
-          : smartColor(drive?.smart_status),
-        isOver && 'ring-2 ring-blue-400 border-blue-400',
-        isSelected && 'ring-2 ring-white'
+          ? 'border-dashed border-gray-700/50 bg-gray-900/20 hover:border-gray-600/70 hover:bg-gray-800/20'
+          : style.outer,
+        isOver && '!border-blue-400 !bg-blue-950/40 ring-2 ring-blue-400/40',
+        isSelected && '!border-white/60 ring-2 ring-white/20'
       )}
     >
-      <span className="absolute top-1 left-1.5 text-[10px] text-gray-500 font-mono leading-none">
+      {/* Bay label */}
+      <span className="absolute top-1 left-1.5 text-[9px] text-gray-600 font-mono leading-none group-hover:text-gray-500 transition-colors">
         {label}
       </span>
 
+      {/* Health dot */}
+      {drive && (
+        <span className={clsx(
+          'absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full shadow-sm',
+          style.dot
+        )} />
+      )}
+
       {isEmpty ? (
-        <span className="text-gray-600 text-xs mt-2">—</span>
+        <span className="text-gray-700 text-lg mt-1">·</span>
       ) : (
         <>
-          <HardDrive size={18} className={clsx(
-            'mt-1',
-            drive.smart_status === 'FAILED' ? 'text-red-400' : 'text-green-400'
-          )} />
-          <span className="text-[9px] text-gray-300 font-mono mt-0.5 px-1 truncate w-full text-center">
+          <HardDrive
+            size={17}
+            className={clsx('mt-0.5 transition-transform group-hover:scale-110', style.icon)}
+          />
+          <span className="text-[9px] text-gray-400 font-mono mt-1 px-1 truncate w-full text-center leading-none">
             {drive.serial?.slice(-6)}
           </span>
           {drive.temperature_c != null && (
             <span className={clsx(
-              'text-[9px] font-mono',
-              drive.temperature_c >= 55 ? 'text-yellow-400' : 'text-gray-500'
+              'text-[8px] font-mono leading-none mt-0.5',
+              drive.temperature_c >= 55 ? 'text-amber-400' : 'text-gray-600'
             )}>
               {drive.temperature_c}°
             </span>
