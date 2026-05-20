@@ -16,6 +16,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.5.0] — 2026-05-19
+
+### Added
+- **Quake-style log console** — press backtick (`` ` ``) to slide down a terminal-style overlay that streams live backend logs at 1 Hz; auto-scrolls to latest entry; opens automatically when a scan is triggered
+- **Manual drive entry** — clicking an empty bay slot opens a form modal to create and assign a drive without scanning; fields: serial (required), make, model, size, form factor, device path, type (SSD / HDD rpm)
+- **`POST /api/drives`** — new endpoint to create a drive record manually (returns 201; 409 on duplicate serial)
+- **`GET /api/drives/logs`** — streams in-memory log ring buffer entries; accepts `after` cursor for incremental polling
+- **`backend/services/log_buffer.py`** — thread-safe in-memory ring buffer (500 entries); custom `logging.Handler` captures all Python log output; installed at startup
+
+### Changed
+- **Settings moved to modal** — Settings is now a tabbed modal dialog (Enclosures | Notifications | Import) triggered from the nav bar; the `/settings` page route has been removed
+- **Scanner preserves manually-entered data** — identity fields (make, model, capacity, form factor, firmware, rpm) are only written if currently null; SMART telemetry (status, temperature, power-on hours, reallocated/pending/uncorrectable sectors) always updates
+- **Scanner now logs progress** — "Scan started", devices discovered, per-drive new/updated messages for log console visibility
+
+### Fixed
+- **Route order bug** — `GET /api/drives/logs` was declared after `GET /api/drives/{serial}`, causing FastAPI to match `logs` as a serial value (404). Route is now correctly ordered before the `/{serial}` catch-all.
+
+---
+
 ## [0.4.0] — 2026-05-19
 
 ### Fixed

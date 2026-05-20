@@ -27,6 +27,7 @@ export const setBayLabel = (bayId, label) =>
 // ── Drives ────────────────────────────────────────────────────────────────────
 export const getDrives = () => api.get('/drives').then(r => r.data)
 export const getDrive = (serial) => api.get(`/drives/${serial}`).then(r => r.data)
+export const createDrive = (data) => api.post('/drives', data).then(r => r.data)
 export const triggerScan = () => api.post('/drives/scan').then(r => r.data)
 export const triggerScanSync = () => api.post('/drives/scan/sync').then(r => r.data)
 export const importCSV = (file) => {
@@ -36,6 +37,8 @@ export const importCSV = (file) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   }).then(r => r.data)
 }
+export const getLogs = (after = 0) =>
+  api.get('/drives/logs', { params: { after } }).then(r => r.data)
 
 // ── Profiles ──────────────────────────────────────────────────────────────────
 export const getProfile = (serial) => api.get(`/profiles/${serial}`).then(r => r.data)

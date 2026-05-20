@@ -1,7 +1,7 @@
 # Project Structure
 
 > Last updated: 2026-05-19
-> Status: v0.4.0 — CSV import + TrueNAS deploy fix
+> Status: v0.5.0 — Settings modal, log console, manual drive entry
 
 ## Current Layout
 
@@ -46,6 +46,7 @@ drive-position/
 │   │   ├── nvme.py                 # nvme-cli wrapper
 │   │   ├── ses.py                  # SES enclosure slot detection (best-effort)
 │   │   ├── notifications.py        # Pluggable notification dispatch
+│   │   ├── log_buffer.py           # In-memory log ring buffer (500 entries); custom logging.Handler
 │   │   └── csv_import.py           # CSV bulk import: Drive + DriveProfile upsert + bay assignment
 │   ├── db/
 │   │   └── base.py                 # SQLAlchemy engine + SessionLocal + Base
@@ -67,17 +68,19 @@ drive-position/
         ├── App.jsx                 # Router shell
         ├── api/
         │   └── client.js           # Axios instance (baseURL: /api)
-        ├── components/             # Populated by UI dev
+        ├── components/
         │   ├── BayGrid.jsx
         │   ├── BaySlot.jsx
         │   ├── DriveCard.jsx
         │   ├── DriveList.jsx
+        │   ├── EmptyBayModal.jsx   # Manual drive entry form; opens on empty bay click
+        │   ├── LogConsole.jsx      # Quake-style slide-down log overlay (backtick key)
         │   ├── ScanButton.jsx
+        │   ├── SettingsModal.jsx   # Tabbed settings modal (Enclosures / Notifications / Import)
         │   └── WarningBadge.jsx
-        └── pages/                  # Populated by UI dev
+        └── pages/
             ├── Dashboard.jsx
-            ├── DriveDetail.jsx
-            └── Settings.jsx
+            └── DriveDetail.jsx
 ```
 
 ## Update Protocol

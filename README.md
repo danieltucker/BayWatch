@@ -9,6 +9,8 @@ No more pulling drives to figure out which one is which.
 - Visual drag-and-drop bay grid for one or more enclosures
 - Automated SMART, temperature, power-on hours, and reallocated sector collection
 - Per-drive metadata: make, model, serial, capacity, firmware, form factor
+- Manual drive entry — click any empty bay to fill in drive details without scanning
+- Live log console — press `` ` `` to slide down a terminal-style overlay showing backend activity in real time
 - Warranty tracking with expiry alerts
 - Telegram alerts for SMART failures, overtemp, and warranty warnings
 - CSV bulk import for existing drive inventories

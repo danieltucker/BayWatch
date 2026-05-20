@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { triggerScan } from '../api/client'
 
-export default function ScanButton({ onScanComplete }) {
+export default function ScanButton({ onScanComplete, onOpenLog }) {
   const [scanning, setScanning] = useState(false)
 
   async function handleScan() {
     setScanning(true)
+    onOpenLog?.()
     try {
       await triggerScan()
-      // Give backend a moment to run the background scan, then refresh
       setTimeout(() => {
         setScanning(false)
         onScanComplete?.()

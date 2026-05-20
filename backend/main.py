@@ -5,11 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from db.base import Base, engine
 import models  # noqa: F401 — registers all ORM models with Base.metadata
 from api.routes import drives, bays, enclosures, profiles, alerts
-from services import scheduler
+from services import log_buffer, scheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    log_buffer.install()
     Base.metadata.create_all(bind=engine)
     scheduler.start()
     yield

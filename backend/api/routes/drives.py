@@ -1,11 +1,12 @@
 import time
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from api.deps import get_db
-from api.schemas import DriveRead
+from api.schemas import DriveCreate, DriveRead
 from models.drive import Drive
 from services import csv_import as csv_import_svc
+from services import log_buffer
 from services import scanner
 
 router = APIRouter()
@@ -26,6 +27,11 @@ def _check_scan_cooldown() -> None:
 @router.get("", response_model=list[DriveRead])
 def list_drives(db: Session = Depends(get_db)):
     return db.query(Drive).all()
+
+
+@router.get("/logs")
+def get_logs(after: int = Query(default=0)):
+    return log_buffer.get_entries(after_id=after)
 
 
 @router.get("/{serial}", response_model=DriveRead)
@@ -55,3 +61,16 @@ async def import_drives(file: UploadFile = File(...), db: Session = Depends(get_
         raise HTTPException(status_code=422, detail="File must be a .csv")
     content = await file.read()
     return csv_import_svc.run_import(content, db)
+
+
+@router.post("", response_model=DriveRead, status_code=201)
+def create_drive(body: DriveCreate, db: Session = Depends(get_db)):
+    if db.get(Drive, body.serial):
+        raise HTTPException(status_code=409, detail="Drive with this serial already exists")
+    drive = Drive(**body.model_dump(exclude_none=True))
+    if not drive.smart_status:
+        drive.smart_status = "UNKNOWN"
+    db.add(drive)
+    db.commit()
+    db.refresh(drive)
+    return drive

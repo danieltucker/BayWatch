@@ -13,12 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 def run_scan(db: Session) -> list[Drive]:
-    """
-    Discover all block devices, gather SMART data, and upsert Drive rows.
-    Returns the list of drives found in this scan.
-    """
+    logger.info("Scan started")
     ses_slots = ses_svc.get_enclosure_slots()
     devices = lsblk_svc.list_disks()
+    logger.info("Discovered %d block device(s) via lsblk", len(devices))
 
     # Supplement with any NVMe devices lsblk may miss
     if nvme_svc.is_nvme_available():
@@ -37,24 +35,25 @@ def run_scan(db: Session) -> list[Drive]:
 
     updated: list[Drive] = []
     for dev in devices:
+        logger.info("Reading SMART data for %s", dev.path)
         info = smartctl_svc.get_smart_info(dev.path)
         if info is None or not info.serial:
             logger.warning("No SMART data for %s — skipping", dev.path)
             continue
 
         drive = db.get(Drive, info.serial)
-        if drive is None:
+        is_new = drive is None
+        if is_new:
             drive = Drive(serial=info.serial)
             db.add(drive)
+            logger.info("New drive: %s (%s %s)", info.serial, info.make, info.model)
+        else:
+            logger.info("Updated drive: %s — %s°C, %s hrs, SMART=%s",
+                        info.serial, info.temperature_c, info.power_on_hours, info.smart_status)
 
+        # Always update live SMART telemetry
         drive.device_path = dev.path
-        drive.by_id_path = dev.by_id_path
-        drive.make = info.make
-        drive.model = info.model
-        drive.firmware_version = info.firmware
-        drive.capacity_bytes = info.capacity_bytes or dev.size_bytes or None
-        drive.rpm = info.rpm
-        drive.form_factor = info.form_factor
+        drive.by_id_path = dev.by_id_path or drive.by_id_path
         drive.smart_status = info.smart_status
         drive.temperature_c = info.temperature_c
         drive.power_on_hours = info.power_on_hours
@@ -62,6 +61,20 @@ def run_scan(db: Session) -> list[Drive]:
         drive.pending_sectors = info.pending_sectors
         drive.uncorrectable_errors = info.uncorrectable_errors
         drive.last_scanned = datetime.datetime.utcnow()
+
+        # Only fill identity fields if not already manually set
+        if not drive.make:
+            drive.make = info.make
+        if not drive.model:
+            drive.model = info.model
+        if not drive.firmware_version:
+            drive.firmware_version = info.firmware
+        if not drive.capacity_bytes:
+            drive.capacity_bytes = info.capacity_bytes or dev.size_bytes or None
+        if drive.rpm is None:
+            drive.rpm = info.rpm
+        if not drive.form_factor:
+            drive.form_factor = info.form_factor
 
         updated.append(drive)
 

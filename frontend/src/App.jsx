@@ -1,14 +1,12 @@
-import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
-import { HardDrive, LayoutDashboard, Settings as SettingsIcon } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { HardDrive, Settings as SettingsIcon } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import DriveDetail from './pages/DriveDetail'
-import Settings from './pages/Settings'
+import SettingsModal from './components/SettingsModal'
+import LogConsole from './components/LogConsole'
 
-function Nav() {
-  const base = 'flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors'
-  const active = 'bg-blue-600/20 text-blue-400 ring-1 ring-blue-500/30'
-  const inactive = 'text-gray-400 hover:text-white hover:bg-gray-800/60'
-
+function Nav({ onSettings }) {
   return (
     <nav className="flex items-center justify-between px-5 py-3 border-b border-gray-800/80 bg-gray-950/95 backdrop-blur-sm sticky top-0 z-40">
       <div className="flex items-center gap-2.5">
@@ -19,28 +17,46 @@ function Nav() {
           Drive<span className="text-blue-400">Map</span>
         </span>
       </div>
-      <div className="flex items-center gap-1">
-        <NavLink to="/" end className={({ isActive }) => `${base} ${isActive ? active : inactive}`}>
-          <LayoutDashboard size={15} /> Map
-        </NavLink>
-        <NavLink to="/settings" className={({ isActive }) => `${base} ${isActive ? active : inactive}`}>
-          <SettingsIcon size={15} /> Settings
-        </NavLink>
-      </div>
+      <button
+        onClick={onSettings}
+        className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition-colors"
+      >
+        <SettingsIcon size={15} /> Settings
+      </button>
     </nav>
   )
 }
 
 export default function App() {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [logOpen, setLogOpen] = useState(false)
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === '`' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Don't toggle if typing in an input/textarea
+        const tag = document.activeElement?.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+        e.preventDefault()
+        setLogOpen(v => !v)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-gray-950 text-gray-100">
-        <Nav />
+        <LogConsole open={logOpen} />
+        <Nav onSettings={() => setSettingsOpen(true)} />
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={
+            <Dashboard onOpenLog={() => setLogOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
+          } />
           <Route path="/drives/:serial" element={<DriveDetail />} />
-          <Route path="/settings" element={<Settings />} />
         </Routes>
+        <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </div>
     </BrowserRouter>
   )

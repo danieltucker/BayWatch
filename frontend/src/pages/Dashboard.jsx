@@ -4,6 +4,7 @@ import BayGrid from '../components/BayGrid'
 import DriveCard from '../components/DriveCard'
 import DriveList from '../components/DriveList'
 import ScanButton from '../components/ScanButton'
+import EmptyBayModal from '../components/EmptyBayModal'
 import { getEnclosures, getDrives, getBays, getProfile } from '../api/client'
 
 function StatCard({ icon: Icon, label, value, color = 'text-gray-300', sub }) {
@@ -21,13 +22,14 @@ function StatCard({ icon: Icon, label, value, color = 'text-gray-300', sub }) {
   )
 }
 
-export default function Dashboard() {
+export default function Dashboard({ onOpenLog, onOpenSettings }) {
   const [enclosures, setEnclosures] = useState([])
   const [drives, setDrives] = useState([])
   const [baysMap, setBaysMap] = useState({})
   const [profiles, setProfiles] = useState([])
   const [selectedBay, setSelectedBay] = useState(null)
   const [selectedDriveSerial, setSelectedDriveSerial] = useState(null)
+  const [emptyBay, setEmptyBay] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const driveMap = Object.fromEntries(drives.map(d => [d.serial, d]))
@@ -113,7 +115,7 @@ export default function Dashboard() {
             <h1 className="text-base font-semibold text-gray-300 tracking-tight">
               {enclosures.length > 0 ? 'Enclosures' : 'Getting Started'}
             </h1>
-            <ScanButton onScanComplete={loadAll} />
+            <ScanButton onScanComplete={loadAll} onOpenLog={onOpenLog} />
           </div>
 
           {enclosures.length === 0 && (
@@ -125,9 +127,9 @@ export default function Dashboard() {
                 <p className="text-white font-semibold mb-1">No enclosures yet</p>
                 <p className="text-sm text-gray-500">
                   Go to{' '}
-                  <a href="/settings" className="text-blue-400 hover:text-blue-300 underline underline-offset-2">
+                  <button onClick={onOpenSettings} className="text-blue-400 hover:text-blue-300 underline underline-offset-2">
                     Settings
-                  </a>{' '}
+                  </button>{' '}
                   to add your first enclosure and bay array.
                 </p>
               </div>
@@ -157,8 +159,12 @@ export default function Dashboard() {
                     driveMap={driveMap}
                     selectedBayId={selectedBay?.id}
                     onBayClick={bay => {
-                      setSelectedBay(bay)
-                      setSelectedDriveSerial(null)
+                      if (!bay.drive_serial) {
+                        setEmptyBay(bay)
+                      } else {
+                        setSelectedBay(bay)
+                        setSelectedDriveSerial(null)
+                      }
                     }}
                     onAssignmentChange={loadAll}
                   />
@@ -168,6 +174,14 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      {emptyBay && (
+        <EmptyBayModal
+          bay={emptyBay}
+          onClose={() => setEmptyBay(null)}
+          onCreated={() => { setEmptyBay(null); loadAll() }}
+        />
+      )}
 
       {/* Sidebar */}
       <div className="w-full lg:w-[340px] shrink-0 flex flex-col bg-gray-950">

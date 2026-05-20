@@ -52,6 +52,18 @@ class BayAssign(BaseModel):
 
 # ── Drive ────────────────────────────────────────────────────────────────────
 
+class DriveCreate(BaseModel):
+    serial: str
+    make: Optional[str] = None
+    model: Optional[str] = None
+    capacity_bytes: Optional[int] = None
+    rpm: Optional[int] = None
+    form_factor: Optional[str] = None
+    firmware_version: Optional[str] = None
+    device_path: Optional[str] = None
+    smart_status: str = "UNKNOWN"
+
+
 class DriveRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     serial: str

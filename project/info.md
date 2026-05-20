@@ -157,3 +157,6 @@ Additional channels (email, Slack, etc.) are a future extension — architecture
 | 6 | Docker with `SYS_RAWIO` + `SYS_ADMIN` capabilities | Safer than `privileged: true`; grants needed device access |
 | 7 | CSV import via `POST /api/drives/import` | Lets users bulk-load inventory from spreadsheets; serial is the key; all other fields are optional |
 | 8 | TrueNAS: no custom `networks:` block | TrueNAS Scale manages its own bridge; explicit `driver: bridge` causes deploy failure |
+| 9 | Settings as modal dialog | Removes the /settings page route; modal is tab-based (Enclosures, Notifications, Import); triggered from nav bar |
+| 10 | In-memory log ring buffer | Backend captures all Python logs into a 500-entry deque; frontend polls at 1 Hz when console is open; no log persistence needed |
+| 11 | Scanner preserves manually-entered fields | Identity fields (make, model, etc.) only fill if null; SMART telemetry always overwrites; prevents scan from clobbering user data |
