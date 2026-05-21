@@ -33,6 +33,10 @@ def run_scan(db: Session) -> list[Drive]:
                     type="disk",
                 ))
 
+    # Skip virtual/kernel devices that never have SMART data
+    _SKIP_PREFIXES = ("/dev/zd",)
+    devices = [d for d in devices if not d.path.startswith(_SKIP_PREFIXES)]
+
     updated: list[Drive] = []
     for dev in devices:
         logger.info("Reading SMART data for %s", dev.path)
