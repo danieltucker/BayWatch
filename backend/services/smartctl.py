@@ -25,26 +25,44 @@ class SmartInfo:
     raw: dict = field(default_factory=dict)
 
 
+_DEVICE_TYPES = [None, "sat", "scsi", "auto"]
+
+
 def get_smart_info(device_path: str) -> SmartInfo | None:
-    """Run smartctl -a on a device and parse the result."""
-    result = subprocess.run(
-        ["smartctl", "-a", "-j", device_path],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    # smartctl exits non-zero for warnings but still returns JSON data
-    if not result.stdout:
-        logger.warning("smartctl returned no output for %s (exit %d): %s",
-                       device_path, result.returncode, result.stderr.strip())
-        return None
+    """Run smartctl -a on a device and parse the result.
 
-    try:
-        data = json.loads(result.stdout)
-    except json.JSONDecodeError:
-        return None
+    Tries multiple device type hints to handle HBA/SAS passthrough on TrueNAS.
+    """
+    for dtype in _DEVICE_TYPES:
+        cmd = ["smartctl", "-a", "-j"]
+        if dtype:
+            cmd += ["-d", dtype]
+        cmd.append(device_path)
 
-    return _parse(device_path, data)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+        if not result.stdout:
+            logger.warning("smartctl no output for %s dtype=%s (exit %d): %s",
+                           device_path, dtype, result.returncode, result.stderr.strip())
+            continue
+
+        try:
+            data = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            continue
+
+        info = _parse(device_path, data)
+        if info and info.serial:
+            if dtype:
+                logger.debug("Got SMART data for %s using -d %s", device_path, dtype)
+            return info
+
+        # Log what smartctl said when it ran but returned no serial
+        messages = [m.get("string", "") for m in data.get("smartctl", {}).get("messages", [])]
+        if messages:
+            logger.debug("smartctl for %s dtype=%s: %s", device_path, dtype, "; ".join(messages))
+
+    return None
 
 
 def _parse(device_path: str, d: dict) -> SmartInfo:

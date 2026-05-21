@@ -21,6 +21,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ### Fixed
 - **TrueNAS healthcheck gate** — removed healthcheck from `docker-compose.truenas.yml`; TrueNAS was treating any defined healthcheck as `condition: service_healthy` on `depends_on`, causing the frontend to refuse to start if the backend healthcheck hadn't passed yet
 - **Frontend image tag** — `drivemap-frontend:0.5.1` pushed (same image as `0.5.0`; frontend had no changes in 0.5.1)
+- **SMART device type fallback** — `smartctl` now retries with `-d sat`, `-d scsi`, and `-d auto` when the default invocation returns no serial number; fixes drives behind HBA/SAS controllers on TrueNAS Scale where passthrough requires an explicit device type hint
 
 ---
 
