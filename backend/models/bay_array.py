@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.base import Base
@@ -21,6 +21,8 @@ class BayArray(Base):
     rows: Mapped[int] = mapped_column(nullable=False)
     cols: Mapped[int] = mapped_column(nullable=False)
     display_order: Mapped[int] = mapped_column(default=0)
+    group_type: Mapped[str] = mapped_column(String(32), default="drive_bays")
+    purpose: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     enclosure: Mapped[Enclosure] = relationship("Enclosure", back_populates="arrays")
     bays: Mapped[list[Bay]] = relationship(

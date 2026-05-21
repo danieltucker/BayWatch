@@ -3,11 +3,30 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
-from db.base import Base, engine
+from db.base import Base, engine, SessionLocal
 import models  # noqa: F401 — registers all ORM models with Base.metadata
 from api.routes import drives, bays, enclosures, profiles, alerts
 from services import log_buffer, scheduler
+
+
+_MIGRATIONS = [
+    "ALTER TABLE bay_arrays ADD COLUMN group_type VARCHAR(32) DEFAULT 'drive_bays'",
+    "ALTER TABLE bay_arrays ADD COLUMN purpose TEXT",
+    "ALTER TABLE notification_configs ADD COLUMN temp_alert_threshold_c INTEGER DEFAULT 55",
+    "ALTER TABLE notification_configs ADD COLUMN log_level VARCHAR(16) DEFAULT 'INFO'",
+]
+
+
+def _run_migrations() -> None:
+    with engine.connect() as conn:
+        for sql in _MIGRATIONS:
+            try:
+                conn.execute(text(sql))
+                conn.commit()
+            except Exception:
+                pass  # column already exists
 
 
 @asynccontextmanager
@@ -15,6 +34,20 @@ async def lifespan(app: FastAPI):
     level = getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO)
     log_buffer.install(level=level)
     Base.metadata.create_all(bind=engine)
+    _run_migrations()
+    # Apply log_level from DB if already configured
+    db = SessionLocal()
+    try:
+        from models.notification_config import NotificationConfig
+        cfg = db.query(NotificationConfig).filter_by(channel="telegram").first()
+        if cfg and cfg.log_level:
+            db_level = getattr(logging, cfg.log_level.upper(), None)
+            if db_level is not None:
+                log_buffer.set_level(db_level)
+    except Exception:
+        pass
+    finally:
+        db.close()
     scheduler.start()
     yield
     scheduler.stop()

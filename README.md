@@ -52,11 +52,8 @@ Click **Add** for each:
 |---|---|
 | `DATABASE_URL` | `sqlite:////app/data/drivemap.db` |
 | `SCAN_INTERVAL_MINUTES` | `60` |
-| `TEMP_ALERT_THRESHOLD_C` | `55` |
-| `WARRANTY_WARNING_DAYS` | `90` |
-| `LOG_LEVEL` | `INFO` |
-| `TELEGRAM_BOT_TOKEN` | *(optional — leave blank if not using alerts)* |
-| `TELEGRAM_CHAT_ID` | *(optional)* |
+
+> Temperature threshold, log level, and Telegram credentials are configured inside the app under **Settings → Notifications** — no env vars needed for these.
 
 **Container Configuration → Storage**
 
@@ -100,9 +97,6 @@ services:
     environment:
       DATABASE_URL: sqlite:////app/data/drivemap.db
       SCAN_INTERVAL_MINUTES: "60"
-      TEMP_ALERT_THRESHOLD_C: "55"
-      WARRANTY_WARNING_DAYS: "90"
-      LOG_LEVEL: INFO
 
 volumes:
   drivemap_data:
@@ -173,11 +167,9 @@ Then open `http://localhost:8585`.
 |---|---|---|
 | `DATABASE_URL` | `sqlite:////app/data/drivemap.db` | SQLite path inside the container |
 | `SCAN_INTERVAL_MINUTES` | `60` | How often background scan runs |
-| `TEMP_ALERT_THRESHOLD_C` | `55` | Temperature (°C) that triggers a critical alert |
-| `WARRANTY_WARNING_DAYS` | `90` | Days before expiry to show warranty warning |
-| `TELEGRAM_BOT_TOKEN` | — | Telegram bot token for alerts |
-| `TELEGRAM_CHAT_ID` | — | Telegram chat or channel ID |
-| `LOG_LEVEL` | `INFO` | Python log level (`DEBUG`, `INFO`, `WARNING`) |
+
+The following are configured inside the app under **Settings → Notifications** and do not need to be set as env vars:
+temperature alert threshold, warranty warning days, log level, Telegram bot token, and Telegram chat ID.
 
 ---
 

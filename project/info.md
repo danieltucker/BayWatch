@@ -163,3 +163,9 @@ Additional channels (email, Slack, etc.) are a future extension — architecture
 | 12 | Single combined Docker image for distribution | `danielgt/drivemap` runs nginx + uvicorn under supervisord; one container, one port, simpler iX Apps and Watchtower setup. Separate `backend/` and `frontend/` Dockerfiles kept for dev. |
 | 13 | Widget bar configuration in localStorage | Widget selection and order stored client-side; no backend API needed. Key: `widget-config` (JSON array of widget IDs). |
 | 14 | Drive icons by form factor (client-side only) | `getDriveIcon(formFactor, rpm)` maps form_factor/rpm to a lucide icon; no schema or API change needed. |
+| 15 | BayArray group_type + purpose fields | Users can label bay arrays as ZFS pools, RAID sets, PCIe slots, standalone drives, etc. Provides context without needing separate inventory tracking. |
+| 16 | Bay grid fill-width via CSS `1fr` | Grid uses `repeat(cols, minmax(0, 1fr))` — bays scale evenly to fill the enclosure panel width at all three size modes. |
+| 17 | SM/MD/LG slot redesign | SM = flat Excel-style row for dense arrays; MD = icon card with health; LG = rich card with gradient, temp bar, warranty. Profile data passed through BayGrid for LG warranty badge. |
+| 18 | Alerts always logged before Telegram dispatch | Alert records written to DB before the send attempt. Notifications appear in the console for all users regardless of Telegram config. |
+| 19 | Bell icon + pinned console notifications | Undismissed alerts surfaced via bell (color by severity) + pinned section in console. Dismissed IDs stored in `localStorage`. No new backend endpoints needed. |
+| 20 | In-app temp threshold + log level via NotificationConfig | `TEMP_ALERT_THRESHOLD_C` and `LOG_LEVEL` moved from env vars to `notification_configs` table. DB migration runs on startup. Log level applies immediately on save. Only `DATABASE_URL` and `SCAN_INTERVAL_MINUTES` remain as env vars. |

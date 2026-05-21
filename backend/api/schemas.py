@@ -11,6 +11,8 @@ class BayArrayBase(BaseModel):
     rows: int
     cols: int
     display_order: int = 0
+    group_type: str = "drive_bays"
+    purpose: Optional[str] = None
 
 class BayArrayCreate(BayArrayBase):
     pass
@@ -129,6 +131,8 @@ class NotificationConfigRead(BaseModel):
     status_frequency: str
     critical_enabled: bool
     warranty_warning_days: int
+    temp_alert_threshold_c: int
+    log_level: str
 
 class NotificationConfigUpdate(BaseModel):
     bot_token: Optional[str] = None
@@ -136,3 +140,5 @@ class NotificationConfigUpdate(BaseModel):
     status_frequency: Optional[str] = None
     critical_enabled: Optional[bool] = None
     warranty_warning_days: Optional[int] = None
+    temp_alert_threshold_c: Optional[int] = None
+    log_level: Optional[str] = None

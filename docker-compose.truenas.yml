@@ -1,6 +1,6 @@
 services:
   drivemap:
-    image: danielgt/drivemap:0.8.0
+    image: danielgt/drivemap:0.9.0
     restart: unless-stopped
     volumes:
       - /dev:/dev
@@ -12,12 +12,6 @@ services:
     environment:
       DATABASE_URL: sqlite:////app/data/drivemap.db
       SCAN_INTERVAL_MINUTES: "60"
-      TEMP_ALERT_THRESHOLD_C: "55"
-      WARRANTY_WARNING_DAYS: "90"
-      LOG_LEVEL: INFO
-      # Optional — fill in to enable Telegram alerts:
-      # TELEGRAM_BOT_TOKEN: ""
-      # TELEGRAM_CHAT_ID: ""
 
 volumes:
   drivemap_data:

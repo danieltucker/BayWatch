@@ -1,4 +1,5 @@
 import json
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -7,6 +8,7 @@ from api.deps import get_db
 from api.schemas import AlertRead, NotificationConfigRead, NotificationConfigUpdate
 from models.alert import Alert
 from models.notification_config import NotificationConfig
+from services import log_buffer
 
 router = APIRouter()
 
@@ -57,6 +59,14 @@ def update_config(body: NotificationConfigUpdate, db: Session = Depends(get_db))
         config.critical_enabled = body.critical_enabled
     if body.warranty_warning_days is not None:
         config.warranty_warning_days = body.warranty_warning_days
+    if body.temp_alert_threshold_c is not None:
+        config.temp_alert_threshold_c = body.temp_alert_threshold_c
+    if body.log_level is not None:
+        allowed_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        if body.log_level.upper() not in allowed_levels:
+            raise HTTPException(status_code=422, detail=f"log_level must be one of {allowed_levels}")
+        config.log_level = body.log_level.upper()
+        log_buffer.set_level(getattr(logging, config.log_level, logging.INFO))
 
     db.commit()
     db.refresh(config)

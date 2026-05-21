@@ -1,7 +1,7 @@
 # Project Structure
 
 > Last updated: 2026-05-21
-> Status: v0.8.0 — Combined container, widget bar, console REPL, form-factor icons
+> Status: v0.9.0 — nginx fix, group types, fill-width grid, SM/MD/LG redesign, notifications, in-app config
 
 ## Current Layout
 

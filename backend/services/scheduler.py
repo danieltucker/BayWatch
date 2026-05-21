@@ -26,13 +26,11 @@ _scheduler = AsyncIOScheduler()
 
 def start():
     interval_minutes = int(os.getenv("SCAN_INTERVAL_MINUTES", "60"))
-    temp_threshold = int(os.getenv("TEMP_ALERT_THRESHOLD_C", "55"))
 
     if interval_minutes > 0:
         _scheduler.add_job(
             _scan_and_check,
             IntervalTrigger(minutes=interval_minutes),
-            args=[temp_threshold],
             id="periodic_scan",
             replace_existing=True,
         )
@@ -55,9 +53,11 @@ def stop():
         _scheduler.shutdown(wait=False)
 
 
-async def _scan_and_check(temp_threshold: int) -> None:
+async def _scan_and_check() -> None:
     db: Session = SessionLocal()
     try:
+        config = db.query(NotificationConfig).filter_by(channel="telegram").first()
+        temp_threshold = config.temp_alert_threshold_c if config else 55
         drives = scanner.run_scan(db)
         await _check_critical_conditions(drives, temp_threshold)
     finally:

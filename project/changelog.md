@@ -16,6 +16,38 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.0] — 2026-05-21
+
+### Fixed
+- **CRITICAL: nginx welcome screen** — Debian nginx installs a default site at `/etc/nginx/sites-enabled/default` with `default_server` flag that took priority over `conf.d/default.conf`. Added `RUN rm -f /etc/nginx/sites-enabled/default` to the combined `Dockerfile`. All deployments using `danielgt/drivemap:0.8.x` were affected.
+
+### Added
+- **Bay array group types** — When adding an array to an enclosure, users can now specify the group type: Drive Bays, ZFS Pool, ZFS Mirror, ZFS RAIDZ1, ZFS RAIDZ2, HW RAID, PCIe Slots, Standalone, or Other. An optional purpose/notes field is also available. Group type badge shown in the bay array header.
+- **Enclosure edit button** — Pencil icon on each enclosure row opens an inline edit form (name + type) with Save/Cancel.
+- **Bell notification icon** — Bell in the nav bar changes color based on unread alert severity (red = critical, amber = status). Clicking opens the log console.
+- **Pinned console notifications** — Undismissed alerts appear pinned at the top of the console (above log output). Each has a dismiss button; dismissed state stored in `localStorage`. Alerts are always written to the DB regardless of Telegram configuration.
+- **CSV import template download** — "Download Template" button in Settings → Import generates a blank `drivemap-import-template.csv` with all supported column headers.
+- **Bay grid fills enclosure width** — Bay arrays now use `repeat(cols, minmax(0, 1fr))` grid layout, spreading bays evenly across the available panel width.
+- **SM/MD/LG bay slot redesign**:
+  - **SM** — Excel-style flat row (h-8): serial in SMART status color, temperature indicator, status dot. No icon.
+  - **MD** — Medium card (min-h-[80px]): drive icon, serial, make, temperature.
+  - **LG** — Rich card (min-h-[150px]): gradient background, drive icon + model/make, full serial, temperature bar, capacity, device path, warranty badge.
+- **In-app temperature threshold + log level** — `TEMP_ALERT_THRESHOLD_C` and `LOG_LEVEL` moved from env vars to Settings → Notifications. Log level change applies immediately at runtime. Both fields also added to `NotificationConfig` DB model with auto-migration.
+
+### Changed
+- `docker-compose.truenas.yml` — version bumped to `0.9.0`; `TEMP_ALERT_THRESHOLD_C`, `WARRANTY_WARNING_DAYS`, `LOG_LEVEL` env vars removed (now configured in-app). Only `DATABASE_URL` and `SCAN_INTERVAL_MINUTES` remain.
+- Scheduler reads `temp_alert_threshold_c` from DB at each scan run (not locked in at startup).
+- Notifications are always logged to the `alerts` table before Telegram dispatch, so alerts appear in the console even when Telegram is not configured.
+- Bay grid gap is size-aware: `gap-1` (SM), `gap-1.5` (MD), `gap-2` (LG).
+
+### Backend
+- `BayArray` model: new `group_type` (VARCHAR 32, default `drive_bays`) and `purpose` (TEXT) columns.
+- `NotificationConfig` model: new `temp_alert_threshold_c` (INTEGER, default 55) and `log_level` (VARCHAR 16, default `INFO`) columns.
+- `main.py`: `_run_migrations()` runs `ALTER TABLE` for all new columns on startup (safe to run on existing DBs).
+- `log_buffer.set_level(level)` — new function to update runtime log level without restart.
+
+---
+
 ## [0.8.0] — 2026-05-21
 
 ### Added

@@ -22,7 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nvme-cli \
     udev \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -f /etc/nginx/sites-enabled/default
 
 # Python runtime deps
 COPY --from=backend-builder /install /usr/local

@@ -62,10 +62,10 @@ async def dispatch(channel: str, message: str, alert_type: str, drive_serial: st
             except json.JSONDecodeError:
                 pass
 
+        db.add(Alert(type=alert_type, channel=channel, message=message, drive_serial=drive_serial))
+        db.commit()
         try:
             await handler(message, config)
-            db.add(Alert(type=alert_type, channel=channel, message=message, drive_serial=drive_serial))
-            db.commit()
         except Exception as exc:
             logger.error("Failed to send %s notification: %s", channel, exc)
     finally:

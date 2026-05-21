@@ -54,5 +54,9 @@ def install(level: int = logging.INFO) -> None:
     root.setLevel(level)
 
 
+def set_level(level: int) -> None:
+    logging.getLogger().setLevel(level)
+
+
 def get_entries(after_id: int = 0) -> list[LogEntry]:
     return _handler.since(after_id)

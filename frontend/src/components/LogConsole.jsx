@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { X } from 'lucide-react'
 import {
   getLogs, getDrives, getDrive, getProfile, patchDrive,
   getEnclosures, getBays, assignDrive, unassignDrive, triggerScan,
@@ -39,7 +40,11 @@ const COMMANDS = {
   clear:    'clear                            — clear console output',
 }
 
-export default function LogConsole({ open }) {
+function stripHtml(str) {
+  return str.replace(/<[^>]+>/g, '')
+}
+
+export default function LogConsole({ open, alerts = [], onDismissAlert }) {
   const [entries, setEntries] = useState([])
   const [activeLevels, setActiveLevels] = useState(new Set(DEFAULT_LEVELS))
   const [cmdInput, setCmdInput] = useState('')
@@ -346,6 +351,41 @@ export default function LogConsole({ open }) {
 
           <span className="text-[10px] text-gray-700 font-mono shrink-0">` to close</span>
         </div>
+
+        {/* Pinned notifications */}
+        {alerts.length > 0 && (
+          <div className="shrink-0 border-b border-gray-800/60 px-3 py-2 flex flex-col gap-1 max-h-[30%] overflow-y-auto">
+            <span className="text-[9px] text-gray-600 font-mono uppercase tracking-widest mb-0.5">Notifications</span>
+            {alerts.map(alert => (
+              <div
+                key={alert.id}
+                className={`flex items-start gap-2 rounded px-2 py-1 ${
+                  alert.type === 'critical'
+                    ? 'bg-red-950/50 border border-red-900/50'
+                    : 'bg-amber-950/40 border border-amber-900/40'
+                }`}
+              >
+                <span className={`text-[9px] font-mono font-bold shrink-0 mt-0.5 ${
+                  alert.type === 'critical' ? 'text-red-400' : 'text-amber-400'
+                }`}>
+                  {alert.type.toUpperCase()}
+                </span>
+                <span className={`text-[10px] font-mono flex-1 leading-relaxed ${
+                  alert.type === 'critical' ? 'text-red-300' : 'text-amber-300'
+                }`}>
+                  {stripHtml(alert.message)}
+                </span>
+                <button
+                  onClick={() => onDismissAlert?.(alert.id)}
+                  className="text-gray-700 hover:text-gray-400 shrink-0 transition-colors mt-0.5"
+                  title="Dismiss"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Log output */}
         <div className="flex-1 overflow-y-auto px-4 py-2 font-mono text-xs">

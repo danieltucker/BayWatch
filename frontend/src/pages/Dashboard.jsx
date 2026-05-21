@@ -149,6 +149,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                       array={arr}
                       bays={baysMap[arr.id] || []}
                       driveMap={driveMap}
+                      profileMap={profileMap}
                       selectedBayId={selectedBay?.id}
                       onBayClick={bay => {
                         if (!bay.drive_serial) {
