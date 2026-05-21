@@ -16,6 +16,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.5.2] — 2026-05-20
+
+### Fixed
+- **TrueNAS healthcheck gate** — removed healthcheck from `docker-compose.truenas.yml`; TrueNAS was treating any defined healthcheck as `condition: service_healthy` on `depends_on`, causing the frontend to refuse to start if the backend healthcheck hadn't passed yet
+- **Frontend image tag** — `drivemap-frontend:0.5.1` pushed (same image as `0.5.0`; frontend had no changes in 0.5.1)
+
+---
+
 ## [0.5.1] — 2026-05-20
 
 ### Fixed

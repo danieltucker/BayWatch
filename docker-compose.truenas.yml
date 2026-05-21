@@ -18,15 +18,8 @@ services:
       # Optional — fill in to enable Telegram alerts:
       # TELEGRAM_BOT_TOKEN: ""
       # TELEGRAM_CHAT_ID: ""
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
   frontend:
-    image: danielgt/drivemap-frontend:0.5.0
+    image: danielgt/drivemap-frontend:0.5.1
     restart: unless-stopped
     ports:
       - "8585:80"
