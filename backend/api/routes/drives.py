@@ -3,7 +3,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Qu
 from sqlalchemy.orm import Session
 
 from api.deps import get_db
-from api.schemas import DriveCreate, DriveRead
+from api.schemas import DriveCreate, DrivePatch, DriveRead
 from models.drive import Drive
 from services import csv_import as csv_import_svc
 from services import log_buffer
@@ -61,6 +61,18 @@ async def import_drives(file: UploadFile = File(...), db: Session = Depends(get_
         raise HTTPException(status_code=422, detail="File must be a .csv")
     content = await file.read()
     return csv_import_svc.run_import(content, db)
+
+
+@router.patch("/{serial}", response_model=DriveRead)
+def patch_drive(serial: str, body: DrivePatch, db: Session = Depends(get_db)):
+    drive = db.get(Drive, serial)
+    if not drive:
+        raise HTTPException(status_code=404, detail="Drive not found")
+    for field, value in body.model_dump(exclude_none=True).items():
+        setattr(drive, field, value)
+    db.commit()
+    db.refresh(drive)
+    return drive
 
 
 @router.post("", response_model=DriveRead, status_code=201)

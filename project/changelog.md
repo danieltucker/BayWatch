@@ -16,6 +16,62 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.8.0] — 2026-05-21
+
+### Added
+- **Terminal console command interface** — command input bar at the bottom of the log console; full REPL with up-arrow history. Commands: `drives`, `drive <serial>`, `find <query>`, `scan`, `edit <serial> <field> <value>`, `profile <serial>`, `bays`, `assign <serial> <label>`, `unassign <label>`, `logs [level]`, `clear`, `help [cmd]`.
+- **Console log level filters** — DEBUG / INFO / WARNING / ERROR toggle buttons in the console title bar; DEBUG hidden by default. Filters apply to backend log entries only; command output always shows.
+- **Customizable widget bar** — replaces the static stats row. 13 widget types: Total Drives, Healthy, Failed, Avg Temp, Hottest Drive, Oldest Drive, Total Capacity, Assigned Bays, Drive Health %, Reallocated Sectors, SSD Count, HDD Count, Warranty Warnings. Plus button opens a picker modal. Drag to reorder. Selection and order persisted to `localStorage`.
+- **Widget close button** — X button appears on hover for each widget card.
+- **Drive icons by form factor** — `getDriveIcon(formFactor, rpm)` utility maps 3.5"/2.5" → HardDrive, M.2 → MemoryStick, U.2 → Server, SSD (rpm=0) → Cpu. Applied in BaySlot, DriveCard, and DriveList.
+- **Single combined container** — new root-level `Dockerfile` bundles nginx + uvicorn under supervisord into a single image (`danielgt/drivemap`). Replaces the separate backend/frontend images for production deployments.
+- **iX Apps install guide** — README updated with a step-by-step guide for configuring DriveMap as a TrueNAS Scale Custom App, including Watchtower auto-update setup.
+
+### Changed
+- `docker-compose.truenas.yml` — migrated from two services (`backend` + `frontend`) to a single `drivemap` service using the combined image.
+- Widget bar uses `@dnd-kit/sortable` nested inside the existing bay DndContext; activation requires 6 px movement to preserve click behavior.
+
+### Added (infrastructure)
+- `Dockerfile` — root-level multi-stage build: node builder → python builder → combined nginx + supervisord runtime.
+- `docker/nginx.conf` — nginx config proxying `/api/` to `localhost:8000`.
+- `docker/supervisord.conf` — supervisord config managing nginx and uvicorn processes.
+- `src/utils/driveIcon.js` — drive icon selector utility.
+- `src/components/WidgetBar.jsx` — sortable widget bar with all widget definitions.
+- `src/components/WidgetPickerModal.jsx` — widget picker modal.
+
+---
+
+## [0.7.0] — 2026-05-21
+
+### Added
+- **Warranty in years** — warranty field now entered and displayed in years (e.g. "3 yrs"); converted to/from months on save/load with no schema change.
+- **Warranty expiry display** — expiry row on DriveCard shows date + time remaining or elapsed (e.g. "Jan 15 2028 · 2.3y left" / "6mo ago").
+- **Array size toggle** — each bay array header has an S / M / L toggle; S = 72 px slots (current default), M = 88 px + model name, L = 108 px + model + capacity. Selection persisted to `localStorage` per array.
+- **Live enclosure/array refresh** — adding or deleting enclosures and arrays in Settings now immediately reloads the Dashboard map without a full page refresh. SettingsModal accepts an `onUpdate` callback; Dashboard passes `loadAll`.
+- **All Drives search** — sidebar drive list has a search input that filters across serial, model, make, device path, and firmware version.
+- **Hide assigned drives** — assigned drives are hidden from the sidebar list by default; an Eye toggle reveals them (dimmed) and shows the count. Active search always shows all matching drives.
+
+---
+
+## [0.6.0] — 2026-05-21
+
+### Added
+- **Drag-and-drop assignment** — sidebar drive items are now draggable; drop onto any bay slot to assign. DnD context moved to Dashboard level so sidebar drag sources and bay-grid drop targets share one context. Uses MouseSensor (8 px activation distance) and TouchSensor (200 ms delay) for reliable click vs. drag distinction.
+- **Assign Existing tab** — clicking an empty bay now shows two tabs: "Assign Existing" (searchable list of all drives; filter by model, make, or serial) and "Create New" (unchanged prior form). Backend already clears conflicting bay assignments on reassign.
+- **Drive Edit modal** — DriveCard now shows a pencil button that opens a `DriveEditModal`. Editable fields: make, model, form factor, type (SSD / HDD + rpm), purchase date, warranty months, notes. Drive fields patched via `PATCH /api/drives/{serial}`; profile fields upserted via `PUT /api/profiles/{serial}`.
+- **Light / Dark / Auto theme** — Appearance tab added to the Settings modal with a three-button toggle. Selection persisted to `localStorage`; "Auto" follows the system color-scheme preference. Dark is the default.
+- **Notes displayed on DriveCard** — drive profile notes now shown in the details card when present.
+
+### Changed
+- **Settings modal anchors from top** — modal position is now fixed at a top offset; height changes grow the panel downward instead of shifting its vertical center.
+- **Full light mode support** — all frontend components updated with `dark:` Tailwind variants; app renders correctly in both light and dark modes.
+
+### Backend
+- `PATCH /api/drives/{serial}` — new endpoint; accepts `DrivePatch` body with optional `make`, `model`, `form_factor`, `rpm` fields.
+- `DrivePatch` Pydantic schema added to `api/schemas.py`.
+
+---
+
 ## [0.5.2] — 2026-05-20
 
 ### Fixed

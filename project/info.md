@@ -160,3 +160,6 @@ Additional channels (email, Slack, etc.) are a future extension — architecture
 | 9 | Settings as modal dialog | Removes the /settings page route; modal is tab-based (Enclosures, Notifications, Import); triggered from nav bar |
 | 10 | In-memory log ring buffer | Backend captures all Python logs into a 500-entry deque; frontend polls at 1 Hz when console is open; no log persistence needed |
 | 11 | Scanner preserves manually-entered fields | Identity fields (make, model, etc.) only fill if null; SMART telemetry always overwrites; prevents scan from clobbering user data |
+| 12 | Single combined Docker image for distribution | `danielgt/drivemap` runs nginx + uvicorn under supervisord; one container, one port, simpler iX Apps and Watchtower setup. Separate `backend/` and `frontend/` Dockerfiles kept for dev. |
+| 13 | Widget bar configuration in localStorage | Widget selection and order stored client-side; no backend API needed. Key: `widget-config` (JSON array of widget IDs). |
+| 14 | Drive icons by form factor (client-side only) | `getDriveIcon(formFactor, rpm)` maps form_factor/rpm to a lucide icon; no schema or API change needed. |

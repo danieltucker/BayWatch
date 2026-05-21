@@ -1,18 +1,22 @@
 # Project Structure
 
-> Last updated: 2026-05-19
-> Status: v0.5.0 — Settings modal, log console, manual drive entry
+> Last updated: 2026-05-21
+> Status: v0.8.0 — Combined container, widget bar, console REPL, form-factor icons
 
 ## Current Layout
 
 ```
 drive-position/
-├── README.md                       # Project overview and quick start
-├── docker-compose.yml              # Production: backend + frontend services
-├── docker-compose.truenas.yml      # TrueNAS Scale custom app YAML (no custom network block)
+├── README.md                       # Project overview, TrueNAS iX Apps guide, Watchtower setup
+├── Dockerfile                      # Combined image: node builder → python builder → nginx+supervisord
+├── docker-compose.yml              # Production: single drivemap service
+├── docker-compose.truenas.yml      # TrueNAS Scale: single drivemap service (combined image)
 ├── docker-compose.dev.yml          # Dev overrides (hot reload, port exposure)
 ├── .env.example                    # Environment variable template
 ├── .gitignore
+├── docker/
+│   ├── nginx.conf                  # nginx: serves static + proxies /api/ to localhost:8000
+│   └── supervisord.conf            # supervisord: manages nginx + uvicorn processes
 ├── project/
 │   ├── info.md                     # LLM context: data model, tech stack, decisions
 │   ├── structure.md                # This file
@@ -69,18 +73,23 @@ drive-position/
         ├── api/
         │   └── client.js           # Axios instance (baseURL: /api)
         ├── components/
-        │   ├── BayGrid.jsx
-        │   ├── BaySlot.jsx
-        │   ├── DriveCard.jsx
-        │   ├── DriveList.jsx
-        │   ├── EmptyBayModal.jsx   # Manual drive entry form; opens on empty bay click
-        │   ├── LogConsole.jsx      # Quake-style slide-down log overlay (backtick key)
+        │   ├── BayGrid.jsx              # Bay array grid with S/M/L size toggle (localStorage per array)
+        │   ├── BaySlot.jsx              # Individual bay slot; form-factor icon; three size variants
+        │   ├── DriveCard.jsx            # Drive details card; form-factor icon; warranty expiry display
+        │   ├── DriveEditModal.jsx       # Edit drive fields + profile; warranty in years
+        │   ├── DriveList.jsx            # Sidebar list; search; hide-assigned toggle; form-factor icon
+        │   ├── EmptyBayModal.jsx        # Manual drive entry form; opens on empty bay click
+        │   ├── LogConsole.jsx           # Slide-down console: log level filters + terminal REPL
         │   ├── ScanButton.jsx
-        │   ├── SettingsModal.jsx   # Tabbed settings modal (Enclosures / Notifications / Import)
-        │   └── WarningBadge.jsx
-        └── pages/
-            ├── Dashboard.jsx
-            └── DriveDetail.jsx
+        │   ├── SettingsModal.jsx        # Tabbed modal (Enclosures / Notifications / Import)
+        │   ├── WarningBadge.jsx
+        │   ├── WidgetBar.jsx            # Draggable widget bar; 13 widget types; localStorage config
+        │   └── WidgetPickerModal.jsx    # Widget picker modal
+        ├── pages/
+        │   ├── Dashboard.jsx            # DnD context, WidgetBar, bay grid, drive sidebar
+        │   └── DriveDetail.jsx          # Drive detail + profile edit page
+        └── utils/
+            └── driveIcon.js             # getDriveIcon(formFactor, rpm) → lucide icon
 ```
 
 ## Update Protocol

@@ -28,6 +28,7 @@ export const setBayLabel = (bayId, label) =>
 export const getDrives = () => api.get('/drives').then(r => r.data)
 export const getDrive = (serial) => api.get(`/drives/${serial}`).then(r => r.data)
 export const createDrive = (data) => api.post('/drives', data).then(r => r.data)
+export const patchDrive = (serial, data) => api.patch(`/drives/${serial}`, data).then(r => r.data)
 export const triggerScan = () => api.post('/drives/scan').then(r => r.data)
 export const triggerScanSync = () => api.post('/drives/scan/sync').then(r => r.data)
 export const importCSV = (file) => {

@@ -64,6 +64,13 @@ class DriveCreate(BaseModel):
     smart_status: str = "UNKNOWN"
 
 
+class DrivePatch(BaseModel):
+    make: Optional[str] = None
+    model: Optional[str] = None
+    form_factor: Optional[str] = None
+    rpm: Optional[int] = None
+
+
 class DriveRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     serial: str
