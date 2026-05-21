@@ -9,15 +9,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         nvme-cli \
         udev \
         curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && groupadd -g 6 -o disk 2>/dev/null || true \
-    && useradd -r -u 1001 -G disk -s /bin/false appuser
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=builder /install /usr/local
 COPY . .
-RUN mkdir -p /app/data && chown appuser:appuser /app/data
-
-USER appuser
+RUN mkdir -p /app/data
 EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

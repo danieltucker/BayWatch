@@ -16,6 +16,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.5.1] — 2026-05-20
+
+### Fixed
+- **Backend runs as root** — removed `USER appuser` from Dockerfile; `smartctl` requires root to open raw block devices on TrueNAS Scale even with `SYS_RAWIO` + `SYS_ADMIN` caps granted
+- **smartctl error logging** — when `smartctl` returns no output, the exit code and stderr are now logged so the cause is visible in the log console
+
+---
+
 ## [0.5.0] — 2026-05-19
 
 ### Added

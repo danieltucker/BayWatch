@@ -1,6 +1,9 @@
 import json
+import logging
 import subprocess
 from dataclasses import dataclass, field
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -30,8 +33,10 @@ def get_smart_info(device_path: str) -> SmartInfo | None:
         text=True,
         timeout=30,
     )
-    # smartctl exits non-zero for warnings but still returns data
+    # smartctl exits non-zero for warnings but still returns JSON data
     if not result.stdout:
+        logger.warning("smartctl returned no output for %s (exit %d): %s",
+                       device_path, result.returncode, result.stderr.strip())
         return None
 
     try:
