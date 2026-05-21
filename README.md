@@ -21,17 +21,7 @@ No more pulling drives to figure out which one is which.
 
 ## Installing on TrueNAS Scale
 
-### 1. Pre-create the data directory
-
-Open a TrueNAS shell (**System → Shell**) and run:
-
-```bash
-mkdir -p "/mnt/Core Storage/Containers/drivemap/data"
-```
-
-Replace `Core Storage` with the name of your pool if it differs.
-
-### 2. Install via Custom App
+### 1. Install via Custom App
 
 1. In the TrueNAS web UI, go to **Apps → Discover Apps → Custom App**
 2. Set **Application Name** to `drivemap`
@@ -91,7 +81,23 @@ Once both containers are running, open:
 http://<truenas-ip>:8585
 ```
 
-### 4. First-time setup
+### 4. Updating to a new version
+
+TrueNAS does not automatically pull updated images. To update:
+
+1. Go to **Apps** → find `drivemap` → click **Stop**
+2. Open **System → Shell** and run:
+
+```bash
+docker pull danielgt/drivemap-backend:latest
+docker pull danielgt/drivemap-frontend:latest
+```
+
+3. Go back to **Apps** → click **Start**
+
+Your data is stored in a Docker-managed named volume (`drivemap_data`) and is preserved across updates.
+
+### 5. First-time setup
 
 1. Go to **Settings** and add an enclosure (e.g. "TrueNAS Main", type: Server)
 2. Add a bay array with the correct row × column layout for your chassis
