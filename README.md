@@ -83,17 +83,13 @@ http://<truenas-ip>:8585
 
 ### 4. Updating to a new version
 
-TrueNAS does not automatically pull updated images. To update:
-
-1. Go to **Apps** → find `drivemap` → click **Stop**
-2. Open **System → Shell** and run:
-
-```bash
-docker pull danielgt/drivemap-backend:latest
-docker pull danielgt/drivemap-frontend:latest
-```
-
-3. Go back to **Apps** → click **Start**
+1. Go to **Apps** → find `drivemap` → click **Edit**
+2. In the Compose YAML, change the image tags to the new version number:
+   ```yaml
+   image: danielgt/drivemap-backend:0.6.0
+   image: danielgt/drivemap-frontend:0.6.0
+   ```
+3. Click **Save** — TrueNAS will pull the new images and restart the containers automatically
 
 Your data is stored in a Docker-managed named volume (`drivemap_data`) and is preserved across updates.
 
