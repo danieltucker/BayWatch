@@ -6,9 +6,7 @@ services:
       - /dev:/dev
       - /run/udev:/run/udev:ro
       - drivemap_data:/app/data
-    cap_add:
-      - SYS_RAWIO
-      - SYS_ADMIN
+    privileged: true
     environment:
       DATABASE_URL: sqlite:////app/data/drivemap.db
       SCAN_INTERVAL_MINUTES: "60"
