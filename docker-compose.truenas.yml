@@ -1,6 +1,6 @@
 services:
   backend:
-    image: danielgt/drivemap-backend:0.5.0
+    image: danielgt/drivemap-backend:0.5.1
     restart: unless-stopped
     volumes:
       - /dev:/dev
