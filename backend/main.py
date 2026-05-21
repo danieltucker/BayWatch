@@ -1,3 +1,5 @@
+import logging
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +12,8 @@ from services import log_buffer, scheduler
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    log_buffer.install()
+    level = getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO)
+    log_buffer.install(level=level)
     Base.metadata.create_all(bind=engine)
     scheduler.start()
     yield

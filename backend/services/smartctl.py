@@ -60,7 +60,10 @@ def get_smart_info(device_path: str) -> SmartInfo | None:
         # Log what smartctl said when it ran but returned no serial
         messages = [m.get("string", "") for m in data.get("smartctl", {}).get("messages", [])]
         if messages:
-            logger.debug("smartctl for %s dtype=%s: %s", device_path, dtype, "; ".join(messages))
+            logger.warning("smartctl for %s dtype=%s: %s", device_path, dtype, "; ".join(messages))
+        else:
+            logger.warning("smartctl for %s dtype=%s: no serial, no messages (exit %d)",
+                           device_path, dtype, result.returncode)
 
     return None
 
