@@ -1,6 +1,7 @@
 import json
 import subprocess
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -50,6 +51,35 @@ def _extract_zfs_pool(dev: dict) -> str | None:
         if child.get("fstype") == "zfs_member":
             return child.get("label") or "unknown"
     return None
+
+
+def get_partitions(device_path: str) -> list[dict[str, Any]]:
+    """Return partition children of device_path via lsblk."""
+    result = subprocess.run(
+        ["lsblk", "-J", "-b", "-o", "NAME,PATH,SIZE,TYPE,FSTYPE,LABEL,MOUNTPOINT,PARTUUID", device_path],
+        capture_output=True, text=True, timeout=10,
+    )
+    if result.returncode != 0:
+        return []
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return []
+
+    partitions = []
+    for dev in data.get("blockdevices", []):
+        for child in dev.get("children", []):
+            if child.get("type") == "part":
+                partitions.append({
+                    "name": child.get("name", ""),
+                    "path": child.get("path", ""),
+                    "size_bytes": int(child.get("size") or 0),
+                    "fstype": child.get("fstype"),
+                    "label": child.get("label"),
+                    "mountpoint": child.get("mountpoint"),
+                    "partuuid": child.get("partuuid"),
+                })
+    return partitions
 
 
 def _resolve_by_id(name: str) -> str | None:

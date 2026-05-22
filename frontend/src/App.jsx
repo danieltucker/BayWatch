@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import DriveDetail from './pages/DriveDetail'
 import LogConsole from './components/LogConsole'
 import { ThemeProvider } from './context/ThemeContext'
+import { TempThresholdProvider } from './context/TempThresholdContext'
 import { getAlerts } from './api/client'
 
 function Nav({ onSettings, onBell, alertCount, alertSeverity }) {
@@ -100,6 +101,7 @@ export default function App() {
 
   return (
     <ThemeProvider>
+      <TempThresholdProvider>
       <BrowserRouter>
         <div className="min-h-screen bg-slate-50 dark:bg-gray-950 text-slate-900 dark:text-gray-100">
           {logOpen && (
@@ -132,6 +134,7 @@ export default function App() {
           </Routes>
         </div>
       </BrowserRouter>
+      </TempThresholdProvider>
     </ThemeProvider>
   )
 }

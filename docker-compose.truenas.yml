@@ -1,6 +1,6 @@
 services:
   drivemap:
-    image: danielgt/drivemap:0.12.0
+    image: danielgt/drivemap:0.14.0
     restart: unless-stopped
     volumes:
       - /dev:/dev

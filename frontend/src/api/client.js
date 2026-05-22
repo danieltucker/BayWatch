@@ -63,4 +63,14 @@ export const getPoolTopology = () => api.get('/pools/topology').then(r => r.data
 export const setBayStatus = (bayId, status) =>
   api.put(`/bays/${bayId}/status`, { status }).then(r => r.data)
 
+// ── Partitions ────────────────────────────────────────────────────────────────
+export const getDrivePartitions = (serial) =>
+  api.get(`/drives/${serial}/partitions`).then(r => r.data)
+
+// ── History ───────────────────────────────────────────────────────────────────
+export const getDriveHistory = (serial, days = 30) =>
+  api.get(`/history/drives/${serial}`, { params: { days } }).then(r => r.data)
+export const getPoolHistory = (poolName, days = 30) =>
+  api.get(`/history/pools/${poolName}`, { params: { days } }).then(r => r.data)
+
 export default api

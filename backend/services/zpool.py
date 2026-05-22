@@ -1,6 +1,9 @@
 import logging
+import os
+import re
 import subprocess
 from dataclasses import dataclass, field
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -181,28 +184,62 @@ def _parse_zpool_status(output: str) -> list[PoolTopology]:
             in_config = False
             continue
 
-        if depth == 4:
+        if depth == 2:
             # vdev group (mirror-0, raidz1-0, spare, cache, log, or lone disk)
             vdev_type = _vdev_type(name)
             current_vdev = Vdev(name=name, type=vdev_type, state=state)
             current_pool.vdevs.append(current_vdev)
-            # If this is a bare disk at vdev level (no children will follow at depth 8),
-            # add it as its own disk entry too so topology is complete
+            # Bare disk at vdev level — add it as its own disk entry
             if vdev_type == "disk":
                 current_vdev.disks.append(VdevDisk(path=name, state=state))
 
-        elif depth >= 8 and current_vdev is not None:
+        elif depth >= 4 and current_vdev is not None:
             # Leaf disk under a vdev group
             current_vdev.disks.append(VdevDisk(path=name, state=state))
 
     return pools
 
 
+def _partuuid_to_parent_dev(partuuid_path: str) -> str | None:
+    """Resolve /dev/disk/by-partuuid/UUID → parent disk /dev/sdX.
+
+    Uses /sys/block to find which disk owns the resolved partition device,
+    avoiding any regex guessing at device naming conventions.
+    """
+    try:
+        target = os.readlink(partuuid_path)          # e.g. "../../sda1"
+        part_name = Path(target).name                 # "sda1"
+        for disk_dir in Path("/sys/block").iterdir():
+            if (disk_dir / part_name).is_dir():
+                return f"/dev/{disk_dir.name}"
+    except Exception:
+        pass
+    return None
+
+
 def build_disk_to_vdev_map(topology: list[PoolTopology]) -> dict[str, str]:
-    """Return {device_path: vdev_name} for all disks in the topology."""
+    """Return {device_path: vdev_name} for all disks in the topology.
+
+    Indexes multiple path forms per disk so lookups succeed regardless of
+    how zpool status -P reports paths on a given system:
+      - by-id with -partN suffix  → also index with suffix stripped
+      - by-partuuid               → also index the parent /dev/sdX
+    """
     mapping: dict[str, str] = {}
     for pool in topology:
         for vdev in pool.vdevs:
             for disk in vdev.disks:
                 mapping[disk.path] = vdev.name
+
+                # /dev/disk/by-id/ata-...-part1 → strip -partN
+                base = re.sub(r"-part\d+$", "", disk.path)
+                if base != disk.path:
+                    mapping[base] = vdev.name
+
+                # /dev/disk/by-partuuid/UUID → resolve to /dev/sdX
+                if disk.path.startswith("/dev/disk/by-partuuid/"):
+                    parent = _partuuid_to_parent_dev(disk.path)
+                    if parent:
+                        mapping[parent] = vdev.name
+
     return mapping

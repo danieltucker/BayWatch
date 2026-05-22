@@ -36,8 +36,8 @@ function DraggableDriveItem({ drive, profile, isSelected, onSelect, isAssigned }
       >
         <DriveIcon size={18} className={clsx('shrink-0', isSelected ? 'text-blue-200' : 'text-slate-400 dark:text-gray-400')} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{drive.model || drive.serial}</p>
-          <p className={clsx('text-xs truncate font-mono', isSelected ? 'text-blue-200' : 'text-slate-400 dark:text-gray-400')}>{drive.serial}</p>
+          <p className="text-sm font-medium truncate">{drive.make || drive.serial}</p>
+          <p className={clsx('text-xs truncate', isSelected ? 'text-blue-200' : 'text-slate-400 dark:text-gray-400')}>{drive.model || drive.serial}</p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <span className={clsx('text-xs', isSelected ? 'text-blue-200' : 'text-slate-400 dark:text-gray-400')}>{formatBytes(drive.capacity_bytes)}</span>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { Server, HardDrive } from 'lucide-react'
 import BayGrid from '../components/BayGrid'
@@ -11,6 +11,13 @@ import EmptyBayModal from '../components/EmptyBayModal'
 import WidgetBar from '../components/WidgetBar'
 import PoolTopologyPanel from '../components/PoolTopologyPanel'
 import { getEnclosures, getDrives, getBays, getProfile, assignDrive, getPools, getPoolTopology } from '../api/client'
+
+function relativeTime(date) {
+  const mins = Math.floor((Date.now() - date.getTime()) / 60000)
+  if (mins < 1) return 'just now'
+  if (mins === 1) return '1 min ago'
+  return `${mins} min ago`
+}
 
 export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onCloseSettings }) {
   const [enclosures, setEnclosures] = useState([])
@@ -25,6 +32,8 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
   const [editTarget, setEditTarget] = useState(null)
   const [poolStats, setPoolStats] = useState([])
   const [poolTopology, setPoolTopology] = useState([])
+  const [lastRefreshed, setLastRefreshed] = useState(null)
+  const [, setTick] = useState(0)
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -61,13 +70,15 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
       setProfiles(profileResults.filter(r => r.status === 'fulfilled').map(r => r.value))
     } finally {
       setLoading(false)
+      setLastRefreshed(new Date())
     }
   }, [])
 
   useEffect(() => {
     loadAll()
-    const interval = setInterval(loadAll, 5 * 60 * 1000)
-    return () => clearInterval(interval)
+    const refresh = setInterval(loadAll, 5 * 60 * 1000)
+    const tick = setInterval(() => setTick(n => n + 1), 60 * 1000)
+    return () => { clearInterval(refresh); clearInterval(tick) }
   }, [loadAll])
 
   const handleDriveSelect = (serial) => {
@@ -127,7 +138,14 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
               <h1 className="text-base font-semibold text-slate-700 dark:text-gray-300 tracking-tight">
                 {enclosures.length > 0 ? 'Enclosures' : 'Getting Started'}
               </h1>
-              <ScanButton onScanComplete={loadAll} onOpenLog={onOpenLog} />
+              <div className="flex items-center gap-3">
+                {lastRefreshed && (
+                  <span className="text-xs text-slate-400 dark:text-gray-600">
+                    Updated {relativeTime(lastRefreshed)}
+                  </span>
+                )}
+                <ScanButton onScanComplete={() => { loadAll(); setLastRefreshed(new Date()) }} onOpenLog={onOpenLog} />
+              </div>
             </div>
 
             {enclosures.length === 0 && (
@@ -233,6 +251,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                 poolStats={poolStats}
                 onEdit={() => setEditTarget({ drive: selectedDrive, profile: selectedProfile })}
                 onClose={() => { setSelectedBay(null); setSelectedDriveSerial(null) }}
+                onReassign={selectedBay ? () => setEmptyBay(selectedBay) : undefined}
               />
             ) : (
               <DriveList

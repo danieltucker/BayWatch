@@ -10,6 +10,7 @@ import {
   Database, LayoutGrid, Activity, AlertTriangle, Cpu, ShieldAlert, Plus, X,
 } from 'lucide-react'
 import WidgetPickerModal from './WidgetPickerModal'
+import WidgetDetailModal, { WIDGET_HAS_DETAIL } from './WidgetDetailModal'
 
 // ── Widget definitions ─────────────────────────────────────────────────────
 
@@ -144,9 +145,10 @@ function loadWidgetIds() {
 
 // ── Sortable widget card ───────────────────────────────────────────────────
 
-function SortableWidgetCard({ id, drives, profiles, baysMap, onRemove }) {
+function SortableWidgetCard({ id, drives, profiles, baysMap, onRemove, onOpenDetail }) {
   const def = WIDGET_DEFS[id]
-  const { value, sub } = def.getValue(drives, profiles, baysMap)
+  const { value } = def.getValue(drives, profiles, baysMap)
+  const hasDetail = WIDGET_HAS_DETAIL.has(id)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = {
@@ -164,7 +166,8 @@ function SortableWidgetCard({ id, drives, profiles, baysMap, onRemove }) {
       style={style}
       {...attributes}
       {...listeners}
-      className="group relative flex items-center gap-3 rounded-xl bg-white dark:bg-gray-900/70 border border-slate-200 dark:border-gray-800/60 px-4 py-3 shrink-0 cursor-grab active:cursor-grabbing select-none"
+      onClick={() => { if (hasDetail && !isDragging) onOpenDetail(id) }}
+      className={`group relative flex items-center gap-3 rounded-xl bg-white dark:bg-gray-900/70 border border-slate-200 dark:border-gray-800/60 px-4 h-[72px] shrink-0 select-none ${hasDetail ? 'cursor-pointer hover:border-blue-400/60 dark:hover:border-blue-600/60 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-colors' : 'cursor-grab active:cursor-grabbing'}`}
     >
       <div className={`shrink-0 ${def.color}`}>
         <Icon size={18} />
@@ -172,7 +175,6 @@ function SortableWidgetCard({ id, drives, profiles, baysMap, onRemove }) {
       <div className="min-w-0">
         <p className="text-xs text-slate-500 dark:text-gray-500 leading-none mb-0.5">{def.label}</p>
         <p className={`text-lg font-bold leading-none ${def.color}`}>{value}</p>
-        {sub && <p className="text-xs text-slate-400 dark:text-gray-600 mt-0.5">{sub}</p>}
       </div>
       <button
         onPointerDown={e => e.stopPropagation()}
@@ -190,6 +192,7 @@ function SortableWidgetCard({ id, drives, profiles, baysMap, onRemove }) {
 export default function WidgetBar({ drives, profiles, baysMap }) {
   const [widgetIds, setWidgetIds] = useState(loadWidgetIds)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [detailWidget, setDetailWidget] = useState(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -230,6 +233,7 @@ export default function WidgetBar({ drives, profiles, baysMap }) {
                 profiles={profiles}
                 baysMap={baysMap}
                 onRemove={removeWidget}
+                onOpenDetail={setDetailWidget}
               />
             ))}
 
@@ -250,6 +254,15 @@ export default function WidgetBar({ drives, profiles, baysMap }) {
           activeIds={widgetIds}
           onAdd={addWidget}
           onClose={() => setPickerOpen(false)}
+        />
+      )}
+
+      {detailWidget && (
+        <WidgetDetailModal
+          widgetId={detailWidget}
+          drives={drives}
+          profiles={profiles}
+          onClose={() => setDetailWidget(null)}
         />
       )}
     </>

@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from db.base import Base, engine, SessionLocal
 import models  # noqa: F401 — registers all ORM models with Base.metadata
-from api.routes import drives, bays, enclosures, profiles, alerts, pools
+from api.routes import drives, bays, enclosures, profiles, alerts, pools, history
 from services import log_buffer, scheduler
 
 
@@ -19,6 +19,7 @@ _MIGRATIONS = [
     "ALTER TABLE bays ADD COLUMN status VARCHAR(16) DEFAULT 'normal'",
     "ALTER TABLE drives ADD COLUMN zfs_pool VARCHAR(64)",
     "ALTER TABLE drives ADD COLUMN vdev_name VARCHAR(32)",
+    "ALTER TABLE notification_configs ADD COLUMN temp_warn_threshold_c INTEGER DEFAULT 55",
 ]
 
 
@@ -56,7 +57,7 @@ async def lifespan(app: FastAPI):
     scheduler.stop()
 
 
-app = FastAPI(title="DriveMap API", version="0.12.0", lifespan=lifespan)
+app = FastAPI(title="DriveMap API", version="0.14.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -71,8 +72,9 @@ app.include_router(drives.router, prefix="/api/drives", tags=["drives"])
 app.include_router(profiles.router, prefix="/api/profiles", tags=["profiles"])
 app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])
 app.include_router(pools.router, prefix="/api/pools", tags=["pools"])
+app.include_router(history.router, prefix="/api/history", tags=["history"])
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "version": "0.12.0"}
+    return {"status": "ok", "version": "0.14.0"}

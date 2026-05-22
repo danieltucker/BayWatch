@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { useDroppable } from '@dnd-kit/core'
 import { getDriveIcon } from '../utils/driveIcon'
+import { useTempThresholds } from '../context/TempThresholdContext'
 
 function formatCapacity(bytes) {
   if (!bytes) return null
@@ -63,6 +64,7 @@ function vdevBadge(vdevName) {
 
 export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, onClick, size = 'sm' }) {
   const { setNodeRef, isOver } = useDroppable({ id: bay.id })
+  const { warnC, dangerC } = useTempThresholds()
   const isEmpty = !drive
   const label = bay.label || `${bay.row + 1}-${bay.col + 1}`
   const s = drive ? statusStyle(drive.smart_status) : null
@@ -100,7 +102,9 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
             {drive.temperature_c != null && (
               <span className={clsx(
                 'text-[9px] font-mono shrink-0 leading-none',
-                drive.temperature_c >= 55 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-400 dark:text-gray-600'
+                drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
+                drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
+                'text-slate-400 dark:text-gray-600'
               )}>
                 {drive.temperature_c}°
               </span>
@@ -154,9 +158,9 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
             <span className={clsx('text-[9px] font-mono px-1 truncate w-full text-center leading-none', s.text)}>
               {drive.serial?.slice(-6)}
             </span>
-            {drive.make && (
+            {drive.model && (
               <span className="text-[8px] text-slate-400 dark:text-gray-500 px-1 truncate w-full text-center leading-none">
-                {drive.make}
+                {drive.model}
               </span>
             )}
             {vb && (
@@ -165,12 +169,26 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
               </span>
             )}
             {drive.temperature_c != null && (
-              <span className={clsx(
-                'text-[8px] font-mono leading-none mt-0.5',
-                drive.temperature_c >= 55 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-400 dark:text-gray-600'
-              )}>
-                {drive.temperature_c}°C
-              </span>
+              <div className="w-full px-1 mt-0.5">
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="h-[3px] flex-1 rounded-full bg-slate-200/80 dark:bg-gray-800 overflow-hidden mr-1.5">
+                    <div
+                      className={clsx('h-full rounded-full',
+                        drive.temperature_c >= dangerC ? 'bg-red-400' :
+                        drive.temperature_c >= warnC   ? 'bg-amber-400' : 'bg-sky-400'
+                      )}
+                      style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }}
+                    />
+                  </div>
+                  <span className={clsx('text-[8px] font-mono leading-none shrink-0',
+                    drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
+                    drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
+                    'text-slate-400 dark:text-gray-600'
+                  )}>
+                    {drive.temperature_c}°
+                  </span>
+                </div>
+              </div>
             )}
           </>
         )}
@@ -220,10 +238,10 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-medium text-slate-800 dark:text-gray-200 leading-tight truncate">
-                {drive.model || 'Unknown Model'}
+                {drive.make || 'Unknown Make'}
               </p>
-              {drive.make && (
-                <p className="text-[8px] text-slate-400 dark:text-gray-500 leading-none truncate">{drive.make}</p>
+              {drive.model && (
+                <p className="text-[8px] text-slate-400 dark:text-gray-500 leading-none truncate">{drive.model}</p>
               )}
             </div>
           </div>
@@ -256,14 +274,19 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
                 <span className="text-[8px] text-slate-400 dark:text-gray-600 uppercase tracking-wide">Temp</span>
                 <span className={clsx(
                   'text-[9px] font-mono font-bold',
-                  drive.temperature_c >= 55 ? 'text-amber-500 dark:text-amber-400' : 'text-sky-500 dark:text-sky-400'
+                  drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
+                  drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
+                  'text-sky-500 dark:text-sky-400'
                 )}>
                   {drive.temperature_c}°C
                 </span>
               </div>
               <div className="h-1 rounded-full bg-slate-200/80 dark:bg-gray-800">
                 <div
-                  className={clsx('h-full rounded-full transition-all', drive.temperature_c >= 55 ? 'bg-amber-400' : 'bg-sky-400')}
+                  className={clsx('h-full rounded-full transition-all',
+                    drive.temperature_c >= dangerC ? 'bg-red-400' :
+                    drive.temperature_c >= warnC   ? 'bg-amber-400' : 'bg-sky-400'
+                  )}
                   style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }}
                 />
               </div>

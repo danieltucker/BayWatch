@@ -4,6 +4,8 @@ import logging
 from sqlalchemy.orm import Session
 
 from models.drive import Drive
+from models.drive_history import DriveHistory
+from models.pool_history import PoolHistory
 from services import lsblk as lsblk_svc
 from services import nvme as nvme_svc
 from services import ses as ses_svc
@@ -91,6 +93,34 @@ def run_scan(db: Session) -> list[Drive]:
             drive.form_factor = info.form_factor
 
         updated.append(drive)
+
+    db.commit()
+
+    # Record history snapshots
+    now = datetime.datetime.utcnow()
+    for drive in updated:
+        db.add(DriveHistory(
+            drive_serial=drive.serial,
+            recorded_at=now,
+            temperature_c=drive.temperature_c,
+            reallocated_sectors=drive.reallocated_sectors,
+            power_on_hours=drive.power_on_hours,
+        ))
+
+    pool_stats = zpool_svc.get_pool_stats()
+    for ps in pool_stats:
+        db.add(PoolHistory(
+            pool_name=ps.name,
+            recorded_at=now,
+            capacity_pct=ps.capacity_pct,
+            size_bytes=ps.size_bytes,
+            alloc_bytes=ps.alloc_bytes,
+        ))
+
+    # Prune history older than 90 days
+    cutoff = now - datetime.timedelta(days=90)
+    db.query(DriveHistory).filter(DriveHistory.recorded_at < cutoff).delete()
+    db.query(PoolHistory).filter(PoolHistory.recorded_at < cutoff).delete()
 
     db.commit()
     logger.info("Scan complete: %d drives found", len(updated))

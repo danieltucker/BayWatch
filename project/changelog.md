@@ -16,6 +16,86 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.14.0] — 2026-05-22
+
+### Fixed
+- **PARTUUID → drive mapping** — `zpool status -P` can return `/dev/disk/by-partuuid/UUID` paths. These are now resolved to their parent block device via `/sys/block` symlink traversal (`_partuuid_to_parent_dev`) before indexing into the vdev map, so drives using by-partuuid paths are correctly matched.
+
+### Added
+- **Partition donut chart** — DriveCard Drive Details panel now shows a donut chart of partition layout when the drive has a `device_path`. Slices are coloured by filesystem type (zfs_member → blue, ext4 → green, btrfs → teal, xfs → violet, swap → amber, ntfs/vfat/exfat → orange). Unpartitioned space shown as a gray remainder slice when total capacity is known. Legend lists fstype + size per slice.
+- **Bay reassignment** — selecting a drive in the sidebar now shows an `ArrowLeftRight` button in DriveCard header. Clicking it opens the existing Assign Bay modal pre-targeted to that bay, supporting reassign, replace, or remove in one flow.
+- **Unassign drive from bay** — Assign Bay modal (Assign Existing tab) now shows a "Remove drive from this bay" button at the top when the bay already has a drive assigned. Calls `PUT /api/bays/{id}/assign` with `drive_serial: null`.
+- **`GET /api/drives/{serial}/partitions`** — new endpoint; runs `lsblk -J -b` on the drive's `device_path` and returns partition list with name, path, size_bytes, fstype, label, mountpoint, partuuid.
+
+### Changed
+- **Make/model order** — make is now the primary label (larger/bold) and model is secondary (smaller/muted) across all views: DriveCard header, BaySlot MD subtext, BaySlot LG card header, DriveList sidebar items, Assign Bay drive list, Pool Topology drive chips.
+
+### Backend
+- `services/zpool.py`: added `_partuuid_to_parent_dev()` using `/sys/block` symlink resolution; `build_disk_to_vdev_map` now handles by-partuuid paths.
+- `services/lsblk.py`: added `get_partitions(device_path)` function returning partition list from `lsblk -J -b`.
+- `api/schemas.py`: added `PartitionRead` schema.
+- `api/routes/drives.py`: added `GET /{serial}/partitions` route; imports `lsblk` service.
+- `main.py`: version bumped to `0.14.0`.
+
+### Frontend
+- `api/client.js`: added `getDrivePartitions(serial)`.
+- `components/DriveCard.jsx`: fetches partitions on mount; renders donut chart (recharts PieChart); make/model swapped in header; reassign button wired to `onReassign` prop.
+- `components/BaySlot.jsx`: MD subtext now shows `drive.model` (was `drive.make`); LG primary shows `drive.make`, secondary shows `drive.model`.
+- `components/DriveList.jsx`: primary label is now `drive.make`, secondary is `drive.model`.
+- `components/EmptyBayModal.jsx`: imports `unassignDrive`; Assign Existing tab shows "Remove drive from this bay" button when `bay.drive_serial` is set; drive list primary label swapped to make.
+- `components/PoolTopologyPanel.jsx`: drive chip subtitle now shows `drive.make` (falls back to `drive.model`).
+- `pages/Dashboard.jsx`: passes `onReassign` to DriveCard when a bay is selected.
+
+---
+
+## [0.13.0] — 2026-05-22
+
+### Fixed
+- **vdev parser depth bug** — `_parse_zpool_status` in `zpool.py` used hardcoded absolute depth values (`depth == 4` for vdev groups, `depth >= 8` for leaf disks). With tab+space mixed indentation, actual relative depths are 2 and 4. Fixed to match correctly.
+- **vdev path normalization** — `build_disk_to_vdev_map` only indexed the exact path from `zpool status -P`, which includes a `-partN` suffix (e.g. `/dev/disk/by-id/ata-...-part1`). lsblk by-id paths point to the whole disk without the suffix. Fixed by also inserting a stripped key for each path using `re.sub(r"-part\d+$", "", path)`.
+
+### Added
+- **Drive history** — `DriveHistory` model records temperature, reallocated sectors, and power-on hours after each scan. Pruned to 90 days. `GET /api/history/drives/{serial}?days=30` returns the series.
+- **Pool history** — `PoolHistory` model records capacity_pct, size_bytes, alloc_bytes per pool per scan. `GET /api/history/pools/{pool_name}?days=30` returns the series.
+- **Temperature warning threshold** — new `temp_warn_threshold_c` column on `notification_configs` (default 55°C, amber). Existing `temp_alert_threshold_c` is now the danger threshold (default 60°C, red).
+- **`TempThresholdContext`** — React context fetched from `/api/alerts/config` on mount; provides `warnC`/`dangerC` to all components without prop drilling.
+- **MD BaySlot temp bar** — compact 3 px colour bar with temp value added to the medium-size bay slot card.
+- **Threshold-aware temp colours** — all temperature indicators (SM/MD/LG BaySlot, DriveCard) now use amber at `warnC` and red at `dangerC` instead of a hardcoded 55°C cutoff.
+- **Temperature history chart** — DriveCard shows a line chart of temperature over 30 days with reference lines at warn and danger thresholds (requires at least 2 history points).
+- **Reallocated sectors history chart** — DriveCard shows an area chart of reallocated sectors over 30 days when any non-zero data exists.
+- **Pool capacity history chart** — PoolTopologyPanel shows a per-pool area chart of capacity % over 30 days when the panel is expanded.
+- **Widget uniform height** — all widget cards are now fixed at `h-[72px]`; subtitle text removed from cards.
+- **Widget detail modals** — clicking a widget with rich data opens a modal: Hottest Drive (top 10), Oldest Drive (top 10), Failed (list), Warranty Warnings, Reallocated Sectors.
+- **Last updated indicator** — "Updated X min ago" label appears next to the Scan button; refreshes every 60 s.
+- **Settings temp threshold fields** — Notifications tab now has separate "Temperature warning threshold" and "Temperature danger threshold" inputs.
+
+### Backend
+- `models/drive_history.py`: new `DriveHistory` ORM model.
+- `models/pool_history.py`: new `PoolHistory` ORM model.
+- `models/__init__.py`: registers both new models.
+- `api/routes/history.py`: new routes file with `GET /history/drives/{serial}` and `GET /history/pools/{pool_name}`.
+- `api/schemas.py`: added `DriveHistoryRead`, `PoolHistoryRead`; added `temp_warn_threshold_c` to `NotificationConfigRead` / `NotificationConfigUpdate`.
+- `models/notification_config.py`: added `temp_warn_threshold_c` (default 55); changed `temp_alert_threshold_c` default to 60.
+- `api/routes/alerts.py`: handles `temp_warn_threshold_c` in `PUT /alerts/config`.
+- `services/scanner.py`: appends `DriveHistory` + `PoolHistory` rows after each scan; prunes >90 days.
+- `services/zpool.py`: fixed depth values; added `re.sub` partition-suffix normalization.
+- `main.py`: version bumped to `0.13.0`; new migration `ALTER TABLE notification_configs ADD COLUMN temp_warn_threshold_c INTEGER DEFAULT 55`.
+
+### Frontend
+- `context/TempThresholdContext.jsx`: new context provider.
+- `App.jsx`: wraps app in `<TempThresholdProvider>`.
+- `api/client.js`: added `getDriveHistory`, `getPoolHistory`.
+- `pages/Dashboard.jsx`: added `lastRefreshed` state + "Updated X min ago" label; 60 s tick for display refresh.
+- `components/BaySlot.jsx`: imports threshold context; MD temp bar; threshold-aware colours in SM/MD/LG.
+- `components/DriveCard.jsx`: imports recharts; fetches drive history; temp + reallocated charts; threshold-aware colours.
+- `components/PoolTopologyPanel.jsx`: fetches pool history when expanded; per-pool capacity area chart.
+- `components/WidgetBar.jsx`: fixed card height; click-to-detail; renders `WidgetDetailModal`.
+- `components/WidgetDetailModal.jsx`: new component with per-widget detail views.
+- `components/SettingsModal.jsx`: warn + danger threshold fields in Notifications tab.
+- `package.json`: added `recharts ^2.15.4`.
+
+---
+
 ## [0.12.0] — 2026-05-21
 
 ### Added

@@ -59,6 +59,8 @@ def update_config(body: NotificationConfigUpdate, db: Session = Depends(get_db))
         config.critical_enabled = body.critical_enabled
     if body.warranty_warning_days is not None:
         config.warranty_warning_days = body.warranty_warning_days
+    if body.temp_warn_threshold_c is not None:
+        config.temp_warn_threshold_c = body.temp_warn_threshold_c
     if body.temp_alert_threshold_c is not None:
         config.temp_alert_threshold_c = body.temp_alert_threshold_c
     if body.log_level is not None:

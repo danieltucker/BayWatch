@@ -1,7 +1,7 @@
 # Project Structure
 
-> Last updated: 2026-05-21
-> Status: v0.12.0 — vdev peer highlighting, richer topology chips, sticky sidebar, array editing, CSV example data
+> Last updated: 2026-05-22
+> Status: v0.14.0 — PARTUUID drive mapping fix, partition donut chart, make/model swap, bay reassignment + unassign
 
 ## Current Layout
 
@@ -35,12 +35,15 @@ drive-position/
 │   │       ├── enclosures.py       # /api/enclosures — CRUD + bay arrays
 │   │       ├── profiles.py         # /api/profiles — drive profile CRUD
 │   │       ├── alerts.py           # /api/alerts — list, config
-│   │       └── pools.py            # /api/pools — ZFS pool stats (GET)
+│   │       ├── pools.py            # /api/pools — ZFS pool stats (GET)
+│   │       └── history.py          # /api/history — drive + pool time-series
 │   ├── models/
 │   │   ├── enclosure.py            # Enclosure ORM model
 │   │   ├── bay_array.py            # BayArray ORM model
 │   │   ├── bay.py                  # Bay ORM model
 │   │   ├── drive.py                # Drive ORM model
+│   │   ├── drive_history.py        # DriveHistory ORM model (temp + realloc + hours per scan)
+│   │   ├── pool_history.py         # PoolHistory ORM model (capacity_pct per scan)
 │   │   ├── drive_profile.py        # DriveProfile ORM model (+ warranty helpers)
 │   │   ├── alert.py                # Alert ORM model
 │   │   └── notification_config.py  # NotificationConfig ORM model
@@ -74,6 +77,9 @@ drive-position/
         ├── App.jsx                 # Router shell
         ├── api/
         │   └── client.js           # Axios instance (baseURL: /api)
+        ├── context/
+        │   ├── ThemeContext.jsx          # Dark/light/auto theme provider
+        │   └── TempThresholdContext.jsx  # warnC/dangerC from alert config; avoids prop drilling
         ├── components/
         │   ├── BayGrid.jsx              # Bay array grid with S/M/L size toggle (localStorage per array)
         │   ├── BaySlot.jsx              # Individual bay slot; form-factor icon; three size variants
@@ -86,7 +92,8 @@ drive-position/
         │   ├── ScanButton.jsx
         │   ├── SettingsModal.jsx        # Tabbed modal (General / Enclosures / Notifications / Import / Appearance)
         │   ├── WarningBadge.jsx
-        │   ├── WidgetBar.jsx            # Draggable widget bar; 13 widget types; localStorage config
+        │   ├── WidgetBar.jsx            # Draggable widget bar; 13 widget types; fixed h-72px; localStorage config
+        │   ├── WidgetDetailModal.jsx    # Per-widget detail modal (hottest, oldest, failed, warranty, reallocated)
         │   └── WidgetPickerModal.jsx    # Widget picker modal
         ├── pages/
         │   ├── Dashboard.jsx            # DnD context, WidgetBar, bay grid, topology panel, drive sidebar; 5-min auto-refresh

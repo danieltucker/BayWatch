@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { HardDrive, X, AlertTriangle, Zap, Archive } from 'lucide-react'
-import { createDrive, assignDrive, setBayStatus } from '../api/client'
+import { createDrive, assignDrive, unassignDrive, setBayStatus } from '../api/client'
 
 const BAY_STATUSES = [
   { value: 'normal',     label: 'Normal',     desc: 'Fully operational bay',          icon: null,          color: 'text-slate-500 dark:text-gray-400',   ring: 'ring-slate-400' },
@@ -32,6 +32,7 @@ export default function EmptyBayModal({ bay, drives = [], onClose, onCreated }) 
   const [search, setSearch] = useState('')
   const [assigning, setAssigning] = useState(false)
   const [assignError, setAssignError] = useState(null)
+  const [unassigning, setUnassigning] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState(bay?.status ?? 'normal')
   const [statusSaving, setStatusSaving] = useState(false)
   const [statusSaved, setStatusSaved] = useState(false)
@@ -85,6 +86,17 @@ export default function EmptyBayModal({ bay, drives = [], onClose, onCreated }) 
     } catch (err) {
       setAssignError(err.response?.data?.detail || 'Failed to assign drive')
       setAssigning(false)
+    }
+  }
+
+  async function handleUnassign() {
+    setUnassigning(true); setAssignError(null)
+    try {
+      await unassignDrive(bay.id)
+      onCreated?.()
+    } catch (err) {
+      setAssignError(err.response?.data?.detail || 'Failed to unassign drive')
+      setUnassigning(false)
     }
   }
 
@@ -144,6 +156,16 @@ export default function EmptyBayModal({ bay, drives = [], onClose, onCreated }) 
           {/* Assign Existing */}
           {tab === 'assign' && (
             <div className="p-5 flex flex-col gap-3">
+              {bay?.drive_serial && (
+                <button
+                  onClick={handleUnassign}
+                  disabled={unassigning}
+                  className="flex items-center gap-2 w-full rounded-lg px-3 py-2.5 border border-red-200 dark:border-red-800/40 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/40 transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  <HardDrive size={14} className="shrink-0" />
+                  {unassigning ? 'Removing…' : 'Remove drive from this bay'}
+                </button>
+              )}
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -167,9 +189,9 @@ export default function EmptyBayModal({ bay, drives = [], onClose, onCreated }) 
                     <HardDrive size={16} className="shrink-0 text-slate-400 dark:text-gray-500" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-800 dark:text-gray-200 truncate">
-                        {drive.model || drive.serial}
+                        {drive.make || drive.serial}
                       </p>
-                      <p className="text-xs text-slate-400 dark:text-gray-500 font-mono truncate">{drive.serial}</p>
+                      <p className="text-xs text-slate-400 dark:text-gray-500 truncate">{drive.model || drive.serial}</p>
                     </div>
                     {drive.capacity_bytes && (
                       <span className="text-xs text-slate-400 dark:text-gray-500 shrink-0">

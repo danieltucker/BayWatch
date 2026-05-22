@@ -3,9 +3,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Qu
 from sqlalchemy.orm import Session
 
 from api.deps import get_db
-from api.schemas import DriveCreate, DrivePatch, DriveRead
+from api.schemas import DriveCreate, DrivePatch, DriveRead, PartitionRead
 from models.drive import Drive
 from services import csv_import as csv_import_svc
+from services import lsblk as lsblk_svc
 from services import log_buffer
 from services import scanner
 
@@ -40,6 +41,16 @@ def get_drive(serial: str, db: Session = Depends(get_db)):
     if not drive:
         raise HTTPException(status_code=404, detail="Drive not found")
     return drive
+
+
+@router.get("/{serial}/partitions", response_model=list[PartitionRead])
+def get_drive_partitions(serial: str, db: Session = Depends(get_db)):
+    drive = db.get(Drive, serial)
+    if not drive:
+        raise HTTPException(status_code=404, detail="Drive not found")
+    if not drive.device_path:
+        return []
+    return lsblk_svc.get_partitions(drive.device_path)
 
 
 @router.post("/scan", status_code=202)

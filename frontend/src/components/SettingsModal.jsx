@@ -46,7 +46,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
   const [alertForm, setAlertForm] = useState({
     bot_token: '', chat_id: '', status_frequency: 'disabled',
     critical_enabled: true, warranty_warning_days: 90,
-    temp_alert_threshold_c: 55, log_level: 'INFO',
+    temp_warn_threshold_c: 55, temp_alert_threshold_c: 60, log_level: 'INFO',
   })
   const [alertSaved, setAlertSaved] = useState(false)
   const [editingArray, setEditingArray] = useState(null)
@@ -64,7 +64,8 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
       status_frequency: cfg.status_frequency,
       critical_enabled: cfg.critical_enabled,
       warranty_warning_days: cfg.warranty_warning_days,
-      temp_alert_threshold_c: cfg.temp_alert_threshold_c ?? 55,
+      temp_warn_threshold_c: cfg.temp_warn_threshold_c ?? 55,
+      temp_alert_threshold_c: cfg.temp_alert_threshold_c ?? 60,
       log_level: cfg.log_level ?? 'INFO',
     }))
   }
@@ -470,9 +471,12 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                   <Field label="Warranty warning (days before expiry)" type="number"
                     value={alertForm.warranty_warning_days}
                     onChange={v => setAlertForm(f => ({ ...f, warranty_warning_days: parseInt(v) || 90 }))} />
-                  <Field label="Temperature alert threshold (°C)" type="number"
+                  <Field label="Temperature warning threshold (°C) — amber" type="number"
+                    value={alertForm.temp_warn_threshold_c}
+                    onChange={v => setAlertForm(f => ({ ...f, temp_warn_threshold_c: parseInt(v) || 55 }))} />
+                  <Field label="Temperature danger threshold (°C) — red" type="number"
                     value={alertForm.temp_alert_threshold_c}
-                    onChange={v => setAlertForm(f => ({ ...f, temp_alert_threshold_c: parseInt(v) || 55 }))} />
+                    onChange={v => setAlertForm(f => ({ ...f, temp_alert_threshold_c: parseInt(v) || 60 }))} />
                   <div className="flex flex-col gap-1">
                     <label className="text-sm text-slate-500 dark:text-gray-400">Log Level</label>
                     <div className="flex gap-2">

@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Database, ChevronDown, ChevronRight } from 'lucide-react'
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts'
 import clsx from 'clsx'
+import { getPoolHistory } from '../api/client'
 
 function smartColor(status) {
   if (status === 'PASSED') return 'border-emerald-500/60 bg-emerald-950/20 text-emerald-400'
@@ -32,6 +34,17 @@ export default function PoolTopologyPanel({ poolTopology, poolStats, driveMap, o
   const [open, setOpen] = useState(
     () => localStorage.getItem('pool-topology-open') === 'true'
   )
+  const [poolHistories, setPoolHistories] = useState({})
+
+  useEffect(() => {
+    if (!open || !poolTopology.length) return
+    poolTopology.forEach(pool => {
+      if (poolHistories[pool.name]) return
+      getPoolHistory(pool.name, 30).then(h => {
+        setPoolHistories(prev => ({ ...prev, [pool.name]: h }))
+      }).catch(() => {})
+    })
+  }, [open, poolTopology])
 
   const pathMap = Object.fromEntries(
     Object.values(driveMap)
@@ -92,6 +105,33 @@ export default function PoolTopologyPanel({ poolTopology, poolStats, driveMap, o
                   )}
                 </div>
 
+                {/* Pool capacity history */}
+                {(() => {
+                  const h = (poolHistories[pool.name] || []).filter(r => r.capacity_pct != null)
+                  if (h.length < 2) return null
+                  const chartData = h.map(r => ({
+                    date: new Date(r.recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    pct: r.capacity_pct,
+                  }))
+                  return (
+                    <div>
+                      <p className="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-1">Capacity (30d)</p>
+                      <ResponsiveContainer width="100%" height={56}>
+                        <AreaChart data={chartData} margin={{ top: 2, right: 4, bottom: 0, left: -24 }}>
+                          <XAxis dataKey="date" tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                          <YAxis tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} domain={[0, 100]} unit="%" />
+                          <Tooltip
+                            contentStyle={{ fontSize: 10, padding: '4px 8px', borderRadius: 6, border: 'none', background: 'rgba(15,23,42,0.85)', color: '#e2e8f0' }}
+                            formatter={v => [`${v}%`, 'Used']}
+                            labelStyle={{ color: '#94a3b8' }}
+                          />
+                          <Area type="monotone" dataKey="pct" stroke="#3b82f6" fill="#3b82f622" strokeWidth={1.5} dot={false} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )
+                })()}
+
                 {/* vdev rows */}
                 <div className="flex flex-col gap-2.5">
                   {pool.vdevs.map(vdev => (
@@ -126,10 +166,10 @@ export default function PoolTopologyPanel({ poolTopology, poolStats, driveMap, o
                                   <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', smartDot(drive.smart_status))} />
                                 )}
                               </div>
-                              {/* Model */}
-                              {drive?.model && (
+                              {/* Make / Model */}
+                              {(drive?.make || drive?.model) && (
                                 <span className="text-[8px] leading-none mt-1 truncate w-full opacity-60">
-                                  {drive.model}
+                                  {drive.make || drive.model}
                                 </span>
                               )}
                               {/* Capacity + temp row */}

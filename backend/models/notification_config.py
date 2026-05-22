@@ -17,5 +17,6 @@ class NotificationConfig(Base):
     )  # daily | weekly | monthly | disabled
     critical_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     warranty_warning_days: Mapped[int] = mapped_column(default=90)
-    temp_alert_threshold_c: Mapped[int] = mapped_column(default=55)
+    temp_warn_threshold_c: Mapped[int] = mapped_column(default=55)
+    temp_alert_threshold_c: Mapped[int] = mapped_column(default=60)
     log_level: Mapped[str] = mapped_column(String(16), default="INFO")

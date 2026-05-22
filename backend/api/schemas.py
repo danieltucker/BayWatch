@@ -170,6 +170,7 @@ class NotificationConfigRead(BaseModel):
     status_frequency: str
     critical_enabled: bool
     warranty_warning_days: int
+    temp_warn_threshold_c: int
     temp_alert_threshold_c: int
     log_level: str
 
@@ -179,5 +180,40 @@ class NotificationConfigUpdate(BaseModel):
     status_frequency: Optional[str] = None
     critical_enabled: Optional[bool] = None
     warranty_warning_days: Optional[int] = None
+    temp_warn_threshold_c: Optional[int] = None
     temp_alert_threshold_c: Optional[int] = None
     log_level: Optional[str] = None
+
+
+# ── Partitions ────────────────────────────────────────────────────────────────
+
+class PartitionRead(BaseModel):
+    name: str
+    path: str
+    size_bytes: int
+    fstype: Optional[str] = None
+    label: Optional[str] = None
+    mountpoint: Optional[str] = None
+    partuuid: Optional[str] = None
+
+
+# ── Drive / Pool History ───────────────────────────────────────────────────────
+
+class DriveHistoryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    drive_serial: str
+    recorded_at: datetime.datetime
+    temperature_c: Optional[int] = None
+    reallocated_sectors: Optional[int] = None
+    power_on_hours: Optional[int] = None
+
+
+class PoolHistoryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    pool_name: str
+    recorded_at: datetime.datetime
+    capacity_pct: Optional[int] = None
+    size_bytes: Optional[int] = None
+    alloc_bytes: Optional[int] = None
