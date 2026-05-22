@@ -20,6 +20,7 @@ class Bay(Base):
     row: Mapped[int] = mapped_column(nullable=False)
     col: Mapped[int] = mapped_column(nullable=False)
     label: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="normal")  # normal|damaged|hot_spare|cold_spare
     drive_serial: Mapped[str | None] = mapped_column(
         ForeignKey("drives.serial", ondelete="SET NULL"), nullable=True
     )

@@ -42,15 +42,38 @@ function statusStyle(status) {
   }
 }
 
-export default function BaySlot({ bay, drive, profile, isSelected, onClick, size = 'sm' }) {
+const BAY_STATUS_STYLE = {
+  damaged:    { badge: 'bg-orange-500/20 text-orange-400 border border-orange-500/40', label: 'DMG', ring: 'ring-1 ring-orange-500/40 !border-orange-500/50' },
+  hot_spare:  { badge: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40',       label: 'HS',  ring: 'ring-1 ring-cyan-500/40 !border-cyan-500/50' },
+  cold_spare: { badge: 'bg-violet-500/20 text-violet-400 border border-violet-500/40', label: 'CS',  ring: 'ring-1 ring-violet-500/40 !border-violet-500/50' },
+}
+
+function vdevBadge(vdevName) {
+  if (!vdevName) return null
+  const m = vdevName.match(/^mirror-(\d+)$/)
+  if (m) return { label: `M${m[1]}`, cls: 'bg-blue-500/20 text-blue-400 border-blue-500/40' }
+  if (/^raidz3/.test(vdevName)) return { label: 'Z3', cls: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40' }
+  if (/^raidz2/.test(vdevName)) return { label: 'Z2', cls: 'bg-teal-500/20 text-teal-400 border-teal-500/40' }
+  if (/^raidz/.test(vdevName))  return { label: 'Z1', cls: 'bg-green-500/20 text-green-400 border-green-500/40' }
+  if (/^spare/.test(vdevName))  return { label: 'SP',  cls: 'bg-violet-500/20 text-violet-400 border-violet-500/40' }
+  if (/^cache/.test(vdevName))  return { label: 'L2',  cls: 'bg-amber-500/20 text-amber-400 border-amber-500/40' }
+  if (/^log/.test(vdevName))    return { label: 'LOG', cls: 'bg-orange-500/20 text-orange-400 border-orange-500/40' }
+  return { label: 'ZFS', cls: 'bg-slate-500/20 text-slate-400 border-slate-500/40' }
+}
+
+export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, onClick, size = 'sm' }) {
   const { setNodeRef, isOver } = useDroppable({ id: bay.id })
   const isEmpty = !drive
   const label = bay.label || `${bay.row + 1}-${bay.col + 1}`
   const s = drive ? statusStyle(drive.smart_status) : null
 
+  const bayStatus = BAY_STATUS_STYLE[bay.status] ?? null
+  const vb = drive ? vdevBadge(drive.vdev_name) : null
+
   const overSelected = clsx(
     isOver && '!border-blue-400 !bg-blue-50 dark:!bg-blue-950/40 ring-2 ring-blue-400/40',
-    isSelected && '!border-blue-500/70 dark:!border-white/60 ring-2 ring-blue-400/20 dark:ring-white/20'
+    isSelected && '!border-blue-500/70 dark:!border-white/60 ring-2 ring-blue-400/20 dark:ring-white/20',
+    isVdevPeer && !isSelected && 'ring-2 ring-cyan-400/50 !border-cyan-400/40'
   )
 
   // ── SM: Excel-style flat row ─────────────────────────────────────────────────
@@ -64,6 +87,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, onClick, size
           isEmpty
             ? 'border-dashed border-slate-200 dark:border-gray-800/50 hover:border-slate-300 dark:hover:border-gray-700/60 bg-transparent'
             : clsx(s.border, s.bg, s.hover),
+          bayStatus?.ring,
           overSelected
         )}
       >
@@ -81,10 +105,20 @@ export default function BaySlot({ bay, drive, profile, isSelected, onClick, size
                 {drive.temperature_c}°
               </span>
             )}
+            {vb && (
+              <span className={clsx('text-[8px] font-mono font-bold px-1 py-0.5 rounded border shrink-0 leading-none', vb.cls)}>
+                {vb.label}
+              </span>
+            )}
             <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', s.dot)} />
           </>
         ) : (
           <span className="text-slate-200 dark:text-gray-800 text-sm flex-1">·</span>
+        )}
+        {bayStatus && (
+          <span className={clsx('text-[8px] font-mono font-bold px-1 py-0.5 rounded shrink-0', bayStatus.badge)}>
+            {bayStatus.label}
+          </span>
         )}
       </div>
     )
@@ -106,7 +140,12 @@ export default function BaySlot({ bay, drive, profile, isSelected, onClick, size
         )}
       >
         <span className="absolute top-1 left-1.5 text-[8px] text-slate-400 dark:text-gray-700 font-mono leading-none">{label}</span>
-        {drive && <span className={clsx('absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full', s.dot)} />}
+        {drive && !bayStatus && <span className={clsx('absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full', s.dot)} />}
+        {bayStatus && (
+          <span className={clsx('absolute top-1 right-1 text-[8px] font-mono font-bold px-1 py-0.5 rounded leading-none', bayStatus.badge)}>
+            {bayStatus.label}
+          </span>
+        )}
         {isEmpty ? (
           <span className="text-slate-300 dark:text-gray-800 text-xl">·</span>
         ) : (
@@ -118,6 +157,11 @@ export default function BaySlot({ bay, drive, profile, isSelected, onClick, size
             {drive.make && (
               <span className="text-[8px] text-slate-400 dark:text-gray-500 px-1 truncate w-full text-center leading-none">
                 {drive.make}
+              </span>
+            )}
+            {vb && (
+              <span className={clsx('text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border leading-none mt-0.5', vb.cls)}>
+                {vb.label}
               </span>
             )}
             {drive.temperature_c != null && (
@@ -156,7 +200,12 @@ export default function BaySlot({ bay, drive, profile, isSelected, onClick, size
       )}
     >
       <span className="absolute top-1.5 left-2 text-[8px] text-slate-400 dark:text-gray-600 font-mono leading-none z-10">{label}</span>
-      {drive && <span className={clsx('absolute top-1.5 right-1.5 w-2 h-2 rounded-full shadow-sm z-10', s.dot)} />}
+      {drive && !bayStatus && <span className={clsx('absolute top-1.5 right-1.5 w-2 h-2 rounded-full shadow-sm z-10', s.dot)} />}
+      {bayStatus && (
+        <span className={clsx('absolute top-1.5 right-1.5 z-10 text-[8px] font-mono font-bold px-1.5 py-0.5 rounded leading-none', bayStatus.badge)}>
+          {bayStatus.label}
+        </span>
+      )}
 
       {isEmpty ? (
         <div className="flex-1 flex items-center justify-center">
@@ -183,6 +232,22 @@ export default function BaySlot({ bay, drive, profile, isSelected, onClick, size
           <span className={clsx('text-[9px] font-mono leading-none truncate', s.text)}>
             {drive.serial}
           </span>
+
+          {/* Pool + vdev */}
+          {(drive.zfs_pool || vb) && (
+            <div className="flex items-center gap-1.5">
+              {drive.zfs_pool && (
+                <span className="text-[8px] text-slate-400 dark:text-gray-500 font-mono truncate flex-1">
+                  {drive.zfs_pool}
+                </span>
+              )}
+              {vb && (
+                <span className={clsx('text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border leading-none shrink-0', vb.cls)}>
+                  {vb.label}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Temp bar */}
           {drive.temperature_c != null && (

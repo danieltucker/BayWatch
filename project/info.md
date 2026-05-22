@@ -59,6 +59,7 @@ This means the app works on TrueNAS Scale, Unraid, or any Linux host — it does
 - `array_id` (FK → BayArray)
 - `row`, `col` — position within the array grid
 - `label` — optional user-defined label (e.g., "A1")
+- `status` — `normal` | `damaged` | `hot_spare` | `cold_spare`
 - `drive_serial` — nullable FK to Drive (the assignment)
 
 ### Drive
@@ -77,6 +78,7 @@ This means the app works on TrueNAS Scale, Unraid, or any Linux host — it does
 - `pending_sectors`
 - `uncorrectable_errors`
 - `last_scanned`
+- `zfs_pool` — pool name if drive is a ZFS member (populated by scanner, nullable)
 
 ### DriveProfile (user-entered)
 - `serial` (PK, FK → Drive)
@@ -169,3 +171,6 @@ Additional channels (email, Slack, etc.) are a future extension — architecture
 | 18 | Alerts always logged before Telegram dispatch | Alert records written to DB before the send attempt. Notifications appear in the console for all users regardless of Telegram config. |
 | 19 | Bell icon + pinned console notifications | Undismissed alerts surfaced via bell (color by severity) + pinned section in console. Dismissed IDs stored in `localStorage`. No new backend endpoints needed. |
 | 20 | In-app temp threshold + log level via NotificationConfig | `TEMP_ALERT_THRESHOLD_C` and `LOG_LEVEL` moved from env vars to `notification_configs` table. DB migration runs on startup. Log level applies immediately on save. Only `DATABASE_URL` and `SCAN_INTERVAL_MINUTES` remain as env vars. |
+| 21 | ZFS pool detection via lsblk FSTYPE/LABEL | `lsblk` extended with `FSTYPE` and `LABEL` columns; drives with `fstype: zfs_member` (disk or partition) get `zfs_pool` populated. `zpool list -Hp` provides pool usage stats. Graceful degradation when ZFS not loaded. |
+| 22 | Bay status field | Bays have `status: normal \| damaged \| hot_spare \| cold_spare`. Set via Bay Status tab in click modal. Visual badges in BaySlot (all 3 sizes). Status banner in DriveCard for non-normal occupied bays. |
+| 23 | Pool stats endpoint | `GET /api/pools` returns `list[PoolRead]` from `zpool list`. Called from Dashboard on load. Pool usage bar shown in DriveCard when drive's pool is identified. |

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from api.deps import get_db
-from api.schemas import BayAssign, BayRead
+from api.schemas import BayAssign, BayRead, BayStatusUpdate
 from models.bay import Bay
 from models.bay_array import BayArray
 from models.drive import Drive
@@ -57,3 +57,18 @@ def set_label(bay_id: int, label: str = "", db: Session = Depends(get_db)):
     bay.label = label.strip() or None
     db.commit()
     return {"ok": True}
+
+
+_VALID_STATUSES = {"normal", "damaged", "hot_spare", "cold_spare"}
+
+@router.put("/{bay_id}/status", response_model=BayRead)
+def set_status(bay_id: int, body: BayStatusUpdate, db: Session = Depends(get_db)):
+    if body.status not in _VALID_STATUSES:
+        raise HTTPException(status_code=422, detail=f"status must be one of: {', '.join(sorted(_VALID_STATUSES))}")
+    bay = db.get(Bay, bay_id)
+    if not bay:
+        raise HTTPException(status_code=404, detail="Bay not found")
+    bay.status = body.status
+    db.commit()
+    db.refresh(bay)
+    return bay

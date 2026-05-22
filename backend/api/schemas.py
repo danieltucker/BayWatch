@@ -17,6 +17,13 @@ class BayArrayBase(BaseModel):
 class BayArrayCreate(BayArrayBase):
     pass
 
+class BayArrayUpdate(BaseModel):
+    name: Optional[str] = None
+    rows: Optional[int] = None
+    cols: Optional[int] = None
+    group_type: Optional[str] = None
+    purpose: Optional[str] = None
+
 class BayArrayRead(BayArrayBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -46,10 +53,14 @@ class BayRead(BaseModel):
     row: int
     col: int
     label: Optional[str] = None
+    status: str = "normal"
     drive_serial: Optional[str] = None
 
 class BayAssign(BaseModel):
     drive_serial: Optional[str] = None  # None to unassign
+
+class BayStatusUpdate(BaseModel):
+    status: str  # normal|damaged|hot_spare|cold_spare
 
 
 # ── Drive ────────────────────────────────────────────────────────────────────
@@ -91,6 +102,34 @@ class DriveRead(BaseModel):
     pending_sectors: Optional[int] = None
     uncorrectable_errors: Optional[int] = None
     last_scanned: Optional[datetime.datetime] = None
+    zfs_pool: Optional[str] = None
+    vdev_name: Optional[str] = None
+
+
+# ── Pool ──────────────────────────────────────────────────────────────────────
+
+class PoolRead(BaseModel):
+    name: str
+    size_bytes: int
+    alloc_bytes: int
+    free_bytes: int
+    capacity_pct: int
+
+
+class VdevDiskRead(BaseModel):
+    path: str
+    state: str
+
+class VdevRead(BaseModel):
+    name: str
+    type: str
+    state: str
+    disks: list[VdevDiskRead] = []
+
+class PoolTopologyRead(BaseModel):
+    name: str
+    state: str
+    vdevs: list[VdevRead] = []
 
 
 # ── Drive Profile ─────────────────────────────────────────────────────────────

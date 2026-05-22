@@ -8,6 +8,7 @@ from services import lsblk as lsblk_svc
 from services import nvme as nvme_svc
 from services import ses as ses_svc
 from services import smartctl as smartctl_svc
+from services import zpool as zpool_svc
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,13 @@ def run_scan(db: Session) -> list[Drive]:
     logger.info("Scan started")
     ses_slots = ses_svc.get_enclosure_slots()
     devices = lsblk_svc.list_disks()
+
+    # Build disk-path → vdev-name map from ZFS topology (best-effort)
+    try:
+        topology = zpool_svc.get_pool_topology()
+        disk_to_vdev = zpool_svc.build_disk_to_vdev_map(topology)
+    except Exception:
+        disk_to_vdev = {}
     logger.info("Discovered %d block device(s) via lsblk", len(devices))
 
     # Supplement with any NVMe devices lsblk may miss
@@ -58,6 +66,8 @@ def run_scan(db: Session) -> list[Drive]:
         # Always update live SMART telemetry
         drive.device_path = dev.path
         drive.by_id_path = dev.by_id_path or drive.by_id_path
+        drive.zfs_pool = dev.zfs_pool
+        drive.vdev_name = disk_to_vdev.get(dev.path) or disk_to_vdev.get(dev.by_id_path or "")
         drive.smart_status = info.smart_status
         drive.temperature_c = info.temperature_c
         drive.power_on_hours = info.power_on_hours

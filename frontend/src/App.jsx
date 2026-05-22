@@ -74,7 +74,8 @@ export default function App() {
     function onKey(e) {
       if (e.key === '`' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const tag = document.activeElement?.tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+        const override = localStorage.getItem('console-tilde-override') === 'true'
+        if (!override && (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT')) return
         e.preventDefault()
         setLogOpen(v => !v)
       }
@@ -101,6 +102,12 @@ export default function App() {
     <ThemeProvider>
       <BrowserRouter>
         <div className="min-h-screen bg-slate-50 dark:bg-gray-950 text-slate-900 dark:text-gray-100">
+          {logOpen && (
+            <div
+              className="fixed inset-0 z-[45]"
+              onClick={() => setLogOpen(false)}
+            />
+          )}
           <LogConsole
             open={logOpen}
             alerts={undismissed}

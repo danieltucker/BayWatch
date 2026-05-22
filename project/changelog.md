@@ -16,6 +16,72 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.12.0] — 2026-05-21
+
+### Added
+- **vdev peer highlighting** — selecting a drive highlights all other drives in the same vdev with a cyan ring on every BaySlot in the grid. Computed from `selectedDrive.vdev_name`; passed as `highlightVdev` prop through Dashboard → BayGrid → BaySlot.
+- **Richer topology panel chips** — each drive chip in the Pool Topology panel is now 120 px wide and shows: last-6 serial + SMART status dot, model (truncated), capacity, and temperature. Previously only showed serial + temp.
+- **Sticky drive details sidebar** — on large screens the right-hand drive details / drive list sidebar is now `position: sticky` (`lg:sticky lg:top-[49px] lg:h-[calc(100vh-49px)]`). It stays in the viewport as you scroll down through a long enclosure list.
+- **Array editing** — each bay array row in Settings → Enclosures now has a pencil icon that opens an inline edit form. Editable fields: name, rows, cols, group type, purpose. Reducing grid size removes out-of-bounds bays (and their drive assignments) with a warning shown before save.
+- **`PUT /api/enclosures/{id}/arrays/{array_id}`** — new endpoint; updates any combination of name, rows, cols, group_type, purpose. Automatically adds bays for newly-in-bounds positions and deletes bays outside the new bounds.
+- **CSV template with example data** — "Download Template" in Settings → Import now includes 3 example rows (a fully-populated HDD, a partial HDD, and an SSD with no bay position) so users can see exactly what each field expects.
+
+### Backend
+- `api/schemas.py`: added `BayArrayUpdate` schema (all fields optional).
+- `api/routes/enclosures.py`: added `PUT /{enclosure_id}/arrays/{array_id}` route; imports `or_` from SQLAlchemy for out-of-bounds bay query.
+
+---
+
+## [0.11.0] — 2026-05-21
+
+### Added
+- **Silent auto-refresh** — Dashboard fetches all data (drives, bays, pools, topology, profiles) silently every 5 minutes via `setInterval`; temperatures and pool stats update without user action or a loading spinner.
+- **vdev membership** — each drive now carries a `vdev_name` field populated at scan time from `zpool status -P` output. Shows as a coloured badge on BaySlot (all three sizes):
+  - `mirror-N` → `M{N}` blue · `raidz1-N` → `Z1` green · `raidz2-N` → `Z2` teal · `raidz3-N` → `Z3` cyan
+  - `spare` → `SP` violet · `cache` → `L2` amber · `log` → `LOG` orange · single-disk → `ZFS` slate
+- **Pool Topology panel** — collapsible panel in Dashboard (below enclosures); collapsed by default, state persisted to `localStorage pool-topology-open`. Shows per-pool state badge + usage bar, then a row per vdev with drive chips. Each chip shows last-6 serial, SMART status border colour, temperature; clicking selects the drive in the sidebar.
+- **`GET /api/pools/topology`** — new endpoint; parses `zpool status -P` into a structured vdev tree (`PoolTopologyRead`).
+- **General tab in Settings** — new first tab with a "Tilde always opens/closes console" toggle. Stored in `localStorage console-tilde-override`; when enabled the backtick key opens/closes the console even when an input field is focused.
+- **Notification dismiss contrast** — dismiss × button on pinned alerts changed from `text-gray-700` to `text-gray-400 hover:text-gray-100` for legibility on the dark console background.
+- **Version badge contrast** — version string in console header wrapped in `bg-gray-800 border border-gray-700 text-gray-300` badge for better readability.
+- **Clear All notifications** — "Clear all" button added next to the "Notifications" label in the console pinned-alerts section; calls `onDismissAlert` for every alert.
+
+### Backend
+- `Drive` model: new `vdev_name` field (`VARCHAR(32)`, nullable).
+- `services/zpool.py`: extended with `VdevDisk`, `Vdev`, `PoolTopology` dataclasses; `get_pool_topology()` runs `zpool status -P` and parses the indentation-based tree; `build_disk_to_vdev_map()` returns `{device_path: vdev_name}`.
+- `api/schemas.py`: added `VdevDiskRead`, `VdevRead`, `PoolTopologyRead`; `DriveRead` gets `vdev_name: Optional[str]`.
+- `api/routes/pools.py`: added `GET /topology` route.
+- `scanner.py`: builds `disk_to_vdev` map at scan start; populates `drive.vdev_name` for each discovered disk.
+- `main.py`: version bumped to `0.11.0`; new migration `ALTER TABLE drives ADD COLUMN vdev_name VARCHAR(32)`.
+
+---
+
+## [0.10.0] — 2026-05-21
+
+### Added
+- **Click outside to close console** — clicking the backdrop behind the log console closes it (in addition to the backtick toggle).
+- **Version in console header** — console title bar now shows the running app version (e.g. `v0.10.0`) fetched from `GET /api/health`; replaces the old `` ` to close `` hint text.
+- **ZFS pool detection** — after each scan, `lsblk` is extended with `FSTYPE` and `LABEL` columns; drives whose disk or partition has `fstype: zfs_member` get their `zfs_pool` field populated with the pool name. ZFS pool badge shown in DriveList sidebar.
+- **Pool usage stats** — `GET /api/pools` returns live pool stats via `zpool list` (name, size, alloc, free, capacity %). Pool usage bar shown in DriveCard when a drive's pool is identified.
+- **Power-on hours bar** — DriveCard now shows a visual progress bar for power-on hours (scale 0–50,000h), color-coded blue/amber/orange by wear level.
+- **Bay status** — bays can be marked as `normal`, `damaged`, `hot_spare`, or `cold_spare`:
+  - Status is set via the new **Bay Status** tab in the bay click modal (works for both empty and occupied bays via `EmptyBayModal`).
+  - Visual treatment in BaySlot: `damaged` → orange `DMG` badge, `hot_spare` → cyan `HS` badge, `cold_spare` → violet `CS` badge, across all three slot sizes (SM/MD/LG).
+  - Status banner shown in DriveCard sidebar for occupied bays with non-normal status.
+- **`GET /api/pools`** — new endpoint returning `list[PoolRead]`; returns `[]` gracefully when ZFS is unavailable.
+- **`PUT /api/bays/{id}/status`** — new endpoint accepting `BayStatusUpdate { status }`.
+
+### Backend
+- `Bay` model: new `status` field (`VARCHAR(16)`, default `"normal"`).
+- `Drive` model: new `zfs_pool` field (`VARCHAR(64)`, nullable).
+- `lsblk.py`: extended `BlockDevice` with `zfs_pool`; lsblk command now includes `FSTYPE,LABEL`; `_extract_zfs_pool()` checks disk + child partitions.
+- `services/zpool.py`: new service; `get_pool_stats()` runs `zpool list -Hp`; returns `[]` if `zpool` not installed or no pools exist.
+- `api/routes/pools.py`: new router registered at `/api/pools`.
+- `main.py`: version bumped to `0.10.0`; two new migrations (`bays.status`, `drives.zfs_pool`); `/api/health` now returns `version`.
+- `Dockerfile`: added `zfsutils-linux` to apt-get install.
+
+---
+
 ## [0.9.0] — 2026-05-21
 
 ### Fixed

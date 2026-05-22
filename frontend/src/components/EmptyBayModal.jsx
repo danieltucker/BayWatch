@@ -1,6 +1,13 @@
 import { useState } from 'react'
-import { HardDrive, X } from 'lucide-react'
-import { createDrive, assignDrive } from '../api/client'
+import { HardDrive, X, AlertTriangle, Zap, Archive } from 'lucide-react'
+import { createDrive, assignDrive, setBayStatus } from '../api/client'
+
+const BAY_STATUSES = [
+  { value: 'normal',     label: 'Normal',     desc: 'Fully operational bay',          icon: null,          color: 'text-slate-500 dark:text-gray-400',   ring: 'ring-slate-400' },
+  { value: 'damaged',    label: 'Damaged',    desc: 'Bay is damaged or unusable',     icon: AlertTriangle, color: 'text-orange-500 dark:text-orange-400', ring: 'ring-orange-500' },
+  { value: 'hot_spare',  label: 'Hot Spare',  desc: 'Drive ready for instant failover', icon: Zap,          color: 'text-cyan-500 dark:text-cyan-400',    ring: 'ring-cyan-500' },
+  { value: 'cold_spare', label: 'Cold Spare', desc: 'Drive stored for manual swap',    icon: Archive,       color: 'text-violet-500 dark:text-violet-400', ring: 'ring-violet-500' },
+]
 
 const FORM_FACTORS = ['', '3.5"', '2.5"', 'M.2', 'U.2', 'other']
 
@@ -25,6 +32,23 @@ export default function EmptyBayModal({ bay, drives = [], onClose, onCreated }) 
   const [search, setSearch] = useState('')
   const [assigning, setAssigning] = useState(false)
   const [assignError, setAssignError] = useState(null)
+  const [selectedStatus, setSelectedStatus] = useState(bay?.status ?? 'normal')
+  const [statusSaving, setStatusSaving] = useState(false)
+  const [statusSaved, setStatusSaved] = useState(false)
+
+  async function handleSetStatus(value) {
+    setSelectedStatus(value)
+    if (!bay) return
+    setStatusSaving(true); setStatusSaved(false)
+    try {
+      await setBayStatus(bay.id, value)
+      onCreated?.()
+      setStatusSaved(true)
+      setTimeout(() => setStatusSaved(false), 2000)
+    } catch {} finally {
+      setStatusSaving(false)
+    }
+  }
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
@@ -104,6 +128,7 @@ export default function EmptyBayModal({ bay, drives = [], onClose, onCreated }) 
             {[
               { key: 'assign', label: 'Assign Existing' },
               { key: 'create', label: 'Create New' },
+              { key: 'status', label: 'Bay Status' },
             ].map(t => (
               <button key={t.key} onClick={() => setTab(t.key)}
                 className={`px-3 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${
@@ -161,6 +186,51 @@ export default function EmptyBayModal({ bay, drives = [], onClose, onCreated }) 
                   {assignError}
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Bay Status */}
+          {tab === 'status' && (
+            <div className="p-5 flex flex-col gap-3">
+              <p className="text-xs text-slate-500 dark:text-gray-400">
+                Set the operational status of this bay slot.
+              </p>
+              <div className="flex flex-col gap-2">
+                {BAY_STATUSES.map(s => {
+                  const Icon = s.icon
+                  const isActive = selectedStatus === s.value
+                  return (
+                    <button
+                      key={s.value}
+                      onClick={() => handleSetStatus(s.value)}
+                      disabled={statusSaving}
+                      className={`flex items-center gap-3 rounded-lg px-4 py-3 border text-left transition-all disabled:opacity-50 ${
+                        isActive
+                          ? `border-current ${s.color} bg-slate-50 dark:bg-gray-800/60 ring-1 ${s.ring}`
+                          : 'border-slate-200 dark:border-gray-700 text-slate-500 dark:text-gray-400 hover:border-slate-300 dark:hover:border-gray-600 hover:bg-slate-50 dark:hover:bg-gray-800/40'
+                      }`}
+                    >
+                      <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${
+                        isActive ? 'bg-current/10' : 'bg-slate-100 dark:bg-gray-800'
+                      }`}>
+                        {Icon
+                          ? <Icon size={14} className={isActive ? 'inherit' : 'text-slate-400 dark:text-gray-500'} />
+                          : <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-current' : 'bg-slate-300 dark:bg-gray-600'}`} />
+                        }
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${isActive ? s.color : ''}`}>{s.label}</p>
+                        <p className="text-xs text-slate-400 dark:text-gray-500">{s.desc}</p>
+                      </div>
+                      {isActive && (
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border border-current/30 bg-current/10 ${s.color}`}>
+                          {statusSaved ? 'Saved' : 'Active'}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           )}
 

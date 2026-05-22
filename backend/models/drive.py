@@ -32,6 +32,8 @@ class Drive(Base):
     pending_sectors: Mapped[int | None] = mapped_column(nullable=True)
     uncorrectable_errors: Mapped[int | None] = mapped_column(nullable=True)
     last_scanned: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+    zfs_pool: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    vdev_name: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     bay: Mapped[Bay | None] = relationship("Bay", back_populates="drive", uselist=False)
     profile: Mapped[DriveProfile | None] = relationship(

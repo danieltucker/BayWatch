@@ -14,6 +14,8 @@ export const createBayArray = (enclosureId, data) =>
   api.post(`/enclosures/${enclosureId}/arrays`, data).then(r => r.data)
 export const deleteBayArray = (enclosureId, arrayId) =>
   api.delete(`/enclosures/${enclosureId}/arrays/${arrayId}`)
+export const updateBayArray = (enclosureId, arrayId, data) =>
+  api.put(`/enclosures/${enclosureId}/arrays/${arrayId}`, data).then(r => r.data)
 
 // ── Bays ──────────────────────────────────────────────────────────────────────
 export const getBays = (arrayId) => api.get(`/bays/array/${arrayId}`).then(r => r.data)
@@ -52,5 +54,13 @@ export const getAlerts = (limit = 100) =>
   api.get('/alerts', { params: { limit } }).then(r => r.data)
 export const getAlertConfig = () => api.get('/alerts/config').then(r => r.data)
 export const updateAlertConfig = (data) => api.put('/alerts/config', data).then(r => r.data)
+
+// ── Pools ─────────────────────────────────────────────────────────────────────
+export const getPools = () => api.get('/pools').then(r => r.data)
+export const getPoolTopology = () => api.get('/pools/topology').then(r => r.data)
+
+// ── Bay status ────────────────────────────────────────────────────────────────
+export const setBayStatus = (bayId, status) =>
+  api.put(`/bays/${bayId}/status`, { status }).then(r => r.data)
 
 export default api

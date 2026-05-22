@@ -15,13 +15,16 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 # Final stage: combined nginx + uvicorn runtime
 FROM python:3.12-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN echo "deb http://deb.debian.org/debian $(. /etc/os-release && echo $VERSION_CODENAME) contrib" \
+      > /etc/apt/sources.list.d/contrib.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
     smartmontools \
     nvme-cli \
     udev \
     curl \
+    zfsutils-linux \
     && rm -rf /var/lib/apt/lists/* \
     && rm -f /etc/nginx/sites-enabled/default
 

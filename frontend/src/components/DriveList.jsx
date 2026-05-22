@@ -41,6 +41,11 @@ function DraggableDriveItem({ drive, profile, isSelected, onSelect, isAssigned }
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <span className={clsx('text-xs', isSelected ? 'text-blue-200' : 'text-slate-400 dark:text-gray-400')}>{formatBytes(drive.capacity_bytes)}</span>
+          {drive.zfs_pool && !isSelected && (
+            <span className="text-[9px] font-mono font-medium px-1 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40 leading-none">
+              {drive.zfs_pool}
+            </span>
+          )}
           <WarningBadge status={drive.smart_status} days={warrantyDays} />
         </div>
       </button>

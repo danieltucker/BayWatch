@@ -18,7 +18,7 @@ const GROUP_TYPE_LABEL = {
 
 const GAP = { sm: 'gap-1', md: 'gap-1.5', lg: 'gap-2' }
 
-export default function BayGrid({ array, bays, driveMap, profileMap, selectedBayId, onBayClick }) {
+export default function BayGrid({ array, bays, driveMap, profileMap, selectedBayId, onBayClick, highlightVdev }) {
   const storageKey = `array-size-${array.id}`
   const [size, setSize] = useState(() => localStorage.getItem(storageKey) || 'sm')
 
@@ -86,6 +86,9 @@ export default function BayGrid({ array, bays, driveMap, profileMap, selectedBay
                 profile={profile}
                 size={size}
                 isSelected={selectedBayId === bay.id}
+                isVdevPeer={
+                  !!(highlightVdev && drive?.vdev_name === highlightVdev && bay.id !== selectedBayId)
+                }
                 onClick={onBayClick}
               />
             )

@@ -4,6 +4,7 @@ import {
   getLogs, getDrives, getDrive, getProfile, patchDrive,
   getEnclosures, getBays, assignDrive, unassignDrive, triggerScan,
 } from '../api/client'
+import api from '../api/client'
 
 const ALL_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 const DEFAULT_LEVELS = new Set(['INFO', 'WARNING', 'ERROR', 'CRITICAL'])
@@ -50,11 +51,16 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
   const [cmdInput, setCmdInput] = useState('')
   const [cmdHistory, setCmdHistory] = useState([])
   const [historyIdx, setHistoryIdx] = useState(-1)
+  const [appVersion, setAppVersion] = useState(null)
   const lastIdRef = useRef(0)
   const bottomRef = useRef(null)
   const intervalRef = useRef(null)
   const inputRef = useRef(null)
   const syntheticId = useRef(0)
+
+  useEffect(() => {
+    api.get('/health').then(r => setAppVersion(r.data.version)).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!open) { clearInterval(intervalRef.current); return }
@@ -349,13 +355,25 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
             })}
           </div>
 
-          <span className="text-[10px] text-gray-700 font-mono shrink-0">` to close</span>
+          {appVersion && (
+            <span className="bg-gray-800 text-gray-300 border border-gray-700 rounded px-1.5 py-0.5 text-[10px] font-mono shrink-0">
+              v{appVersion}
+            </span>
+          )}
         </div>
 
         {/* Pinned notifications */}
         {alerts.length > 0 && (
           <div className="shrink-0 border-b border-gray-800/60 px-3 py-2 flex flex-col gap-1 max-h-[30%] overflow-y-auto">
-            <span className="text-[9px] text-gray-600 font-mono uppercase tracking-widest mb-0.5">Notifications</span>
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-[9px] text-gray-600 font-mono uppercase tracking-widest">Notifications</span>
+              <button
+                onClick={() => alerts.forEach(a => onDismissAlert?.(a.id))}
+                className="text-[9px] text-gray-600 hover:text-gray-400 font-mono uppercase tracking-widest transition-colors"
+              >
+                Clear all
+              </button>
+            </div>
             {alerts.map(alert => (
               <div
                 key={alert.id}
@@ -377,7 +395,7 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
                 </span>
                 <button
                   onClick={() => onDismissAlert?.(alert.id)}
-                  className="text-gray-700 hover:text-gray-400 shrink-0 transition-colors mt-0.5"
+                  className="text-gray-400 hover:text-gray-100 shrink-0 transition-colors mt-0.5"
                   title="Dismiss"
                 >
                   <X size={10} />

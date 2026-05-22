@@ -1,7 +1,7 @@
 # Project Structure
 
 > Last updated: 2026-05-21
-> Status: v0.9.0 — nginx fix, group types, fill-width grid, SM/MD/LG redesign, notifications, in-app config
+> Status: v0.12.0 — vdev peer highlighting, richer topology chips, sticky sidebar, array editing, CSV example data
 
 ## Current Layout
 
@@ -31,10 +31,11 @@ drive-position/
 │   │   ├── deps.py                 # Shared DI: DB session
 │   │   └── routes/
 │   │       ├── drives.py           # /api/drives — scan, list, get
-│   │       ├── bays.py             # /api/bays — list, assign, unassign
+│   │       ├── bays.py             # /api/bays — list, assign, unassign, status
 │   │       ├── enclosures.py       # /api/enclosures — CRUD + bay arrays
 │   │       ├── profiles.py         # /api/profiles — drive profile CRUD
-│   │       └── alerts.py           # /api/alerts — list, config
+│   │       ├── alerts.py           # /api/alerts — list, config
+│   │       └── pools.py            # /api/pools — ZFS pool stats (GET)
 │   ├── models/
 │   │   ├── enclosure.py            # Enclosure ORM model
 │   │   ├── bay_array.py            # BayArray ORM model
@@ -46,9 +47,10 @@ drive-position/
 │   ├── services/
 │   │   ├── scanner.py              # Orchestrates full disk scan pipeline
 │   │   ├── smartctl.py             # smartctl subprocess wrapper
-│   │   ├── lsblk.py                # lsblk subprocess wrapper
+│   │   ├── lsblk.py                # lsblk subprocess wrapper; ZFS pool detection via FSTYPE/LABEL
 │   │   ├── nvme.py                 # nvme-cli wrapper
 │   │   ├── ses.py                  # SES enclosure slot detection (best-effort)
+│   │   ├── zpool.py                # zpool list/status wrapper; PoolStats + PoolTopology; vdev tree parser; graceful if ZFS absent
 │   │   ├── notifications.py        # Pluggable notification dispatch
 │   │   ├── log_buffer.py           # In-memory log ring buffer (500 entries); custom logging.Handler
 │   │   └── csv_import.py           # CSV bulk import: Drive + DriveProfile upsert + bay assignment
@@ -79,14 +81,15 @@ drive-position/
         │   ├── DriveEditModal.jsx       # Edit drive fields + profile; warranty in years
         │   ├── DriveList.jsx            # Sidebar list; search; hide-assigned toggle; form-factor icon
         │   ├── EmptyBayModal.jsx        # Manual drive entry form; opens on empty bay click
-        │   ├── LogConsole.jsx           # Slide-down console: log level filters + terminal REPL
+        │   ├── LogConsole.jsx           # Slide-down console: log level filters + terminal REPL; pinned alerts with Clear All
+        │   ├── PoolTopologyPanel.jsx    # Collapsible ZFS pool topology panel; vdev rows + drive chips; onDriveSelect
         │   ├── ScanButton.jsx
-        │   ├── SettingsModal.jsx        # Tabbed modal (Enclosures / Notifications / Import)
+        │   ├── SettingsModal.jsx        # Tabbed modal (General / Enclosures / Notifications / Import / Appearance)
         │   ├── WarningBadge.jsx
         │   ├── WidgetBar.jsx            # Draggable widget bar; 13 widget types; localStorage config
         │   └── WidgetPickerModal.jsx    # Widget picker modal
         ├── pages/
-        │   ├── Dashboard.jsx            # DnD context, WidgetBar, bay grid, drive sidebar
+        │   ├── Dashboard.jsx            # DnD context, WidgetBar, bay grid, topology panel, drive sidebar; 5-min auto-refresh
         │   └── DriveDetail.jsx          # Drive detail + profile edit page
         └── utils/
             └── driveIcon.js             # getDriveIcon(formFactor, rpm) → lucide icon

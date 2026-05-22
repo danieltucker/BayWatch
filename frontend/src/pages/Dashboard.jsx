@@ -9,7 +9,8 @@ import SettingsModal from '../components/SettingsModal'
 import ScanButton from '../components/ScanButton'
 import EmptyBayModal from '../components/EmptyBayModal'
 import WidgetBar from '../components/WidgetBar'
-import { getEnclosures, getDrives, getBays, getProfile, assignDrive } from '../api/client'
+import PoolTopologyPanel from '../components/PoolTopologyPanel'
+import { getEnclosures, getDrives, getBays, getProfile, assignDrive, getPools, getPoolTopology } from '../api/client'
 
 export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onCloseSettings }) {
   const [enclosures, setEnclosures] = useState([])
@@ -22,6 +23,8 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
   const [loading, setLoading] = useState(true)
   const [activeDriveSerial, setActiveDriveSerial] = useState(null)
   const [editTarget, setEditTarget] = useState(null)
+  const [poolStats, setPoolStats] = useState([])
+  const [poolTopology, setPoolTopology] = useState([])
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -37,7 +40,14 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
 
   const loadAll = useCallback(async () => {
     try {
-      const [encs, drvs] = await Promise.all([getEnclosures(), getDrives()])
+      const [encs, drvs, pools, topology] = await Promise.all([
+        getEnclosures(),
+        getDrives(),
+        getPools().catch(() => []),
+        getPoolTopology().catch(() => []),
+      ])
+      setPoolStats(pools)
+      setPoolTopology(topology)
       setEnclosures(encs)
       setDrives(drvs)
 
@@ -54,7 +64,16 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
     }
   }, [])
 
-  useEffect(() => { loadAll() }, [loadAll])
+  useEffect(() => {
+    loadAll()
+    const interval = setInterval(loadAll, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [loadAll])
+
+  const handleDriveSelect = (serial) => {
+    setSelectedDriveSerial(serial)
+    setSelectedBay(null)
+  }
 
   async function handleDragEnd(event) {
     const { active, over } = event
@@ -77,6 +96,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
     ? driveMap[selectedDriveSerial]
     : null
   const selectedProfile = selectedDrive ? profileMap[selectedDrive.serial] : null
+  const highlightVdev = selectedDrive?.vdev_name ?? null
 
   const activeDrive = activeDriveSerial ? driveMap[activeDriveSerial] : null
 
@@ -151,6 +171,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                       driveMap={driveMap}
                       profileMap={profileMap}
                       selectedBayId={selectedBay?.id}
+                      highlightVdev={highlightVdev}
                       onBayClick={bay => {
                         if (!bay.drive_serial) {
                           setEmptyBay(bay)
@@ -164,6 +185,15 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                 </div>
               </div>
             ))}
+
+            {poolTopology.length > 0 && (
+              <PoolTopologyPanel
+                poolTopology={poolTopology}
+                poolStats={poolStats}
+                driveMap={driveMap}
+                onDriveSelect={handleDriveSelect}
+              />
+            )}
           </div>
         </div>
 
@@ -188,7 +218,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
         <SettingsModal open={settingsOpen} onClose={onCloseSettings} onUpdate={loadAll} />
 
         {/* Sidebar */}
-        <div className="w-full lg:w-[340px] shrink-0 flex flex-col bg-white dark:bg-gray-950 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-gray-800">
+        <div className="w-full lg:w-[340px] shrink-0 flex flex-col bg-white dark:bg-gray-950 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-gray-800 lg:sticky lg:top-[49px] lg:h-[calc(100vh-49px)] lg:self-start">
           <div className="px-4 py-3 border-b border-slate-200 dark:border-gray-800/60">
             <p className="text-xs font-medium text-slate-500 dark:text-gray-500 uppercase tracking-widest">
               {selectedDrive ? 'Drive Details' : 'All Drives'}
@@ -199,6 +229,8 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
               <DriveCard
                 drive={selectedDrive}
                 profile={selectedProfile}
+                bay={selectedBay}
+                poolStats={poolStats}
                 onEdit={() => setEditTarget({ drive: selectedDrive, profile: selectedProfile })}
                 onClose={() => { setSelectedBay(null); setSelectedDriveSerial(null) }}
               />

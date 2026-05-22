@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Trash2, Save, Server, Upload, CheckCircle2, AlertCircle, X, Bell, Sun, Moon, Monitor, Pencil, Download, Thermometer } from 'lucide-react'
+import { Plus, Trash2, Save, Server, Upload, CheckCircle2, AlertCircle, X, Bell, Sun, Moon, Monitor, Pencil, Download, Thermometer, Settings2 } from 'lucide-react'
 import {
   getEnclosures, createEnclosure, updateEnclosure, deleteEnclosure,
-  createBayArray, deleteBayArray,
+  createBayArray, deleteBayArray, updateBayArray,
   getAlertConfig, updateAlertConfig,
   importCSV,
 } from '../api/client'
 import { useTheme } from '../context/ThemeContext'
 
 const TABS = [
+  { key: 'general', label: 'General', icon: Settings2 },
   { key: 'enclosures', label: 'Enclosures', icon: Server },
   { key: 'notifications', label: 'Notifications', icon: Bell },
   { key: 'import', label: 'Import', icon: Upload },
@@ -34,7 +35,10 @@ const LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR']
 const CSV_HEADERS = ['Position', 'Dev Name', 'Make', 'Model', 'Serial', 'Size', 'Mfg Date', 'Source', 'Warranty', 'Notes']
 
 export default function SettingsModal({ open, onClose, onUpdate }) {
-  const [tab, setTab] = useState('enclosures')
+  const [tab, setTab] = useState('general')
+  const [tildeOverride, setTildeOverride] = useState(
+    () => localStorage.getItem('console-tilde-override') === 'true'
+  )
   const [enclosures, setEnclosures] = useState([])
   const [newEnc, setNewEnc] = useState({ name: '', type: 'server' })
   const [editingEnc, setEditingEnc] = useState(null)
@@ -45,6 +49,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
     temp_alert_threshold_c: 55, log_level: 'INFO',
   })
   const [alertSaved, setAlertSaved] = useState(false)
+  const [editingArray, setEditingArray] = useState(null)
   const [importResult, setImportResult] = useState(null)
   const [importError, setImportError] = useState(null)
   const [importing, setImporting] = useState(false)
@@ -122,6 +127,16 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
     load(); onUpdate?.()
   }
 
+  async function handleSaveArray() {
+    if (!editingArray) return
+    const { enclosureId, arrayId, name, rows, cols, group_type, purpose } = editingArray
+    await updateBayArray(enclosureId, arrayId, {
+      name, rows: parseInt(rows), cols: parseInt(cols), group_type, purpose: purpose || null,
+    })
+    setEditingArray(null)
+    load(); onUpdate?.()
+  }
+
   async function handleSaveAlerts(e) {
     e.preventDefault()
     await updateAlertConfig(alertForm)
@@ -144,7 +159,13 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
   }
 
   function handleDownloadTemplate() {
-    const csv = CSV_HEADERS.join(',') + '\n'
+    const rows = [
+      CSV_HEADERS.join(','),
+      '"1-1","sda","Seagate","IronWolf Pro 16TB","ST16000NE000","16 TB","2022-03-15","Amazon","3 years","Primary NAS array"',
+      '"1-2","sdb","Western Digital","WD Red Plus 8TB","WD8003FFBX","8 TB","2021-11-01","B&H Photo","","Replaced 2024-01"',
+      '"","","Samsung","870 EVO 500GB","S4ABCDE12345","500 GB","","Newegg","2 years","Boot SSD - no bay assigned"',
+    ]
+    const csv = rows.join('\n') + '\n'
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -191,6 +212,39 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-5">
+
+            {/* ── General ── */}
+            {tab === 'general' && (
+              <div className="flex flex-col gap-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-gray-300">Tilde always opens/closes console</p>
+                    <p className="text-xs text-slate-500 dark:text-gray-500 mt-0.5">
+                      When on, the ~ key toggles the console even when an input field is focused.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !tildeOverride
+                      setTildeOverride(next)
+                      localStorage.setItem('console-tilde-override', String(next))
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+                      tildeOverride ? 'bg-blue-600' : 'bg-slate-200 dark:bg-gray-700'
+                    }`}
+                    role="switch"
+                    aria-checked={tildeOverride}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition duration-200 ${
+                        tildeOverride ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* ── Enclosures ── */}
             {tab === 'enclosures' && (
@@ -244,23 +298,89 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
 
                     {/* Array list */}
                     {enc.arrays.map(arr => (
-                      <div key={arr.id} className="flex items-center justify-between pl-2 border-l border-slate-300 dark:border-gray-700">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm text-slate-600 dark:text-gray-300 truncate">
-                            {arr.name} <span className="text-slate-400 dark:text-gray-500">({arr.rows}×{arr.cols})</span>
-                          </span>
-                          {arr.group_type && arr.group_type !== 'drive_bays' && (
-                            <span className="text-[10px] text-slate-400 dark:text-gray-600 bg-slate-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-full shrink-0">
-                              {GROUP_TYPE_LABEL[arr.group_type] || arr.group_type}
-                            </span>
-                          )}
-                          {arr.purpose && (
-                            <span className="text-[10px] text-slate-400 dark:text-gray-600 truncate hidden sm:block">{arr.purpose}</span>
-                          )}
-                        </div>
-                        <button onClick={() => handleDeleteArray(enc.id, arr.id)} className="text-red-400 hover:text-red-300 p-1 shrink-0">
-                          <Trash2 size={14} />
-                        </button>
+                      <div key={arr.id} className="pl-2 border-l border-slate-300 dark:border-gray-700">
+                        {editingArray?.arrayId === arr.id ? (
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                              <input
+                                value={editingArray.name}
+                                onChange={e => setEditingArray(f => ({ ...f, name: e.target.value }))}
+                                className="flex-1 rounded bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-2 py-1 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                placeholder="Array name"
+                              />
+                              <input
+                                type="number" min="1" value={editingArray.rows}
+                                onChange={e => setEditingArray(f => ({ ...f, rows: e.target.value }))}
+                                className="w-16 rounded bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-2 py-1 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                placeholder="Rows"
+                              />
+                              <input
+                                type="number" min="1" value={editingArray.cols}
+                                onChange={e => setEditingArray(f => ({ ...f, cols: e.target.value }))}
+                                className="w-16 rounded bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-2 py-1 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                placeholder="Cols"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={editingArray.group_type}
+                                onChange={e => setEditingArray(f => ({ ...f, group_type: e.target.value }))}
+                                className="flex-1 rounded bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-2 py-1 text-sm text-slate-900 dark:text-gray-100 focus:outline-none"
+                              >
+                                {GROUP_TYPES.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+                              </select>
+                              <input
+                                value={editingArray.purpose}
+                                onChange={e => setEditingArray(f => ({ ...f, purpose: e.target.value }))}
+                                className="flex-1 rounded bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-2 py-1 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                placeholder="Purpose (optional)"
+                              />
+                              <button onClick={handleSaveArray} className="text-blue-500 hover:text-blue-400 p-1">
+                                <Save size={15} />
+                              </button>
+                              <button onClick={() => setEditingArray(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-gray-300 p-1">
+                                <X size={15} />
+                              </button>
+                            </div>
+                            {(parseInt(editingArray.rows) < arr.rows || parseInt(editingArray.cols) < arr.cols) && (
+                              <p className="text-[10px] text-amber-500 dark:text-amber-400">
+                                Reducing grid size will remove out-of-bounds bays and their drive assignments.
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-sm text-slate-600 dark:text-gray-300 truncate">
+                                {arr.name} <span className="text-slate-400 dark:text-gray-500">({arr.rows}×{arr.cols})</span>
+                              </span>
+                              {arr.group_type && arr.group_type !== 'drive_bays' && (
+                                <span className="text-[10px] text-slate-400 dark:text-gray-600 bg-slate-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-full shrink-0">
+                                  {GROUP_TYPE_LABEL[arr.group_type] || arr.group_type}
+                                </span>
+                              )}
+                              {arr.purpose && (
+                                <span className="text-[10px] text-slate-400 dark:text-gray-600 truncate hidden sm:block">{arr.purpose}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => setEditingArray({
+                                  enclosureId: enc.id, arrayId: arr.id,
+                                  name: arr.name, rows: arr.rows, cols: arr.cols,
+                                  group_type: arr.group_type || 'drive_bays', purpose: arr.purpose || '',
+                                })}
+                                className="text-slate-400 hover:text-blue-500 dark:text-gray-600 dark:hover:text-blue-400 p-1 transition-colors"
+                                title="Edit array"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button onClick={() => handleDeleteArray(enc.id, arr.id)} className="text-red-400 hover:text-red-300 p-1">
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
 

@@ -1,6 +1,12 @@
-import { Clock, X, Pencil } from 'lucide-react'
+import { Clock, X, Pencil, AlertTriangle, Zap, Archive } from 'lucide-react'
 import WarningBadge from './WarningBadge'
 import { getDriveIcon } from '../utils/driveIcon'
+
+const BAY_STATUS_INFO = {
+  damaged:    { label: 'Damaged',    icon: AlertTriangle, color: 'text-orange-500 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800/40' },
+  hot_spare:  { label: 'Hot Spare',  icon: Zap,           color: 'text-cyan-500 dark:text-cyan-400',    bg: 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800/40' },
+  cold_spare: { label: 'Cold Spare', icon: Archive,        color: 'text-violet-500 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800/40' },
+}
 
 function formatBytes(bytes) {
   if (!bytes) return '—'
@@ -41,11 +47,13 @@ function healthGradient(status) {
   return 'from-slate-50 dark:from-gray-700/20 to-transparent border-slate-200 dark:border-gray-700/30'
 }
 
-export default function DriveCard({ drive, profile, onClose, onEdit }) {
+export default function DriveCard({ drive, profile, bay, poolStats = [], onClose, onEdit }) {
   if (!drive) return null
 
   const warrantyDays = profile?.warranty_days_remaining ?? null
   const DriveIcon = getDriveIcon(drive.form_factor, drive.rpm)
+  const poolInfo = drive.zfs_pool ? poolStats.find(p => p.name === drive.zfs_pool) : null
+  const bayStatusInfo = bay?.status ? BAY_STATUS_INFO[bay.status] : null
 
   return (
     <div className={`flex flex-col gap-0 rounded-2xl border bg-gradient-to-b overflow-hidden shadow-xl ${healthGradient(drive.smart_status)}`}>
@@ -84,23 +92,44 @@ export default function DriveCard({ drive, profile, onClose, onEdit }) {
         </div>
       </div>
 
-      {/* Temperature bar */}
-      {drive.temperature_c != null && (
-        <div className="px-4 pb-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Temperature</span>
-            <span className={`text-xs font-bold ${drive.temperature_c >= 55 ? 'text-amber-500 dark:text-amber-400' : 'text-sky-500 dark:text-sky-400'}`}>
-              {drive.temperature_c}°C
-            </span>
+      {/* Temperature + Power-on bars */}
+      <div className="px-4 pb-3 flex flex-col gap-2">
+        {drive.temperature_c != null && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Temperature</span>
+              <span className={`text-xs font-bold ${drive.temperature_c >= 55 ? 'text-amber-500 dark:text-amber-400' : 'text-sky-500 dark:text-sky-400'}`}>
+                {drive.temperature_c}°C
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${drive.temperature_c >= 55 ? 'bg-amber-400' : 'bg-sky-500'}`}
+                style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }}
+              />
+            </div>
           </div>
-          <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${drive.temperature_c >= 55 ? 'bg-amber-400' : 'bg-sky-500'}`}
-              style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }}
-            />
+        )}
+        {drive.power_on_hours != null && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Power-on Hours</span>
+              <span className="text-xs font-bold text-slate-500 dark:text-gray-400">
+                {drive.power_on_hours.toLocaleString()}h
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  drive.power_on_hours >= 40000 ? 'bg-orange-400' :
+                  drive.power_on_hours >= 25000 ? 'bg-amber-400' : 'bg-blue-400'
+                }`}
+                style={{ width: `${Math.min(100, (drive.power_on_hours / 50000) * 100)}%` }}
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Divider */}
       <div className="border-t border-slate-200 dark:border-gray-800/60 mx-4" />
@@ -116,10 +145,44 @@ export default function DriveCard({ drive, profile, onClose, onEdit }) {
 
         <div className="col-span-2 border-t border-slate-200 dark:border-gray-800/50 my-0.5" />
 
-        <Row label="Power-on" value={formatHours(drive.power_on_hours)} />
         <Row label="Reallocated" value={drive.reallocated_sectors ?? '—'} warn={(drive.reallocated_sectors ?? 0) > 0} />
         <Row label="Pending" value={drive.pending_sectors ?? '—'} warn={(drive.pending_sectors ?? 0) > 0} />
         <Row label="Uncorrectable" value={drive.uncorrectable_errors ?? '—'} warn={(drive.uncorrectable_errors ?? 0) > 0} />
+
+        {drive.zfs_pool && (
+          <>
+            <div className="col-span-2 border-t border-slate-200 dark:border-gray-800/50 my-0.5" />
+            <div className="col-span-2">
+              <dt className="text-slate-500 dark:text-gray-500 text-xs mb-1.5">ZFS Pool</dt>
+              <dd>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-mono font-medium text-blue-600 dark:text-blue-400">{drive.zfs_pool}</span>
+                  {poolInfo && (
+                    <span className="text-[10px] text-slate-500 dark:text-gray-500">
+                      {poolInfo.capacity_pct}% used
+                    </span>
+                  )}
+                </div>
+                {poolInfo && (
+                  <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        poolInfo.capacity_pct >= 80 ? 'bg-red-400' :
+                        poolInfo.capacity_pct >= 60 ? 'bg-amber-400' : 'bg-blue-400'
+                      }`}
+                      style={{ width: `${poolInfo.capacity_pct}%` }}
+                    />
+                  </div>
+                )}
+                {poolInfo && (
+                  <p className="text-[10px] text-slate-400 dark:text-gray-600 mt-0.5">
+                    {formatBytes(poolInfo.alloc_bytes)} used of {formatBytes(poolInfo.size_bytes)}
+                  </p>
+                )}
+              </dd>
+            </div>
+          </>
+        )}
 
         {profile && (
           <>
@@ -144,6 +207,14 @@ export default function DriveCard({ drive, profile, onClose, onEdit }) {
           </>
         )}
       </dl>
+
+      {bayStatusInfo && (
+        <div className={`mx-4 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 border text-xs ${bayStatusInfo.bg}`}>
+          <bayStatusInfo.icon size={12} className={bayStatusInfo.color} />
+          <span className={`font-medium ${bayStatusInfo.color}`}>{bayStatusInfo.label}</span>
+          <span className="text-slate-400 dark:text-gray-500">bay status</span>
+        </div>
+      )}
 
       {drive.last_scanned && (
         <div className="flex items-center gap-1.5 px-4 py-2.5 border-t border-slate-200 dark:border-gray-800/50 text-[10px] text-slate-400 dark:text-gray-600">

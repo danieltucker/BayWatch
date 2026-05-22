@@ -1,6 +1,6 @@
 import json
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -10,12 +10,13 @@ class BlockDevice:
     by_id_path: str | None
     size_bytes: int
     type: str  # disk | part | rom
+    zfs_pool: str | None = field(default=None)
 
 
 def list_disks() -> list[BlockDevice]:
     """Return block devices of type 'disk' visible to the host."""
     result = subprocess.run(
-        ["lsblk", "-J", "-b", "-o", "NAME,PATH,SIZE,TYPE"],
+        ["lsblk", "-J", "-b", "-o", "NAME,PATH,SIZE,TYPE,FSTYPE,LABEL"],
         capture_output=True,
         text=True,
         timeout=15,
@@ -34,9 +35,21 @@ def list_disks() -> list[BlockDevice]:
                     by_id_path=_resolve_by_id(dev["name"]),
                     size_bytes=int(dev.get("size") or 0),
                     type=dev["type"],
+                    zfs_pool=_extract_zfs_pool(dev),
                 )
             )
     return devices
+
+
+def _extract_zfs_pool(dev: dict) -> str | None:
+    """Check disk and its children for ZFS membership; return pool name if found."""
+    # Some setups put zfs_member on the disk directly, others on a partition
+    if dev.get("fstype") == "zfs_member":
+        return dev.get("label") or "unknown"
+    for child in dev.get("children", []):
+        if child.get("fstype") == "zfs_member":
+            return child.get("label") or "unknown"
+    return None
 
 
 def _resolve_by_id(name: str) -> str | None:
