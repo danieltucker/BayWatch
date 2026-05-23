@@ -23,6 +23,7 @@ class BayArrayUpdate(BaseModel):
     cols: Optional[int] = None
     group_type: Optional[str] = None
     purpose: Optional[str] = None
+    display_order: Optional[int] = None
 
 class BayArrayRead(BayArrayBase):
     model_config = ConfigDict(from_attributes=True)
@@ -34,6 +35,7 @@ class EnclosureBase(BaseModel):
     name: str
     type: str = "server"
     description: Optional[str] = None
+    display_order: Optional[int] = None
 
 class EnclosureCreate(EnclosureBase):
     pass
@@ -119,6 +121,9 @@ class PoolRead(BaseModel):
 class VdevDiskRead(BaseModel):
     path: str
     state: str
+    read_errors: int = 0
+    write_errors: int = 0
+    cksum_errors: int = 0
 
 class VdevRead(BaseModel):
     name: str
@@ -129,6 +134,7 @@ class VdevRead(BaseModel):
 class PoolTopologyRead(BaseModel):
     name: str
     state: str
+    scan_status: Optional[str] = None
     vdevs: list[VdevRead] = []
 
 

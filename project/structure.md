@@ -1,7 +1,7 @@
 # Project Structure
 
 > Last updated: 2026-05-22
-> Status: v0.14.0 — PARTUUID drive mapping fix, partition donut chart, make/model swap, bay reassignment + unassign
+> Status: v0.16.0 — DriveCard redesign, health gradients, blue vdev peer highlight, array stats/collapse, enclosure collapse/reorder, array reorder, ZFS scan status + per-disk errors, sub-1GB partition display
 
 ## Current Layout
 

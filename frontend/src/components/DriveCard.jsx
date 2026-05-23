@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Clock, X, Pencil, AlertTriangle, Zap, Archive, ArrowLeftRight } from 'lucide-react'
+import { Clock, X, Pencil, AlertTriangle, Zap, Archive, ArrowLeftRight, CheckCircle2, ShieldAlert } from 'lucide-react'
 import {
   ResponsiveContainer, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, Tooltip, ReferenceLine,
@@ -23,16 +23,9 @@ function formatBytes(bytes) {
   return `${(bytes / 1e9).toFixed(0)} GB`
 }
 
-function formatHours(hours) {
-  if (hours == null) return '—'
-  const yrs = (hours / 24 / 365).toFixed(1)
-  return `${hours.toLocaleString()}h (${yrs}y)`
-}
-
 function formatWarrantyYears(months) {
   if (!months) return '—'
-  const yrs = months / 12
-  return `${parseFloat(yrs.toFixed(1))} yrs`
+  return `${parseFloat((months / 12).toFixed(1))} yrs`
 }
 
 function formatExpiry(expiryDate, daysRemaining) {
@@ -42,38 +35,76 @@ function formatExpiry(expiryDate, daysRemaining) {
   })
   if (daysRemaining == null) return dateStr
   if (daysRemaining > 0) {
-    const yrs = parseFloat((daysRemaining / 365).toFixed(1))
-    return `${dateStr} · ${yrs}y left`
+    return `${dateStr} · ${parseFloat((daysRemaining / 365).toFixed(1))}y left`
   }
-  const moAgo = Math.abs(Math.round(daysRemaining / 30))
-  return `${dateStr} · ${moAgo}mo ago`
+  return `${dateStr} · ${Math.abs(Math.round(daysRemaining / 30))}mo ago`
 }
 
 const FSTYPE_COLORS = {
   zfs_member: '#3b82f6',
-  ext4: '#22c55e', ext3: '#22c55e', ext2: '#22c55e',
+  ext4: '#22c55e', ext3: '#22c55e', ext2: '#22c55e', ext: '#22c55e',
   btrfs: '#14b8a6',
   xfs: '#8b5cf6',
   swap: '#f59e0b',
-  ntfs: '#f97316', vfat: '#f97316', exfat: '#f97316',
+  ntfs: '#f97316', vfat: '#f97316', exfat: '#f97316', fat32: '#f97316', fat16: '#f97316',
+  reiserfs: '#06b6d4', reiser4: '#06b6d4',
+  lvm2_member: '#ec4899',
+  linux_raid_member: '#ef4444',
+  crypto_luks: '#a855f7',
+  apfs: '#6366f1',
+  hfsplus: '#6366f1', hfs: '#6366f1',
+  nilfs2: '#0ea5e9',
+  udf: '#84cc16', iso9660: '#84cc16',
+  squashfs: '#78716c',
+  tmpfs: '#94a3b8',
 }
+const FSTYPE_LABELS = {
+  zfs_member: 'ZFS',
+  lvm2_member: 'LVM',
+  linux_raid_member: 'RAID',
+  crypto_luks: 'LUKS',
+  hfsplus: 'HFS+', hfs: 'HFS',
+  fat32: 'FAT32', fat16: 'FAT16',
+}
+const MIN_CHART_BYTES = 1_048_576
+
 function fstypeColor(fstype) {
   return FSTYPE_COLORS[fstype?.toLowerCase()] ?? '#64748b'
 }
 function fstypeLabel(fstype) {
-  return fstype ?? 'unknown'
+  if (!fstype) return 'unknown'
+  return FSTYPE_LABELS[fstype.toLowerCase()] ?? fstype
 }
-function formatGB(bytes) {
-  if (!bytes) return '0 GB'
-  const tb = bytes / 1e12
-  if (tb >= 1) return `${tb.toFixed(1)} TB`
-  return `${(bytes / 1e9).toFixed(0)} GB`
+function formatSize(bytes) {
+  if (!bytes) return '0 B'
+  if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(1)} TB`
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(0)} MB`
+  return `${(bytes / 1e3).toFixed(0)} KB`
 }
 
-function healthGradient(status) {
-  if (status === 'PASSED') return 'from-emerald-50 dark:from-emerald-500/10 to-transparent border-emerald-200 dark:border-emerald-700/30'
-  if (status === 'FAILED') return 'from-red-50 dark:from-red-500/15 to-transparent border-red-200 dark:border-red-700/40'
+function healthState(drive) {
+  if (drive.smart_status === 'FAILED') return 'failed'
+  if (drive.smart_status === 'PASSED') {
+    const hasErrors = (drive.reallocated_sectors ?? 0) > 0
+      || (drive.pending_sectors ?? 0) > 0
+      || (drive.uncorrectable_errors ?? 0) > 0
+    return hasErrors ? 'warn' : 'ok'
+  }
+  return 'unknown'
+}
+
+function healthGradient(state) {
+  if (state === 'ok')      return 'from-emerald-50 dark:from-emerald-500/10 to-transparent border-emerald-200 dark:border-emerald-700/30'
+  if (state === 'warn')    return 'from-amber-50 dark:from-amber-500/10 to-transparent border-amber-300 dark:border-amber-600/50'
+  if (state === 'failed')  return 'from-red-50 dark:from-red-500/15 to-transparent border-red-300 dark:border-red-600/60'
   return 'from-slate-50 dark:from-gray-700/20 to-transparent border-slate-200 dark:border-gray-700/30'
+}
+
+function iconStyle(state) {
+  if (state === 'failed') return { wrap: 'bg-red-100 dark:bg-red-950/40 border-red-200 dark:border-red-800/50',  icon: 'text-red-500 dark:text-red-400' }
+  if (state === 'warn')   return { wrap: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/40', icon: 'text-amber-500 dark:text-amber-400' }
+  return { wrap: 'bg-slate-100 dark:bg-gray-800/80 border-slate-200 dark:border-gray-700/50', icon: 'text-blue-500 dark:text-blue-400' }
 }
 
 export default function DriveCard({ drive, profile, bay, poolStats = [], onClose, onEdit, onReassign }) {
@@ -95,111 +126,147 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
   const DriveIcon = getDriveIcon(drive.form_factor, drive.rpm)
   const poolInfo = drive.zfs_pool ? poolStats.find(p => p.name === drive.zfs_pool) : null
   const bayStatusInfo = bay?.status ? BAY_STATUS_INFO[bay.status] : null
+  const state = healthState(drive)
+  const { wrap: iconWrap, icon: iconCls } = iconStyle(state)
 
   const tempHistory = history.filter(h => h.temperature_c != null).map(h => ({
     date: new Date(h.recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     temp: h.temperature_c,
   }))
-
   const reallocHistory = history.filter(h => h.reallocated_sectors != null).map(h => ({
     date: new Date(h.recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     sectors: h.reallocated_sectors,
   }))
   const hasReallocHistory = reallocHistory.some(h => h.sectors > 0)
 
+  const hasErrors = (drive.reallocated_sectors ?? 0) > 0
+    || (drive.pending_sectors ?? 0) > 0
+    || (drive.uncorrectable_errors ?? 0) > 0
+
   return (
-    <div className={`flex flex-col gap-0 rounded-2xl border bg-gradient-to-b overflow-hidden shadow-xl ${healthGradient(drive.smart_status)}`}>
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700/50 flex items-center justify-center shrink-0">
-            <DriveIcon size={18} className="text-blue-500 dark:text-blue-400" />
+    <div className={`flex flex-col gap-0 rounded-2xl border bg-gradient-to-b overflow-hidden shadow-xl ${healthGradient(state)}`}>
+
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${iconWrap}`}>
+            <DriveIcon size={18} className={iconCls} />
           </div>
-          <div>
-            <p className="font-semibold text-slate-900 dark:text-white text-sm leading-tight">
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-900 dark:text-white text-sm leading-tight truncate">
               {drive.make || 'Unknown Make'}
             </p>
-            <p className="text-xs text-slate-500 dark:text-gray-500">{drive.model || 'Unknown Model'}</p>
+            <p className="text-xs text-slate-500 dark:text-gray-500 leading-snug truncate">{drive.model || 'Unknown Model'}</p>
+            <p className="text-[10px] font-mono text-slate-400 dark:text-gray-600 leading-snug">{drive.serial}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 pt-0.5">
+        <div className="flex items-center gap-1.5 pt-0.5 shrink-0">
           <WarningBadge status={drive.smart_status} days={warrantyDays} />
           {onReassign && (
-            <button
-              onClick={onReassign}
-              className="text-slate-400 dark:text-gray-600 hover:text-amber-500 dark:hover:text-amber-400 transition-colors p-0.5 rounded"
-              title="Reassign bay"
-            >
+            <button onClick={onReassign} className="text-slate-400 dark:text-gray-600 hover:text-amber-500 dark:hover:text-amber-400 transition-colors p-0.5 rounded" title="Reassign bay">
               <ArrowLeftRight size={14} />
             </button>
           )}
           {onEdit && (
-            <button
-              onClick={onEdit}
-              className="text-slate-400 dark:text-gray-600 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-0.5 rounded"
-              title="Edit drive"
-            >
+            <button onClick={onEdit} className="text-slate-400 dark:text-gray-600 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-0.5 rounded" title="Edit drive">
               <Pencil size={14} />
             </button>
           )}
           {onClose && (
-            <button
-              onClick={onClose}
-              className="text-slate-400 dark:text-gray-600 hover:text-slate-700 dark:hover:text-gray-300 transition-colors p-0.5 rounded"
-            >
+            <button onClick={onClose} className="text-slate-400 dark:text-gray-600 hover:text-slate-700 dark:hover:text-gray-300 transition-colors p-0.5 rounded">
               <X size={15} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Temperature + Power-on bars */}
-      <div className="px-4 pb-3 flex flex-col gap-2">
-        {drive.temperature_c != null && (
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Temperature</span>
-              <span className={`text-xs font-bold ${
-                drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
-                drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
-                'text-sky-500 dark:text-sky-400'
-              }`}>
-                {drive.temperature_c}°C
-              </span>
-            </div>
-            <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  drive.temperature_c >= dangerC ? 'bg-red-400' :
-                  drive.temperature_c >= warnC   ? 'bg-amber-400' : 'bg-sky-500'
-                }`}
-                style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }}
-              />
-            </div>
-          </div>
-        )}
-        {drive.power_on_hours != null && (
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Power-on Hours</span>
-              <span className="text-xs font-bold text-slate-500 dark:text-gray-400">
-                {drive.power_on_hours.toLocaleString()}h
-              </span>
-            </div>
-            <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  drive.power_on_hours >= 40000 ? 'bg-orange-400' :
-                  drive.power_on_hours >= 25000 ? 'bg-amber-400' : 'bg-blue-400'
-                }`}
-                style={{ width: `${Math.min(100, (drive.power_on_hours / 50000) * 100)}%` }}
-              />
-            </div>
-          </div>
-        )}
+      {/* ── Spec chips ── */}
+      <div className="px-4 pb-3 flex flex-wrap gap-1.5">
+        {drive.capacity_bytes && <Chip>{formatBytes(drive.capacity_bytes)}</Chip>}
+        {drive.rpm === 0
+          ? <Chip>SSD</Chip>
+          : drive.rpm ? <Chip>HDD {drive.rpm.toLocaleString()} rpm</Chip> : null}
+        {drive.form_factor && <Chip>{drive.form_factor}</Chip>}
+        {drive.firmware_version && <Chip mono>FW {drive.firmware_version}</Chip>}
+        {drive.device_path && <Chip mono>{drive.device_path}</Chip>}
       </div>
 
-      {/* Temperature history chart */}
+      {/* ── Temperature + Power-on hours (side-by-side) ── */}
+      {(drive.temperature_c != null || drive.power_on_hours != null) && (
+        <div className={`px-4 pb-3 grid gap-3 ${drive.temperature_c != null && drive.power_on_hours != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {drive.temperature_c != null && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Temp</span>
+                <span className={`text-xs font-bold ${
+                  drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
+                  drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
+                  'text-sky-500 dark:text-sky-400'
+                }`}>{drive.temperature_c}°C</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${
+                  drive.temperature_c >= dangerC ? 'bg-red-400' :
+                  drive.temperature_c >= warnC   ? 'bg-amber-400' : 'bg-sky-500'
+                }`} style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }} />
+              </div>
+            </div>
+          )}
+          {drive.power_on_hours != null && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Hours</span>
+                <span className="text-xs font-bold text-slate-500 dark:text-gray-400">{drive.power_on_hours.toLocaleString()}h</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${
+                  drive.power_on_hours >= 40000 ? 'bg-orange-400' :
+                  drive.power_on_hours >= 25000 ? 'bg-amber-400' : 'bg-blue-400'
+                }`} style={{ width: `${Math.min(100, (drive.power_on_hours / 50000) * 100)}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Health block ── */}
+      <div className="px-4 pb-3">
+        {state === 'failed' || hasErrors ? (
+          <div className="flex flex-col gap-2">
+            {state === 'failed' && (
+              <div className="flex items-center gap-2 rounded-lg px-3 py-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40">
+                <ShieldAlert size={13} className="text-red-500 dark:text-red-400 shrink-0" />
+                <span className="text-xs font-semibold text-red-600 dark:text-red-400">SMART failure detected</span>
+              </div>
+            )}
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { label: 'Reallocated', value: drive.reallocated_sectors },
+                { label: 'Pending',     value: drive.pending_sectors },
+                { label: 'Uncorrect.',  value: drive.uncorrectable_errors },
+              ].map(({ label, value }) => (
+                <div key={label} className={`rounded-lg px-2 py-2 text-center border ${
+                  (value ?? 0) > 0
+                    ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/40'
+                    : 'bg-slate-50 dark:bg-gray-800/30 border-slate-200 dark:border-gray-700/40'
+                }`}>
+                  <p className={`text-sm font-bold leading-none ${(value ?? 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-gray-600'}`}>
+                    {value ?? '—'}
+                  </p>
+                  <p className="text-[9px] text-slate-400 dark:text-gray-600 mt-1 leading-none">{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : drive.smart_status === 'PASSED' ? (
+          <div className="flex items-center gap-2 rounded-lg px-3 py-2 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30">
+            <CheckCircle2 size={13} className="text-emerald-500 dark:text-emerald-400 shrink-0" />
+            <span className="text-xs text-emerald-600 dark:text-emerald-400">No SMART errors detected</span>
+          </div>
+        ) : null}
+      </div>
+
+      {/* ── Temperature history chart ── */}
       {tempHistory.length > 1 && (
         <div className="px-4 pb-3">
           <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-1.5">Temp History (30d)</p>
@@ -207,11 +274,7 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
             <LineChart data={tempHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
               <XAxis dataKey="date" tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
               <YAxis tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} domain={['auto', 'auto']} />
-              <Tooltip
-                contentStyle={{ fontSize: 10, padding: '4px 8px', borderRadius: 6, border: 'none', background: 'rgba(15,23,42,0.85)', color: '#e2e8f0' }}
-                formatter={v => [`${v}°C`, 'Temp']}
-                labelStyle={{ color: '#94a3b8' }}
-              />
+              <Tooltip contentStyle={{ fontSize: 10, padding: '4px 8px', borderRadius: 6, border: 'none', background: 'rgba(15,23,42,0.85)', color: '#e2e8f0' }} formatter={v => [`${v}°C`, 'Temp']} labelStyle={{ color: '#94a3b8' }} />
               <ReferenceLine y={warnC} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} />
               <ReferenceLine y={dangerC} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} />
               <Line type="monotone" dataKey="temp" stroke="#38bdf8" strokeWidth={1.5} dot={false} />
@@ -220,7 +283,7 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
         </div>
       )}
 
-      {/* Reallocated sectors history chart */}
+      {/* ── Reallocated sectors history ── */}
       {hasReallocHistory && (
         <div className="px-4 pb-3">
           <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-1.5">Reallocated Sectors (30d)</p>
@@ -228,34 +291,30 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
             <AreaChart data={reallocHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
               <XAxis dataKey="date" tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
               <YAxis tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip
-                contentStyle={{ fontSize: 10, padding: '4px 8px', borderRadius: 6, border: 'none', background: 'rgba(15,23,42,0.85)', color: '#e2e8f0' }}
-                formatter={v => [v, 'Sectors']}
-                labelStyle={{ color: '#94a3b8' }}
-              />
+              <Tooltip contentStyle={{ fontSize: 10, padding: '4px 8px', borderRadius: 6, border: 'none', background: 'rgba(15,23,42,0.85)', color: '#e2e8f0' }} formatter={v => [v, 'Sectors']} labelStyle={{ color: '#94a3b8' }} />
               <Area type="monotone" dataKey="sectors" stroke="#f59e0b" fill="#f59e0b22" strokeWidth={1.5} dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {/* Partition donut chart */}
+      {/* ── Partition donut ── */}
       {partitions.length > 0 && (() => {
-        const usedBytes = partitions.reduce((s, p) => s + (p.size_bytes || 0), 0)
+        const visiblePartitions = partitions.filter(p => (p.size_bytes || 0) >= MIN_CHART_BYTES)
+        const usedBytes = visiblePartitions.reduce((s, p) => s + (p.size_bytes || 0), 0)
         const unpartitioned = drive.capacity_bytes ? Math.max(0, drive.capacity_bytes - usedBytes) : 0
         const pieData = [
-          ...partitions.map(p => ({ name: p.label || p.name, fstype: p.fstype, value: p.size_bytes || 0 })),
+          ...visiblePartitions.map(p => ({ name: p.label || p.name, fstype: p.fstype, value: p.size_bytes || 0 })),
           ...(unpartitioned > 0 ? [{ name: 'Unpartitioned', fstype: null, value: unpartitioned }] : []),
         ]
+        if (!pieData.length) return null
         return (
           <div className="px-4 pb-3">
             <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-2">Partitions</p>
             <div className="flex items-center gap-4">
               <PieChart width={80} height={80}>
                 <Pie data={pieData} cx={35} cy={35} innerRadius={22} outerRadius={36} dataKey="value" stroke="none">
-                  {pieData.map((entry, i) => (
-                    <Cell key={i} fill={fstypeColor(entry.fstype)} />
-                  ))}
+                  {pieData.map((entry, i) => <Cell key={i} fill={fstypeColor(entry.fstype)} />)}
                 </Pie>
               </PieChart>
               <div className="flex flex-col gap-1 min-w-0 flex-1">
@@ -263,7 +322,7 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
                   <div key={i} className="flex items-center gap-1.5 min-w-0">
                     <div className="w-2 h-2 rounded-sm shrink-0" style={{ background: fstypeColor(entry.fstype) }} />
                     <span className="text-[10px] text-slate-500 dark:text-gray-400 truncate">{fstypeLabel(entry.fstype)}</span>
-                    <span className="text-[10px] text-slate-400 dark:text-gray-600 ml-auto shrink-0">{formatGB(entry.value)}</span>
+                    <span className="text-[10px] text-slate-400 dark:text-gray-600 ml-auto shrink-0">{formatSize(entry.value)}</span>
                   </div>
                 ))}
               </div>
@@ -272,83 +331,57 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
         )
       })()}
 
-      {/* Divider */}
-      <div className="border-t border-slate-200 dark:border-gray-800/60 mx-4" />
+      {/* ── ZFS pool ── */}
+      {drive.zfs_pool && (
+        <div className="mx-4 mb-3 rounded-xl border border-blue-200/60 dark:border-blue-800/30 bg-blue-50/50 dark:bg-blue-950/10 px-3 py-2.5">
+          <p className="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">ZFS Pool</p>
+          <div className="flex items-center justify-between mb-1.5 gap-2">
+            <span className="text-xs font-mono font-semibold text-blue-600 dark:text-blue-400 truncate">{drive.zfs_pool}</span>
+            {drive.vdev_name && (
+              <span className="text-[9px] font-mono font-medium px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40 shrink-0">
+                {drive.vdev_name}
+              </span>
+            )}
+            {poolInfo && (
+              <span className="text-[10px] text-slate-500 dark:text-gray-500 shrink-0">{poolInfo.capacity_pct}% used</span>
+            )}
+          </div>
+          {poolInfo && (
+            <>
+              <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden mb-1">
+                <div className={`h-full rounded-full transition-all ${
+                  poolInfo.capacity_pct >= 80 ? 'bg-red-400' :
+                  poolInfo.capacity_pct >= 60 ? 'bg-amber-400' : 'bg-blue-400'
+                }`} style={{ width: `${poolInfo.capacity_pct}%` }} />
+              </div>
+              <p className="text-[10px] text-slate-400 dark:text-gray-600">
+                {formatBytes(poolInfo.alloc_bytes)} used of {formatBytes(poolInfo.size_bytes)}
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
-      {/* Stats grid */}
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm px-4 py-3">
-        <Row label="Serial" value={drive.serial} mono />
-        <Row label="Capacity" value={formatBytes(drive.capacity_bytes)} />
-        <Row label="Form factor" value={drive.form_factor || '—'} />
-        <Row label="Type" value={drive.rpm === 0 ? 'SSD' : drive.rpm ? `HDD ${drive.rpm.toLocaleString()}rpm` : '—'} />
-        <Row label="Firmware" value={drive.firmware_version || '—'} mono />
-        <Row label="Device" value={drive.device_path || '—'} mono />
-
-        <div className="col-span-2 border-t border-slate-200 dark:border-gray-800/50 my-0.5" />
-
-        <Row label="Reallocated" value={drive.reallocated_sectors ?? '—'} warn={(drive.reallocated_sectors ?? 0) > 0} />
-        <Row label="Pending" value={drive.pending_sectors ?? '—'} warn={(drive.pending_sectors ?? 0) > 0} />
-        <Row label="Uncorrectable" value={drive.uncorrectable_errors ?? '—'} warn={(drive.uncorrectable_errors ?? 0) > 0} />
-
-        {drive.zfs_pool && (
-          <>
-            <div className="col-span-2 border-t border-slate-200 dark:border-gray-800/50 my-0.5" />
-            <div className="col-span-2">
-              <dt className="text-slate-500 dark:text-gray-500 text-xs mb-1.5">ZFS Pool</dt>
-              <dd>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-mono font-medium text-blue-600 dark:text-blue-400">{drive.zfs_pool}</span>
-                  {poolInfo && (
-                    <span className="text-[10px] text-slate-500 dark:text-gray-500">
-                      {poolInfo.capacity_pct}% used
-                    </span>
-                  )}
-                </div>
-                {poolInfo && (
-                  <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        poolInfo.capacity_pct >= 80 ? 'bg-red-400' :
-                        poolInfo.capacity_pct >= 60 ? 'bg-amber-400' : 'bg-blue-400'
-                      }`}
-                      style={{ width: `${poolInfo.capacity_pct}%` }}
-                    />
-                  </div>
-                )}
-                {poolInfo && (
-                  <p className="text-[10px] text-slate-400 dark:text-gray-600 mt-0.5">
-                    {formatBytes(poolInfo.alloc_bytes)} used of {formatBytes(poolInfo.size_bytes)}
-                  </p>
-                )}
-              </dd>
-            </div>
-          </>
-        )}
-
-        {profile && (
-          <>
-            <div className="col-span-2 border-t border-slate-200 dark:border-gray-800/50 my-0.5" />
+      {/* ── Profile ── */}
+      {profile && (
+        <div className="mx-4 mb-3 rounded-xl border border-slate-200 dark:border-gray-700/50 bg-slate-50 dark:bg-gray-800/20 px-3 py-2.5">
+          <p className="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-2">Profile</p>
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
             <Row label="Purchased" value={profile.purchase_date || '—'} />
             <Row label="Warranty" value={formatWarrantyYears(profile.warranty_months)} />
-            <Row
-              label="Expires"
-              value={formatExpiry(profile.warranty_expiry, warrantyDays)}
-              warn={warrantyDays !== null && warrantyDays <= 90}
-            />
+            <Row label="Expires" value={formatExpiry(profile.warranty_expiry, warrantyDays)} warn={warrantyDays !== null && warrantyDays <= 90} />
             {profile.vendor && <Row label="Vendor" value={profile.vendor} />}
-            {profile.notes && (
-              <>
-                <div className="col-span-2 border-t border-slate-200 dark:border-gray-800/50 my-0.5" />
-                <div className="col-span-2">
-                  <dt className="text-slate-500 dark:text-gray-500 text-xs mb-1">Notes</dt>
-                  <dd className="text-xs text-slate-700 dark:text-gray-200 whitespace-pre-wrap">{profile.notes}</dd>
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </dl>
+          </dl>
+          {profile.notes && (
+            <div className="mt-2 pt-2 border-t border-slate-200 dark:border-gray-700/40">
+              <p className="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-1">Notes</p>
+              <p className="text-xs text-slate-700 dark:text-gray-200 whitespace-pre-wrap">{profile.notes}</p>
+            </div>
+          )}
+        </div>
+      )}
 
+      {/* ── Bay status ── */}
       {bayStatusInfo && (
         <div className={`mx-4 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 border text-xs ${bayStatusInfo.bg}`}>
           <bayStatusInfo.icon size={12} className={bayStatusInfo.color} />
@@ -357,6 +390,7 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
         </div>
       )}
 
+      {/* ── Scanned footer ── */}
       {drive.last_scanned && (
         <div className="flex items-center gap-1.5 px-4 py-2.5 border-t border-slate-200 dark:border-gray-800/50 text-[10px] text-slate-400 dark:text-gray-600">
           <Clock size={10} />
@@ -367,11 +401,19 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
   )
 }
 
-function Row({ label, value, mono, warn }) {
+function Chip({ children, mono = false }) {
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-gray-800/60 border border-slate-200 dark:border-gray-700/50 text-[10px] text-slate-600 dark:text-gray-400 leading-none ${mono ? 'font-mono' : ''}`}>
+      {children}
+    </span>
+  )
+}
+
+function Row({ label, value, warn }) {
   return (
     <>
       <dt className="text-slate-500 dark:text-gray-500 text-xs">{label}</dt>
-      <dd className={`text-xs truncate ${mono ? 'font-mono' : ''} ${warn ? 'text-amber-500 dark:text-amber-400 font-medium' : 'text-slate-700 dark:text-gray-200'}`}>
+      <dd className={`text-xs truncate ${warn ? 'text-amber-500 dark:text-amber-400 font-medium' : 'text-slate-700 dark:text-gray-200'}`}>
         {value}
       </dd>
     </>

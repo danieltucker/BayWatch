@@ -46,11 +46,11 @@ export default function PoolTopologyPanel({ poolTopology, poolStats, driveMap, o
     })
   }, [open, poolTopology])
 
-  const pathMap = Object.fromEntries(
-    Object.values(driveMap)
-      .filter(d => d.device_path)
-      .map(d => [d.device_path, d])
-  )
+  const pathMap = {}
+  Object.values(driveMap).forEach(d => {
+    if (d.device_path) pathMap[d.device_path] = d
+    if (d.by_id_path) pathMap[d.by_id_path] = d
+  })
 
   const statMap = Object.fromEntries(poolStats.map(p => [p.name, p]))
 
@@ -87,21 +87,33 @@ export default function PoolTopologyPanel({ poolTopology, poolStats, driveMap, o
             return (
               <div key={pool.name} className="flex flex-col gap-3">
                 {/* Pool header */}
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-slate-800 dark:text-gray-200 text-sm">{pool.name}</span>
-                  <span className={clsx('text-[9px] font-mono font-bold px-1.5 py-0.5 rounded', stateColor(pool.state))}>
-                    {pool.state}
-                  </span>
-                  {usedPct != null && (
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                      <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden">
-                        <div
-                          className={clsx('h-full rounded-full transition-all', usedPct >= 80 ? 'bg-amber-400' : 'bg-blue-400')}
-                          style={{ width: `${Math.min(100, usedPct)}%` }}
-                        />
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-800 dark:text-gray-200 text-sm">{pool.name}</span>
+                    <span className={clsx('text-[9px] font-mono font-bold px-1.5 py-0.5 rounded', stateColor(pool.state))}>
+                      {pool.state}
+                    </span>
+                    {usedPct != null && (
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden">
+                          <div
+                            className={clsx('h-full rounded-full transition-all', usedPct >= 80 ? 'bg-amber-400' : 'bg-blue-400')}
+                            style={{ width: `${Math.min(100, usedPct)}%` }}
+                          />
+                        </div>
+                        <span className="text-[9px] font-mono text-slate-400 dark:text-gray-500 shrink-0">{usedPct}%</span>
                       </div>
-                      <span className="text-[9px] font-mono text-slate-400 dark:text-gray-500 shrink-0">{usedPct}%</span>
-                    </div>
+                    )}
+                  </div>
+                  {pool.scan_status && pool.scan_status !== 'none requested' && (
+                    <p className={clsx(
+                      'text-[9px] font-mono leading-tight truncate',
+                      /error|fault|degraded/i.test(pool.scan_status)
+                        ? 'text-amber-500 dark:text-amber-400'
+                        : 'text-slate-400 dark:text-gray-600'
+                    )}>
+                      {pool.scan_status}
+                    </p>
                   )}
                 </div>
 
@@ -141,7 +153,7 @@ export default function PoolTopologyPanel({ poolTopology, poolStats, driveMap, o
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {vdev.disks.map(disk => {
-                          const drive = pathMap[disk.path]
+                          const drive = pathMap[disk.path] ?? pathMap[disk.path.replace(/-part\d+$/, '')]
                           return (
                             <button
                               key={disk.path}
@@ -188,6 +200,14 @@ export default function PoolTopologyPanel({ poolTopology, poolStats, driveMap, o
                                   </span>
                                 )}
                               </div>
+                              {/* Per-disk error counts */}
+                              {(disk.read_errors > 0 || disk.write_errors > 0 || disk.cksum_errors > 0) && (
+                                <div className="flex items-center gap-1 w-full mt-1">
+                                  <span className="text-[8px] font-mono text-red-400 dark:text-red-500">
+                                    R:{disk.read_errors} W:{disk.write_errors} C:{disk.cksum_errors}
+                                  </span>
+                                </div>
+                              )}
                               {!drive && (
                                 <span className="text-[8px] font-mono leading-none mt-1 opacity-50">
                                   {disk.state}

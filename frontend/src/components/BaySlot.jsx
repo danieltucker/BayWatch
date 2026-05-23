@@ -75,7 +75,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
   const overSelected = clsx(
     isOver && '!border-blue-400 !bg-blue-50 dark:!bg-blue-950/40 ring-2 ring-blue-400/40',
     isSelected && '!border-blue-500/70 dark:!border-white/60 ring-2 ring-blue-400/20 dark:ring-white/20',
-    isVdevPeer && !isSelected && 'ring-2 ring-cyan-400/50 !border-cyan-400/40'
+    isVdevPeer && !isSelected && '!bg-blue-50 dark:!bg-blue-950/30 ring-1 ring-blue-400/60 !border-blue-500/50'
   )
 
   // ── SM: Excel-style flat row ─────────────────────────────────────────────────
@@ -93,15 +93,15 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           overSelected
         )}
       >
-        <span className="text-[9px] text-slate-400 dark:text-gray-700 font-mono w-5 shrink-0 leading-none">{label}</span>
+        <span className="text-[10px] text-slate-400 dark:text-gray-700 font-mono w-5 shrink-0 leading-none">{label}</span>
         {drive ? (
           <>
-            <span className={clsx('text-[10px] font-mono font-semibold flex-1 truncate leading-none', s.text)}>
+            <span className={clsx('text-xs font-mono font-semibold flex-1 truncate leading-none', s.text)}>
               {drive.serial?.slice(-8)}
             </span>
             {drive.temperature_c != null && (
               <span className={clsx(
-                'text-[9px] font-mono shrink-0 leading-none',
+                'text-[10px] font-mono shrink-0 leading-none',
                 drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
                 drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
                 'text-slate-400 dark:text-gray-600'
@@ -110,7 +110,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
               </span>
             )}
             {vb && (
-              <span className={clsx('text-[8px] font-mono font-bold px-1 py-0.5 rounded border shrink-0 leading-none', vb.cls)}>
+              <span className={clsx('text-[9px] font-mono font-bold px-1 py-0.5 rounded border shrink-0 leading-none', vb.cls)}>
                 {vb.label}
               </span>
             )}
@@ -120,7 +120,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           <span className="text-slate-200 dark:text-gray-800 text-sm flex-1">·</span>
         )}
         {bayStatus && (
-          <span className={clsx('text-[8px] font-mono font-bold px-1 py-0.5 rounded shrink-0', bayStatus.badge)}>
+          <span className={clsx('text-[9px] font-mono font-bold px-1 py-0.5 rounded shrink-0', bayStatus.badge)}>
             {bayStatus.label}
           </span>
         )}
@@ -143,10 +143,10 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           overSelected
         )}
       >
-        <span className="absolute top-1 left-1.5 text-[8px] text-slate-400 dark:text-gray-700 font-mono leading-none">{label}</span>
+        <span className="absolute top-1 left-1.5 text-[9px] text-slate-400 dark:text-gray-700 font-mono leading-none">{label}</span>
         {drive && !bayStatus && <span className={clsx('absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full', s.dot)} />}
         {bayStatus && (
-          <span className={clsx('absolute top-1 right-1 text-[8px] font-mono font-bold px-1 py-0.5 rounded leading-none', bayStatus.badge)}>
+          <span className={clsx('absolute top-1 right-1 text-[9px] font-mono font-bold px-1 py-0.5 rounded leading-none', bayStatus.badge)}>
             {bayStatus.label}
           </span>
         )}
@@ -155,16 +155,16 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
         ) : (
           <>
             <Icon size={18} className={clsx('mt-0.5 transition-transform group-hover:scale-110', s.icon)} />
-            <span className={clsx('text-[9px] font-mono px-1 truncate w-full text-center leading-none', s.text)}>
+            <span className={clsx('text-[10px] font-mono px-1 truncate w-full text-center leading-none', s.text)}>
               {drive.serial?.slice(-6)}
             </span>
             {drive.model && (
-              <span className="text-[8px] text-slate-400 dark:text-gray-500 px-1 truncate w-full text-center leading-none">
+              <span className="text-[9px] text-slate-400 dark:text-gray-500 px-1 truncate w-full text-center leading-none">
                 {drive.model}
               </span>
             )}
             {vb && (
-              <span className={clsx('text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border leading-none mt-0.5', vb.cls)}>
+              <span className={clsx('text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border leading-none mt-0.5', vb.cls)}>
                 {vb.label}
               </span>
             )}
@@ -180,7 +180,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
                       style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }}
                     />
                   </div>
-                  <span className={clsx('text-[8px] font-mono leading-none shrink-0',
+                  <span className={clsx('text-[9px] font-mono leading-none shrink-0',
                     drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
                     drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
                     'text-slate-400 dark:text-gray-600'
@@ -217,10 +217,10 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
         overSelected
       )}
     >
-      <span className="absolute top-1.5 left-2 text-[8px] text-slate-400 dark:text-gray-600 font-mono leading-none z-10">{label}</span>
+      <span className="absolute top-1.5 left-2 text-[9px] text-slate-400 dark:text-gray-600 font-mono leading-none z-10">{label}</span>
       {drive && !bayStatus && <span className={clsx('absolute top-1.5 right-1.5 w-2 h-2 rounded-full shadow-sm z-10', s.dot)} />}
       {bayStatus && (
-        <span className={clsx('absolute top-1.5 right-1.5 z-10 text-[8px] font-mono font-bold px-1.5 py-0.5 rounded leading-none', bayStatus.badge)}>
+        <span className={clsx('absolute top-1.5 right-1.5 z-10 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded leading-none', bayStatus.badge)}>
           {bayStatus.label}
         </span>
       )}
@@ -237,17 +237,17 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
               <Icon size={14} className={s.icon} />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-medium text-slate-800 dark:text-gray-200 leading-tight truncate">
+              <p className="text-[11px] font-medium text-slate-800 dark:text-gray-200 leading-tight truncate">
                 {drive.make || 'Unknown Make'}
               </p>
               {drive.model && (
-                <p className="text-[8px] text-slate-400 dark:text-gray-500 leading-none truncate">{drive.model}</p>
+                <p className="text-[9px] text-slate-400 dark:text-gray-500 leading-none truncate">{drive.model}</p>
               )}
             </div>
           </div>
 
           {/* Serial */}
-          <span className={clsx('text-[9px] font-mono leading-none truncate', s.text)}>
+          <span className={clsx('text-[10px] font-mono leading-none truncate', s.text)}>
             {drive.serial}
           </span>
 
@@ -255,12 +255,12 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           {(drive.zfs_pool || vb) && (
             <div className="flex items-center gap-1.5">
               {drive.zfs_pool && (
-                <span className="text-[8px] text-slate-400 dark:text-gray-500 font-mono truncate flex-1">
+                <span className="text-[9px] text-slate-400 dark:text-gray-500 font-mono truncate flex-1">
                   {drive.zfs_pool}
                 </span>
               )}
               {vb && (
-                <span className={clsx('text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border leading-none shrink-0', vb.cls)}>
+                <span className={clsx('text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border leading-none shrink-0', vb.cls)}>
                   {vb.label}
                 </span>
               )}
@@ -271,9 +271,9 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           {drive.temperature_c != null && (
             <div>
               <div className="flex items-center justify-between mb-0.5">
-                <span className="text-[8px] text-slate-400 dark:text-gray-600 uppercase tracking-wide">Temp</span>
+                <span className="text-[9px] text-slate-400 dark:text-gray-600 uppercase tracking-wide">Temp</span>
                 <span className={clsx(
-                  'text-[9px] font-mono font-bold',
+                  'text-[10px] font-mono font-bold',
                   drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
                   drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
                   'text-sky-500 dark:text-sky-400'
@@ -295,16 +295,16 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
 
           {/* Capacity + device path */}
           <div className="flex items-center justify-between gap-1 mt-auto">
-            {cap && <span className="text-[8px] text-slate-500 dark:text-gray-500">{cap}</span>}
+            {cap && <span className="text-[9px] text-slate-500 dark:text-gray-500">{cap}</span>}
             {drive.device_path && (
-              <span className="text-[8px] font-mono text-slate-400 dark:text-gray-600 truncate">{drive.device_path}</span>
+              <span className="text-[9px] font-mono text-slate-400 dark:text-gray-600 truncate">{drive.device_path}</span>
             )}
           </div>
 
           {/* Warranty badge */}
           {warrantyDays != null && warrantyDays <= 365 && (
             <div className={clsx(
-              'text-[8px] font-medium rounded px-1.5 py-0.5 text-center',
+              'text-[9px] font-medium rounded px-1.5 py-0.5 text-center',
               warrantyDays < 0
                 ? 'bg-red-100 dark:bg-red-950/40 text-red-500 dark:text-red-400'
                 : warrantyDays <= 90

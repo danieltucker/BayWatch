@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, Text
+from sqlalchemy import Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.base import Base
@@ -18,7 +18,9 @@ class Enclosure(Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     type: Mapped[str] = mapped_column(String(32), default="server")  # server | jbod | other
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    display_order: Mapped[int] = mapped_column(Integer, default=0)
 
     arrays: Mapped[list[BayArray]] = relationship(
-        "BayArray", back_populates="enclosure", cascade="all, delete-orphan"
+        "BayArray", back_populates="enclosure", cascade="all, delete-orphan",
+        order_by="BayArray.display_order, BayArray.id",
     )

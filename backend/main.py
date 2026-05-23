@@ -20,6 +20,7 @@ _MIGRATIONS = [
     "ALTER TABLE drives ADD COLUMN zfs_pool VARCHAR(64)",
     "ALTER TABLE drives ADD COLUMN vdev_name VARCHAR(32)",
     "ALTER TABLE notification_configs ADD COLUMN temp_warn_threshold_c INTEGER DEFAULT 55",
+    "ALTER TABLE enclosures ADD COLUMN display_order INTEGER DEFAULT 0",
 ]
 
 
@@ -57,7 +58,7 @@ async def lifespan(app: FastAPI):
     scheduler.stop()
 
 
-app = FastAPI(title="DriveMap API", version="0.14.0", lifespan=lifespan)
+app = FastAPI(title="DriveMap API", version="0.16.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -77,4 +78,4 @@ app.include_router(history.router, prefix="/api/history", tags=["history"])
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "version": "0.14.0"}
+    return {"status": "ok", "version": "0.16.0"}

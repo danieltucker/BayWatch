@@ -16,6 +16,73 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.16.0] — 2026-05-22
+
+### Fixed
+- **Sub-1 GB partition display** — `formatSize()` replaces `formatGB()` throughout DriveCard; values below 1 GB now render as MB (e.g. "512 MB") instead of rounding to "0 GB". Fixes lingering "0 GB unknown" slices in the partition donut for BIOS/protective partitions that survived the 1 MB filter.
+
+### Added
+- **Drive health gradient colours** — DriveCard background and border now reflect health state: green gradient for healthy (`PASSED`, no errors), amber/yellow for degraded (`PASSED` with reallocated/pending/uncorrectable sectors > 0), red for failed (`FAILED`). Uses a `healthState()` function that returns `ok | warn | failed | unknown`.
+- **vdev peer highlighting — blue gradient** — drives sharing a vdev with the selected drive now show a blue-tinted background (`!bg-blue-50 dark:!bg-blue-950/30`) with a blue ring, replacing the previous subtle cyan ring. More visually distinct when scanning which drives belong to the same vdev group.
+- **DriveCard UI redesign** — full structural rewrite:
+  - `formatSize()` helper shows TB / GB / MB / KB based on magnitude
+  - Serial number moved to header row (under make/model, `text-[10px] font-mono`)
+  - Spec chips row: capacity, form factor, firmware, device path
+  - Temp + power-on hours rendered side-by-side in a two-column grid
+  - Health block: green "No SMART errors detected" checkmark OR three error count cards (reallocated / pending / uncorrectable) + SMART failure banner
+  - ZFS pool section card-styled with vdev badge chip
+  - Profile section card-styled with purchase / warranty label
+  - Partition donut uses `formatSize()` for slice labels
+- **ZFS Pool Topology — scan status** — each pool header now shows the `scan:` line from `zpool status` (e.g. last scrub date/result or in-progress scrub %). Coloured amber when the string contains "error", "fault", or "degraded".
+- **ZFS Pool Topology — per-disk error counts** — disk chips in the topology panel show `R:N W:N C:N` (read / write / checksum error counts) in red when any count is non-zero. Backend `VdevDisk` and `_parse_zpool_status` updated to capture and pass error columns.
+- **Array stats strip** — each bay array now shows a compact stats line above its grid: `occupied/total` drive count, FAIL/WARN counts (coloured red/amber), "All OK" when clean, and average temperature across occupied bays.
+- **Collapsible arrays** — each bay array has a collapse toggle (chevron) next to its name. Collapsed state persisted per-array in `localStorage array-collapsed-{id}`. Stats strip remains visible when collapsed.
+- **Collapsible enclosures** — each enclosure header has a collapse toggle (chevron). Collapsed state persisted per-enclosure in `localStorage enc-collapsed-{id}`.
+- **Enclosure reorder** — up/down arrow buttons in each enclosure header reorder enclosures by updating `display_order` on the backend. Disabled when already first/last.
+- **Array reorder** — up/down arrow buttons appear on array hover (absolute-positioned, top-right). Reorders arrays within an enclosure by updating `display_order`. Hidden when only one array exists.
+
+### Backend
+- `models/enclosure.py`: added `display_order: Mapped[int]` column; arrays relationship now ordered by `BayArray.display_order, BayArray.id`.
+- `api/schemas.py`: `EnclosureBase` gains `display_order: Optional[int]`; `BayArrayUpdate` gains `display_order: Optional[int]`; `VdevDiskRead` gains `read_errors`, `write_errors`, `cksum_errors`; `PoolTopologyRead` gains `scan_status`.
+- `api/routes/enclosures.py`: `list_enclosures` orders by `display_order, id`; `update_enclosure` uses `exclude_none=True`; `update_bay_array` handles `display_order`.
+- `services/zpool.py`: `VdevDisk` gets error count fields; `PoolTopology` gets `scan_status`; `_parse_zpool_status` captures scan line and per-disk READ/WRITE/CKSUM columns.
+- `main.py`: migration for `enclosures.display_order`; version bumped to `0.16.0`.
+
+### Frontend
+- `components/DriveCard.jsx`: full rewrite — `formatSize()`, `healthState()`, `healthGradient()`; new chip/section layout; health block with checkmark or error cards; ZFS + profile card sections.
+- `components/BaySlot.jsx`: vdev peer class changed from cyan ring to blue gradient background.
+- `components/BayGrid.jsx`: collapse toggle with localStorage persistence; `computeStats()` helper; stats strip (occupied/total, FAIL/WARN counts, avg temp).
+- `pages/Dashboard.jsx`: enclosure collapse toggle; `moveEnclosure()` / `moveArray()` using sequential `display_order` reassignment; arrow reorder buttons in enclosure header and per-array hover overlay; imports `updateEnclosure`, `updateBayArray`.
+- `components/PoolTopologyPanel.jsx`: scan_status line under pool header (amber when errors); per-disk R/W/C error row on disk chips when non-zero.
+- `docker-compose.truenas.yml`: image tag bumped to `0.16.0`.
+
+---
+
+## [0.15.0] — 2026-05-22
+
+### Fixed
+- **Partition donut: 0 GB "unknown" slices** — BIOS boot and protective MBR partitions (≤ 1 MB, no fstype) now filtered from the donut chart with a `MIN_CHART_BYTES = 1 MB` threshold. An empty-after-filter guard prevents rendering an empty chart.
+- **vdev topology drive matching** — `PoolTopologyPanel` pathMap now indexes both `device_path` (`/dev/sda`) and `by_id_path` (`/dev/disk/by-id/ata-...`). Disk paths from `zpool status -P` also have `-partN` suffix stripped before lookup, so drives reliably appear as clickable chips in the topology view.
+
+### Added
+- **Whole-disk filesystem support** — `get_partitions()` in `lsblk.py` now detects drives with no partition table but a direct filesystem (unRAID XFS, raw-formatted drives, some USB drives). Returns the disk itself as a single partition entry so the donut chart still renders correctly.
+- **Extended fstype palette** — Partition donut now correctly colors and labels: LVM (`lvm2_member` → pink), LUKS (`crypto_luks` → purple), Linux RAID (`linux_raid_member` → red), ReiserFS (cyan), HFS+ / APFS (indigo), UDF / ISO9660 (lime), nilfs2, squashfs, tmpfs. Fallback label shows the raw fstype string instead of "unknown" for unrecognized types.
+- **Bay slot text legibility** — All three BaySlot sizes bumped up by 1–2px: SM serial is now `text-xs` (12px), MD serial `text-[10px]`, LG make primary `text-[11px]`. Badge and annotation text also bumped across all sizes.
+
+### Changed
+- **Partition donut legend labels** — LVM2_member shows as "LVM", linux_raid_member as "RAID", crypto_LUKS as "LUKS", hfsplus as "HFS+". All other fstypes display their raw string rather than "unknown".
+
+### Backend
+- `services/lsblk.py`: `get_partitions()` now handles partitioned disks (existing) and whole-disk filesystems (new) via a single unified return path.
+- `main.py`: version bumped to `0.15.0`.
+
+### Frontend
+- `components/DriveCard.jsx`: extended `FSTYPE_COLORS` and `FSTYPE_LABELS` maps; added `MIN_CHART_BYTES` constant; `visiblePartitions` filter applied before computing `usedBytes` and `pieData`; empty `pieData` guard added.
+- `components/PoolTopologyPanel.jsx`: pathMap built from both `device_path` and `by_id_path`; disk path lookup strips `-partN` suffix before map lookup.
+- `components/BaySlot.jsx`: font sizes bumped in SM, MD, and LG variants for improved readability.
+
+---
+
 ## [0.14.0] — 2026-05-22
 
 ### Fixed

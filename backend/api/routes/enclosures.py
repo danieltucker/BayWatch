@@ -16,7 +16,7 @@ router = APIRouter()
 
 @router.get("", response_model=list[EnclosureRead])
 def list_enclosures(db: Session = Depends(get_db)):
-    return db.query(Enclosure).all()
+    return db.query(Enclosure).order_by(Enclosure.display_order, Enclosure.id).all()
 
 
 @router.post("", response_model=EnclosureRead, status_code=201)
@@ -43,7 +43,7 @@ def update_enclosure(
     enc = db.get(Enclosure, enclosure_id)
     if not enc:
         raise HTTPException(status_code=404, detail="Enclosure not found")
-    for k, v in body.model_dump().items():
+    for k, v in body.model_dump(exclude_none=True).items():
         setattr(enc, k, v)
     db.commit()
     db.refresh(enc)
@@ -97,6 +97,8 @@ def update_bay_array(
         arr.group_type = body.group_type
     if body.purpose is not None:
         arr.purpose = body.purpose
+    if body.display_order is not None:
+        arr.display_order = body.display_order
 
     new_rows = body.rows if body.rows is not None else arr.rows
     new_cols = body.cols if body.cols is not None else arr.cols

@@ -21,6 +21,9 @@ class PoolStats:
 class VdevDisk:
     path: str
     state: str
+    read_errors: int = 0
+    write_errors: int = 0
+    cksum_errors: int = 0
 
 
 @dataclass
@@ -35,6 +38,7 @@ class Vdev:
 class PoolTopology:
     name: str
     state: str
+    scan_status: str | None = None
     vdevs: list[Vdev] = field(default_factory=list)
 
 
@@ -150,13 +154,17 @@ def _parse_zpool_status(output: str) -> list[PoolTopology]:
             current_pool.state = raw_line.split(":", 1)[1].strip()
             continue
 
+        # Capture scan/scrub status line
+        if raw_line.lstrip().startswith("scan:") and current_pool and not in_config:
+            current_pool.scan_status = raw_line.split(":", 1)[1].strip()
+            continue
+
         if stripped == "config:":
             in_config = True
             pool_root_indent = None
             continue
 
         if not in_config or current_pool is None:
-            # Other sections (status, action, errors, scan) — reset on next pool keyword
             if raw_line.startswith("  pool:") or stripped in ("errors:", "status:", "action:", "scan:", "remove:"):
                 in_config = False
             continue
@@ -172,6 +180,16 @@ def _parse_zpool_status(output: str) -> list[PoolTopology]:
             continue
         name, state = parts[0], (parts[1] if len(parts) > 1 else "UNKNOWN")
 
+        def _safe_int(val: str) -> int:
+            try:
+                return int(val)
+            except (ValueError, TypeError):
+                return 0
+
+        read_err  = _safe_int(parts[2]) if len(parts) > 2 else 0
+        write_err = _safe_int(parts[3]) if len(parts) > 3 else 0
+        cksum_err = _safe_int(parts[4]) if len(parts) > 4 else 0
+
         # First indented line after "config:" is the pool root — skip it
         if pool_root_indent is None:
             pool_root_indent = indent
@@ -180,22 +198,24 @@ def _parse_zpool_status(output: str) -> list[PoolTopology]:
         depth = indent - pool_root_indent  # relative depth (0 = pool root, already skipped)
 
         if depth <= 0:
-            # Back to pool root level — another pool section follows, reset
             in_config = False
             continue
 
         if depth == 2:
-            # vdev group (mirror-0, raidz1-0, spare, cache, log, or lone disk)
             vdev_type = _vdev_type(name)
             current_vdev = Vdev(name=name, type=vdev_type, state=state)
             current_pool.vdevs.append(current_vdev)
-            # Bare disk at vdev level — add it as its own disk entry
             if vdev_type == "disk":
-                current_vdev.disks.append(VdevDisk(path=name, state=state))
+                current_vdev.disks.append(VdevDisk(
+                    path=name, state=state,
+                    read_errors=read_err, write_errors=write_err, cksum_errors=cksum_err,
+                ))
 
         elif depth >= 4 and current_vdev is not None:
-            # Leaf disk under a vdev group
-            current_vdev.disks.append(VdevDisk(path=name, state=state))
+            current_vdev.disks.append(VdevDisk(
+                path=name, state=state,
+                read_errors=read_err, write_errors=write_err, cksum_errors=cksum_err,
+            ))
 
     return pools
 

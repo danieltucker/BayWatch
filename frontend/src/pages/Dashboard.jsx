@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { Server, HardDrive } from 'lucide-react'
+import { Server, HardDrive, ChevronDown, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react'
+import clsx from 'clsx'
 import BayGrid from '../components/BayGrid'
 import DriveCard from '../components/DriveCard'
 import DriveList from '../components/DriveList'
@@ -10,7 +11,10 @@ import ScanButton from '../components/ScanButton'
 import EmptyBayModal from '../components/EmptyBayModal'
 import WidgetBar from '../components/WidgetBar'
 import PoolTopologyPanel from '../components/PoolTopologyPanel'
-import { getEnclosures, getDrives, getBays, getProfile, assignDrive, getPools, getPoolTopology } from '../api/client'
+import {
+  getEnclosures, getDrives, getBays, getProfile, assignDrive,
+  getPools, getPoolTopology, updateEnclosure, updateBayArray,
+} from '../api/client'
 
 function relativeTime(date) {
   const mins = Math.floor((Date.now() - date.getTime()) / 60000)
@@ -34,6 +38,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
   const [poolTopology, setPoolTopology] = useState([])
   const [lastRefreshed, setLastRefreshed] = useState(null)
   const [, setTick] = useState(0)
+  const [collapsedEncs, setCollapsedEncs] = useState({})
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -68,6 +73,17 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
 
       const profileResults = await Promise.allSettled(drvs.map(d => getProfile(d.serial)))
       setProfiles(profileResults.filter(r => r.status === 'fulfilled').map(r => r.value))
+
+      // Initialize collapse state from localStorage on first load
+      setCollapsedEncs(prev => {
+        const next = { ...prev }
+        for (const enc of encs) {
+          if (!(enc.id in next)) {
+            next[enc.id] = localStorage.getItem(`enc-collapsed-${enc.id}`) === 'true'
+          }
+        }
+        return next
+      })
     } finally {
       setLoading(false)
       setLastRefreshed(new Date())
@@ -80,6 +96,40 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
     const tick = setInterval(() => setTick(n => n + 1), 60 * 1000)
     return () => { clearInterval(refresh); clearInterval(tick) }
   }, [loadAll])
+
+  function toggleEncCollapse(encId) {
+    setCollapsedEncs(prev => {
+      const next = !prev[encId]
+      localStorage.setItem(`enc-collapsed-${encId}`, String(next))
+      return { ...prev, [encId]: next }
+    })
+  }
+
+  async function moveEnclosure(idx, dir) {
+    const swapIdx = idx + dir
+    if (swapIdx < 0 || swapIdx >= enclosures.length) return
+    const updates = enclosures.map((enc, i) => {
+      let order = i
+      if (i === idx) order = swapIdx
+      else if (i === swapIdx) order = idx
+      return updateEnclosure(enc.id, { name: enc.name, type: enc.type, display_order: order })
+    })
+    await Promise.all(updates)
+    loadAll()
+  }
+
+  async function moveArray(enc, arrIdx, dir) {
+    const swapIdx = arrIdx + dir
+    if (swapIdx < 0 || swapIdx >= enc.arrays.length) return
+    const updates = enc.arrays.map((arr, i) => {
+      let order = i
+      if (i === arrIdx) order = swapIdx
+      else if (i === swapIdx) order = arrIdx
+      return updateBayArray(enc.id, arr.id, { display_order: order })
+    })
+    await Promise.all(updates)
+    loadAll()
+  }
 
   const handleDriveSelect = (serial) => {
     setSelectedDriveSerial(serial)
@@ -166,43 +216,114 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
               </div>
             )}
 
-            {enclosures.map(enc => (
-              <div
-                key={enc.id}
-                className="rounded-2xl bg-white dark:bg-gray-900/50 border border-slate-200 dark:border-gray-800/60 overflow-hidden"
-              >
-                <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-200 dark:border-gray-800/60 bg-slate-50 dark:bg-gray-900/80">
-                  <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-gray-800 flex items-center justify-center">
-                    <Server size={13} className="text-slate-500 dark:text-gray-400" />
+            {enclosures.map((enc, encIdx) => {
+              const isCollapsed = collapsedEncs[enc.id] ?? false
+              return (
+                <div
+                  key={enc.id}
+                  className="rounded-2xl bg-white dark:bg-gray-900/50 border border-slate-200 dark:border-gray-800/60 overflow-hidden"
+                >
+                  {/* Enclosure header */}
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-gray-800/60 bg-slate-50 dark:bg-gray-900/80">
+                    <button
+                      onClick={() => toggleEncCollapse(enc.id)}
+                      className="text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 shrink-0 transition-colors"
+                    >
+                      {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-gray-800 flex items-center justify-center">
+                      <Server size={13} className="text-slate-500 dark:text-gray-400" />
+                    </div>
+                    <h2 className="font-semibold text-slate-800 dark:text-gray-200 text-sm flex-1">{enc.name}</h2>
+                    <span className="text-xs text-slate-500 dark:text-gray-600 capitalize bg-slate-100 dark:bg-gray-800/60 px-2 py-0.5 rounded-full">
+                      {enc.type}
+                    </span>
+                    {/* Enclosure reorder buttons */}
+                    <div className="flex gap-0.5 ml-1">
+                      <button
+                        onClick={() => moveEnclosure(encIdx, -1)}
+                        disabled={encIdx === 0}
+                        className={clsx(
+                          'p-0.5 rounded transition-colors',
+                          encIdx === 0
+                            ? 'text-slate-200 dark:text-gray-800 cursor-not-allowed'
+                            : 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800'
+                        )}
+                      >
+                        <ArrowUp size={13} />
+                      </button>
+                      <button
+                        onClick={() => moveEnclosure(encIdx, 1)}
+                        disabled={encIdx === enclosures.length - 1}
+                        className={clsx(
+                          'p-0.5 rounded transition-colors',
+                          encIdx === enclosures.length - 1
+                            ? 'text-slate-200 dark:text-gray-800 cursor-not-allowed'
+                            : 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800'
+                        )}
+                      >
+                        <ArrowDown size={13} />
+                      </button>
+                    </div>
                   </div>
-                  <h2 className="font-semibold text-slate-800 dark:text-gray-200 text-sm">{enc.name}</h2>
-                  <span className="text-xs text-slate-500 dark:text-gray-600 capitalize bg-slate-100 dark:bg-gray-800/60 px-2 py-0.5 rounded-full">
-                    {enc.type}
-                  </span>
+
+                  {/* Arrays */}
+                  {!isCollapsed && (
+                    <div className="p-4 flex flex-col gap-6">
+                      {enc.arrays.map((arr, arrIdx) => (
+                        <div key={arr.id} className="relative group/arr">
+                          {/* Array reorder buttons */}
+                          {enc.arrays.length > 1 && (
+                            <div className="absolute top-0 right-0 flex gap-0.5 opacity-0 group-hover/arr:opacity-100 transition-opacity z-10">
+                              <button
+                                onClick={() => moveArray(enc, arrIdx, -1)}
+                                disabled={arrIdx === 0}
+                                className={clsx(
+                                  'p-0.5 rounded transition-colors bg-white/80 dark:bg-gray-900/80 border border-slate-200 dark:border-gray-700/60',
+                                  arrIdx === 0
+                                    ? 'text-slate-200 dark:text-gray-800 cursor-not-allowed'
+                                    : 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400'
+                                )}
+                              >
+                                <ArrowUp size={11} />
+                              </button>
+                              <button
+                                onClick={() => moveArray(enc, arrIdx, 1)}
+                                disabled={arrIdx === enc.arrays.length - 1}
+                                className={clsx(
+                                  'p-0.5 rounded transition-colors bg-white/80 dark:bg-gray-900/80 border border-slate-200 dark:border-gray-700/60',
+                                  arrIdx === enc.arrays.length - 1
+                                    ? 'text-slate-200 dark:text-gray-800 cursor-not-allowed'
+                                    : 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400'
+                                )}
+                              >
+                                <ArrowDown size={11} />
+                              </button>
+                            </div>
+                          )}
+                          <BayGrid
+                            array={arr}
+                            bays={baysMap[arr.id] || []}
+                            driveMap={driveMap}
+                            profileMap={profileMap}
+                            selectedBayId={selectedBay?.id}
+                            highlightVdev={highlightVdev}
+                            onBayClick={bay => {
+                              if (!bay.drive_serial) {
+                                setEmptyBay(bay)
+                              } else {
+                                setSelectedBay(bay)
+                                setSelectedDriveSerial(null)
+                              }
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="p-4 flex flex-col gap-6">
-                  {enc.arrays.map(arr => (
-                    <BayGrid
-                      key={arr.id}
-                      array={arr}
-                      bays={baysMap[arr.id] || []}
-                      driveMap={driveMap}
-                      profileMap={profileMap}
-                      selectedBayId={selectedBay?.id}
-                      highlightVdev={highlightVdev}
-                      onBayClick={bay => {
-                        if (!bay.drive_serial) {
-                          setEmptyBay(bay)
-                        } else {
-                          setSelectedBay(bay)
-                          setSelectedDriveSerial(null)
-                        }
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+              )
+            })}
 
             {poolTopology.length > 0 && (
               <PoolTopologyPanel

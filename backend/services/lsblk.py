@@ -68,8 +68,9 @@ def get_partitions(device_path: str) -> list[dict[str, Any]]:
 
     partitions = []
     for dev in data.get("blockdevices", []):
-        for child in dev.get("children", []):
-            if child.get("type") == "part":
+        children = [c for c in dev.get("children", []) if c.get("type") == "part"]
+        if children:
+            for child in children:
                 partitions.append({
                     "name": child.get("name", ""),
                     "path": child.get("path", ""),
@@ -79,6 +80,17 @@ def get_partitions(device_path: str) -> list[dict[str, Any]]:
                     "mountpoint": child.get("mountpoint"),
                     "partuuid": child.get("partuuid"),
                 })
+        elif dev.get("fstype"):
+            # Whole-disk filesystem (no partition table — unRAID, raw-formatted, USB drives, etc.)
+            partitions.append({
+                "name": dev.get("name", ""),
+                "path": dev.get("path", ""),
+                "size_bytes": int(dev.get("size") or 0),
+                "fstype": dev.get("fstype"),
+                "label": dev.get("label"),
+                "mountpoint": dev.get("mountpoint"),
+                "partuuid": None,
+            })
     return partitions
 
 
