@@ -213,6 +213,8 @@ class DriveHistoryRead(BaseModel):
     temperature_c: Optional[int] = None
     reallocated_sectors: Optional[int] = None
     power_on_hours: Optional[int] = None
+    read_bytes: Optional[int] = None
+    write_bytes: Optional[int] = None
 
 
 class PoolHistoryRead(BaseModel):

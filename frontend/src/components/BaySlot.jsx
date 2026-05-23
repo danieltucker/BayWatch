@@ -49,18 +49,7 @@ const BAY_STATUS_STYLE = {
   cold_spare: { badge: 'bg-violet-500/20 text-violet-400 border border-violet-500/40', label: 'CS',  ring: 'ring-1 ring-violet-500/40 !border-violet-500/50' },
 }
 
-function vdevBadge(vdevName) {
-  if (!vdevName) return null
-  const m = vdevName.match(/^mirror-(\d+)$/)
-  if (m) return { label: `M${m[1]}`, cls: 'bg-blue-500/20 text-blue-400 border-blue-500/40' }
-  if (/^raidz3/.test(vdevName)) return { label: 'Z3', cls: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40' }
-  if (/^raidz2/.test(vdevName)) return { label: 'Z2', cls: 'bg-teal-500/20 text-teal-400 border-teal-500/40' }
-  if (/^raidz/.test(vdevName))  return { label: 'Z1', cls: 'bg-green-500/20 text-green-400 border-green-500/40' }
-  if (/^spare/.test(vdevName))  return { label: 'SP',  cls: 'bg-violet-500/20 text-violet-400 border-violet-500/40' }
-  if (/^cache/.test(vdevName))  return { label: 'L2',  cls: 'bg-amber-500/20 text-amber-400 border-amber-500/40' }
-  if (/^log/.test(vdevName))    return { label: 'LOG', cls: 'bg-orange-500/20 text-orange-400 border-orange-500/40' }
-  return { label: 'ZFS', cls: 'bg-slate-500/20 text-slate-400 border-slate-500/40' }
-}
+const GAP = { sm: 'gap-1', md: 'gap-1.5', lg: 'gap-2' }
 
 export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, onClick, size = 'sm' }) {
   const { setNodeRef, isOver } = useDroppable({ id: bay.id })
@@ -68,18 +57,24 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
   const isEmpty = !drive
   const label = bay.label || `${bay.row + 1}-${bay.col + 1}`
   const s = drive ? statusStyle(drive.smart_status) : null
-
   const bayStatus = BAY_STATUS_STYLE[bay.status] ?? null
-  const vb = drive ? vdevBadge(drive.vdev_name) : null
+  const isPeer = isVdevPeer && !isSelected
 
-  const overSelected = clsx(
+  // Drag-over and selection highlights — work for all sizes
+  const selectionHighlight = clsx(
     isOver && '!border-blue-400 !bg-blue-50 dark:!bg-blue-950/40 ring-2 ring-blue-400/40',
     isSelected && '!border-blue-500/70 dark:!border-white/60 ring-2 ring-blue-400/20 dark:ring-white/20',
-    isVdevPeer && !isSelected && '!bg-blue-50 dark:!bg-blue-950/30 ring-1 ring-blue-400/60 !border-blue-500/50'
   )
+  // Peer highlight for SM/MD: flat bg override with !important is safe since no gradient
+  const peerFlat = isPeer && '!bg-blue-50 dark:!bg-blue-950/30 ring-1 ring-blue-400/60 !border-blue-500/50'
 
-  // ── SM: Excel-style flat row ─────────────────────────────────────────────────
+  // ── SM: compact row — make · size on left, temp + dot on right ───────────────
   if (size === 'sm') {
+    const cap = drive ? formatCapacity(drive.capacity_bytes) : null
+    const makeSize = drive
+      ? [drive.make, cap].filter(Boolean).join(' · ')
+      : null
+
     return (
       <div
         ref={setNodeRef}
@@ -90,14 +85,15 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
             ? 'border-dashed border-slate-200 dark:border-gray-800/50 hover:border-slate-300 dark:hover:border-gray-700/60 bg-transparent'
             : clsx(s.border, s.bg, s.hover),
           bayStatus?.ring,
-          overSelected
+          selectionHighlight,
+          peerFlat,
         )}
       >
         <span className="text-[10px] text-slate-400 dark:text-gray-700 font-mono w-5 shrink-0 leading-none">{label}</span>
         {drive ? (
           <>
-            <span className={clsx('text-xs font-mono font-semibold flex-1 truncate leading-none', s.text)}>
-              {drive.serial?.slice(-8)}
+            <span className={clsx('text-[10px] flex-1 truncate leading-none', s.text)}>
+              {makeSize || drive.serial?.slice(-8)}
             </span>
             {drive.temperature_c != null && (
               <span className={clsx(
@@ -107,11 +103,6 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
                 'text-slate-400 dark:text-gray-600'
               )}>
                 {drive.temperature_c}°
-              </span>
-            )}
-            {vb && (
-              <span className={clsx('text-[9px] font-mono font-bold px-1 py-0.5 rounded border shrink-0 leading-none', vb.cls)}>
-                {vb.label}
               </span>
             )}
             <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', s.dot)} />
@@ -128,7 +119,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
     )
   }
 
-  // ── MD: Medium card — icon + serial + make + temp ────────────────────────────
+  // ── MD: card — icon + make (primary) + serial (secondary) + temp bar ─────────
   if (size === 'md') {
     const Icon = drive ? getDriveIcon(drive.form_factor, drive.rpm) : null
     return (
@@ -140,7 +131,8 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           isEmpty
             ? 'border-dashed border-slate-300 dark:border-gray-700/50 bg-slate-50 dark:bg-gray-900/20 hover:border-slate-400 dark:hover:border-gray-600/70 hover:bg-slate-100 dark:hover:bg-gray-800/20'
             : clsx(s.border, s.bg, s.hover),
-          overSelected
+          selectionHighlight,
+          peerFlat,
         )}
       >
         <span className="absolute top-1 left-1.5 text-[9px] text-slate-400 dark:text-gray-700 font-mono leading-none">{label}</span>
@@ -155,23 +147,18 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
         ) : (
           <>
             <Icon size={18} className={clsx('mt-0.5 transition-transform group-hover:scale-110', s.icon)} />
-            <span className={clsx('text-[10px] font-mono px-1 truncate w-full text-center leading-none', s.text)}>
+            {/* Make as primary */}
+            <span className={clsx('text-[10px] font-medium px-1 truncate w-full text-center leading-none', s.text)}>
+              {drive.make || drive.model || '—'}
+            </span>
+            {/* Serial as secondary */}
+            <span className="text-[9px] font-mono text-slate-400 dark:text-gray-500 px-1 truncate w-full text-center leading-none">
               {drive.serial?.slice(-6)}
             </span>
-            {drive.model && (
-              <span className="text-[9px] text-slate-400 dark:text-gray-500 px-1 truncate w-full text-center leading-none">
-                {drive.model}
-              </span>
-            )}
-            {vb && (
-              <span className={clsx('text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border leading-none mt-0.5', vb.cls)}>
-                {vb.label}
-              </span>
-            )}
             {drive.temperature_c != null && (
               <div className="w-full px-1 mt-0.5">
-                <div className="flex items-center justify-between mb-0.5">
-                  <div className="h-[3px] flex-1 rounded-full bg-slate-200/80 dark:bg-gray-800 overflow-hidden mr-1.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-[3px] flex-1 rounded-full bg-slate-200/80 dark:bg-gray-800 overflow-hidden">
                     <div
                       className={clsx('h-full rounded-full',
                         drive.temperature_c >= dangerC ? 'bg-red-400' :
@@ -196,10 +183,17 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
     )
   }
 
-  // ── LG: Rich card — gradient + all details ───────────────────────────────────
+  // ── LG: rich gradient card ───────────────────────────────────────────────────
   const Icon = drive ? getDriveIcon(drive.form_factor, drive.rpm) : null
   const cap = drive ? formatCapacity(drive.capacity_bytes) : null
   const warrantyDays = profile?.warranty_days_remaining ?? null
+
+  // For LG, apply blue gradient directly (no !important needed) for vdev peers
+  const lgBg = isEmpty
+    ? 'border-dashed border-slate-200 dark:border-gray-700/50 bg-slate-50/50 dark:bg-gray-900/10 hover:border-slate-300 dark:hover:border-gray-600'
+    : isPeer
+    ? 'bg-gradient-to-b from-blue-50 to-white dark:from-blue-950/30 dark:to-gray-900/60 border-blue-300/70 dark:border-blue-700/50 hover:from-blue-100/70 dark:hover:from-blue-950/50'
+    : clsx('bg-gradient-to-b to-white dark:to-gray-900/60', s.lgFrom, s.lgBorder, s.hover)
 
   return (
     <div
@@ -207,14 +201,9 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
       onClick={() => onClick?.(bay)}
       className={clsx(
         'relative min-h-[150px] flex flex-col rounded-xl border cursor-pointer select-none transition-all duration-150 overflow-hidden group',
-        isEmpty
-          ? 'border-dashed border-slate-200 dark:border-gray-700/50 bg-slate-50/50 dark:bg-gray-900/10 hover:border-slate-300 dark:hover:border-gray-600'
-          : clsx(
-              'bg-gradient-to-b to-white dark:to-gray-900/60',
-              s.lgFrom, s.lgBorder,
-              s.hover
-            ),
-        overSelected
+        lgBg,
+        selectionHighlight,
+        isPeer && !isSelected && 'ring-1 ring-blue-400/50',
       )}
     >
       <span className="absolute top-1.5 left-2 text-[9px] text-slate-400 dark:text-gray-600 font-mono leading-none z-10">{label}</span>
@@ -231,14 +220,14 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
         </div>
       ) : (
         <div className="flex-1 flex flex-col gap-1.5 px-2.5 pt-6 pb-2.5">
-          {/* Icon + model/make */}
+          {/* Icon + make/model */}
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-white/70 dark:bg-gray-800/60 border border-slate-200/80 dark:border-gray-700/40 flex items-center justify-center shrink-0">
               <Icon size={14} className={s.icon} />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-medium text-slate-800 dark:text-gray-200 leading-tight truncate">
-                {drive.make || 'Unknown Make'}
+              <p className="text-[11px] font-semibold text-slate-800 dark:text-gray-200 leading-tight truncate">
+                {drive.make || 'Unknown'}
               </p>
               {drive.model && (
                 <p className="text-[9px] text-slate-400 dark:text-gray-500 leading-none truncate">{drive.model}</p>
@@ -251,17 +240,15 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
             {drive.serial}
           </span>
 
-          {/* Pool + vdev */}
-          {(drive.zfs_pool || vb) && (
+          {/* Pool info */}
+          {drive.zfs_pool && (
             <div className="flex items-center gap-1.5">
-              {drive.zfs_pool && (
-                <span className="text-[9px] text-slate-400 dark:text-gray-500 font-mono truncate flex-1">
-                  {drive.zfs_pool}
-                </span>
-              )}
-              {vb && (
-                <span className={clsx('text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border leading-none shrink-0', vb.cls)}>
-                  {vb.label}
+              <span className="text-[9px] text-slate-400 dark:text-gray-500 font-mono truncate flex-1">
+                {drive.zfs_pool}
+              </span>
+              {drive.vdev_name && (
+                <span className="text-[9px] font-mono text-slate-400 dark:text-gray-600 shrink-0">
+                  {drive.vdev_name}
                 </span>
               )}
             </div>

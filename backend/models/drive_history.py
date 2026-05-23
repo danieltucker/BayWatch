@@ -21,3 +21,5 @@ class DriveHistory(Base):
     temperature_c: Mapped[int | None] = mapped_column(nullable=True)
     reallocated_sectors: Mapped[int | None] = mapped_column(nullable=True)
     power_on_hours: Mapped[int | None] = mapped_column(nullable=True)
+    read_bytes: Mapped[int | None] = mapped_column(nullable=True)
+    write_bytes: Mapped[int | None] = mapped_column(nullable=True)

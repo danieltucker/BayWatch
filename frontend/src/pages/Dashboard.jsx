@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { Server, HardDrive, ChevronDown, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react'
+import { Server, HardDrive, ChevronDown, ChevronRight, ArrowUp, ArrowDown, Download } from 'lucide-react'
 import clsx from 'clsx'
 import BayGrid from '../components/BayGrid'
 import DriveCard from '../components/DriveCard'
@@ -15,6 +15,47 @@ import {
   getEnclosures, getDrives, getBays, getProfile, assignDrive,
   getPools, getPoolTopology, updateEnclosure, updateBayArray,
 } from '../api/client'
+
+function exportDrivesCSV(drives, profiles) {
+  const profileMap = Object.fromEntries(profiles.map(p => [p.serial, p]))
+  const headers = [
+    'Serial', 'Make', 'Model', 'Capacity', 'Form Factor', 'RPM', 'Firmware',
+    'Device Path', 'SMART Status', 'Temperature (C)', 'Power On Hours',
+    'Reallocated Sectors', 'Pending Sectors', 'Uncorrectable Errors',
+    'ZFS Pool', 'vDev', 'Last Scanned',
+    'Purchase Date', 'Warranty (months)', 'Vendor', 'Notes',
+  ]
+  const rows = drives.map(d => {
+    const p = profileMap[d.serial] || {}
+    const cap = d.capacity_bytes
+      ? d.capacity_bytes >= 1e12
+        ? `${(d.capacity_bytes / 1e12).toFixed(1)} TB`
+        : `${(d.capacity_bytes / 1e9).toFixed(0)} GB`
+      : ''
+    return [
+      d.serial, d.make || '', d.model || '', cap,
+      d.form_factor || '', d.rpm != null ? d.rpm : '', d.firmware_version || '',
+      d.device_path || '', d.smart_status || '',
+      d.temperature_c != null ? d.temperature_c : '',
+      d.power_on_hours != null ? d.power_on_hours : '',
+      d.reallocated_sectors != null ? d.reallocated_sectors : '',
+      d.pending_sectors != null ? d.pending_sectors : '',
+      d.uncorrectable_errors != null ? d.uncorrectable_errors : '',
+      d.zfs_pool || '', d.vdev_name || '',
+      d.last_scanned ? new Date(d.last_scanned).toISOString() : '',
+      p.purchase_date || '', p.warranty_months != null ? p.warranty_months : '',
+      p.vendor || '', p.notes ? `"${p.notes.replace(/"/g, '""')}"` : '',
+    ].map(v => String(v).includes(',') ? `"${v}"` : v)
+  })
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `drivemap-export-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 function relativeTime(date) {
   const mins = Math.floor((Date.now() - date.getTime()) / 60000)
@@ -194,6 +235,16 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                     Updated {relativeTime(lastRefreshed)}
                   </span>
                 )}
+                {drives.length > 0 && (
+                  <button
+                    onClick={() => exportDrivesCSV(drives, profiles)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-gray-700/60 text-xs text-slate-500 dark:text-gray-500 hover:text-slate-700 dark:hover:text-gray-300 hover:border-slate-300 dark:hover:border-gray-600 hover:bg-slate-50 dark:hover:bg-gray-800/40 transition-colors"
+                    title="Export drives to CSV"
+                  >
+                    <Download size={12} />
+                    Export
+                  </button>
+                )}
                 <ScanButton onScanComplete={() => { loadAll(); setLastRefreshed(new Date()) }} onOpenLog={onOpenLog} />
               </div>
             </div>
@@ -271,53 +322,25 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                   {!isCollapsed && (
                     <div className="p-4 flex flex-col gap-6">
                       {enc.arrays.map((arr, arrIdx) => (
-                        <div key={arr.id} className="relative group/arr">
-                          {/* Array reorder buttons */}
-                          {enc.arrays.length > 1 && (
-                            <div className="absolute top-0 right-0 flex gap-0.5 opacity-0 group-hover/arr:opacity-100 transition-opacity z-10">
-                              <button
-                                onClick={() => moveArray(enc, arrIdx, -1)}
-                                disabled={arrIdx === 0}
-                                className={clsx(
-                                  'p-0.5 rounded transition-colors bg-white/80 dark:bg-gray-900/80 border border-slate-200 dark:border-gray-700/60',
-                                  arrIdx === 0
-                                    ? 'text-slate-200 dark:text-gray-800 cursor-not-allowed'
-                                    : 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400'
-                                )}
-                              >
-                                <ArrowUp size={11} />
-                              </button>
-                              <button
-                                onClick={() => moveArray(enc, arrIdx, 1)}
-                                disabled={arrIdx === enc.arrays.length - 1}
-                                className={clsx(
-                                  'p-0.5 rounded transition-colors bg-white/80 dark:bg-gray-900/80 border border-slate-200 dark:border-gray-700/60',
-                                  arrIdx === enc.arrays.length - 1
-                                    ? 'text-slate-200 dark:text-gray-800 cursor-not-allowed'
-                                    : 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400'
-                                )}
-                              >
-                                <ArrowDown size={11} />
-                              </button>
-                            </div>
-                          )}
-                          <BayGrid
-                            array={arr}
-                            bays={baysMap[arr.id] || []}
-                            driveMap={driveMap}
-                            profileMap={profileMap}
-                            selectedBayId={selectedBay?.id}
-                            highlightVdev={highlightVdev}
-                            onBayClick={bay => {
-                              if (!bay.drive_serial) {
-                                setEmptyBay(bay)
-                              } else {
-                                setSelectedBay(bay)
-                                setSelectedDriveSerial(null)
-                              }
-                            }}
-                          />
-                        </div>
+                        <BayGrid
+                          key={arr.id}
+                          array={arr}
+                          bays={baysMap[arr.id] || []}
+                          driveMap={driveMap}
+                          profileMap={profileMap}
+                          selectedBayId={selectedBay?.id}
+                          highlightVdev={highlightVdev}
+                          onMoveUp={arrIdx > 0 ? () => moveArray(enc, arrIdx, -1) : undefined}
+                          onMoveDown={arrIdx < enc.arrays.length - 1 ? () => moveArray(enc, arrIdx, 1) : undefined}
+                          onBayClick={bay => {
+                            if (!bay.drive_serial) {
+                              setEmptyBay(bay)
+                            } else {
+                              setSelectedBay(bay)
+                              setSelectedDriveSerial(null)
+                            }
+                          }}
+                        />
                       ))}
                     </div>
                   )}

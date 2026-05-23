@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Clock, X, Pencil, AlertTriangle, Zap, Archive, ArrowLeftRight, CheckCircle2, ShieldAlert } from 'lucide-react'
 import {
-  ResponsiveContainer, LineChart, Line, AreaChart, Area,
+  ResponsiveContainer, AreaChart, Area,
   XAxis, YAxis, Tooltip, ReferenceLine,
   PieChart, Pie, Cell,
 } from 'recharts'
@@ -22,58 +22,18 @@ function formatBytes(bytes) {
   if (tb >= 1) return `${tb.toFixed(1)} TB`
   return `${(bytes / 1e9).toFixed(0)} GB`
 }
-
 function formatWarrantyYears(months) {
   if (!months) return '—'
   return `${parseFloat((months / 12).toFixed(1))} yrs`
 }
-
 function formatExpiry(expiryDate, daysRemaining) {
   if (!expiryDate) return '—'
   const dateStr = new Date(expiryDate + 'T00:00:00').toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric',
   })
   if (daysRemaining == null) return dateStr
-  if (daysRemaining > 0) {
-    return `${dateStr} · ${parseFloat((daysRemaining / 365).toFixed(1))}y left`
-  }
+  if (daysRemaining > 0) return `${dateStr} · ${parseFloat((daysRemaining / 365).toFixed(1))}y left`
   return `${dateStr} · ${Math.abs(Math.round(daysRemaining / 30))}mo ago`
-}
-
-const FSTYPE_COLORS = {
-  zfs_member: '#3b82f6',
-  ext4: '#22c55e', ext3: '#22c55e', ext2: '#22c55e', ext: '#22c55e',
-  btrfs: '#14b8a6',
-  xfs: '#8b5cf6',
-  swap: '#f59e0b',
-  ntfs: '#f97316', vfat: '#f97316', exfat: '#f97316', fat32: '#f97316', fat16: '#f97316',
-  reiserfs: '#06b6d4', reiser4: '#06b6d4',
-  lvm2_member: '#ec4899',
-  linux_raid_member: '#ef4444',
-  crypto_luks: '#a855f7',
-  apfs: '#6366f1',
-  hfsplus: '#6366f1', hfs: '#6366f1',
-  nilfs2: '#0ea5e9',
-  udf: '#84cc16', iso9660: '#84cc16',
-  squashfs: '#78716c',
-  tmpfs: '#94a3b8',
-}
-const FSTYPE_LABELS = {
-  zfs_member: 'ZFS',
-  lvm2_member: 'LVM',
-  linux_raid_member: 'RAID',
-  crypto_luks: 'LUKS',
-  hfsplus: 'HFS+', hfs: 'HFS',
-  fat32: 'FAT32', fat16: 'FAT16',
-}
-const MIN_CHART_BYTES = 1_048_576
-
-function fstypeColor(fstype) {
-  return FSTYPE_COLORS[fstype?.toLowerCase()] ?? '#64748b'
-}
-function fstypeLabel(fstype) {
-  if (!fstype) return 'unknown'
-  return FSTYPE_LABELS[fstype.toLowerCase()] ?? fstype
 }
 function formatSize(bytes) {
   if (!bytes) return '0 B'
@@ -81,6 +41,29 @@ function formatSize(bytes) {
   if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`
   if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(0)} MB`
   return `${(bytes / 1e3).toFixed(0)} KB`
+}
+
+const FSTYPE_COLORS = {
+  zfs_member: '#3b82f6',
+  ext4: '#22c55e', ext3: '#22c55e', ext2: '#22c55e', ext: '#22c55e',
+  btrfs: '#14b8a6', xfs: '#8b5cf6', swap: '#f59e0b',
+  ntfs: '#f97316', vfat: '#f97316', exfat: '#f97316', fat32: '#f97316', fat16: '#f97316',
+  reiserfs: '#06b6d4', reiser4: '#06b6d4', lvm2_member: '#ec4899',
+  linux_raid_member: '#ef4444', crypto_luks: '#a855f7',
+  apfs: '#6366f1', hfsplus: '#6366f1', hfs: '#6366f1',
+  nilfs2: '#0ea5e9', udf: '#84cc16', iso9660: '#84cc16',
+  squashfs: '#78716c', tmpfs: '#94a3b8',
+}
+const FSTYPE_LABELS = {
+  zfs_member: 'ZFS', lvm2_member: 'LVM', linux_raid_member: 'RAID',
+  crypto_luks: 'LUKS', hfsplus: 'HFS+', hfs: 'HFS', fat32: 'FAT32', fat16: 'FAT16',
+}
+const MIN_CHART_BYTES = 1_048_576
+
+function fstypeColor(fstype) { return FSTYPE_COLORS[fstype?.toLowerCase()] ?? '#64748b' }
+function fstypeLabel(fstype) {
+  if (!fstype) return 'unknown'
+  return FSTYPE_LABELS[fstype.toLowerCase()] ?? fstype
 }
 
 function healthState(drive) {
@@ -93,18 +76,78 @@ function healthState(drive) {
   }
   return 'unknown'
 }
-
 function healthGradient(state) {
-  if (state === 'ok')      return 'from-emerald-50 dark:from-emerald-500/10 to-transparent border-emerald-200 dark:border-emerald-700/30'
-  if (state === 'warn')    return 'from-amber-50 dark:from-amber-500/10 to-transparent border-amber-300 dark:border-amber-600/50'
-  if (state === 'failed')  return 'from-red-50 dark:from-red-500/15 to-transparent border-red-300 dark:border-red-600/60'
+  if (state === 'ok')     return 'from-emerald-50 dark:from-emerald-500/10 to-transparent border-emerald-200 dark:border-emerald-700/30'
+  if (state === 'warn')   return 'from-amber-50 dark:from-amber-500/10 to-transparent border-amber-300 dark:border-amber-600/50'
+  if (state === 'failed') return 'from-red-50 dark:from-red-500/15 to-transparent border-red-300 dark:border-red-600/60'
   return 'from-slate-50 dark:from-gray-700/20 to-transparent border-slate-200 dark:border-gray-700/30'
 }
-
 function iconStyle(state) {
-  if (state === 'failed') return { wrap: 'bg-red-100 dark:bg-red-950/40 border-red-200 dark:border-red-800/50',  icon: 'text-red-500 dark:text-red-400' }
+  if (state === 'failed') return { wrap: 'bg-red-100 dark:bg-red-950/40 border-red-200 dark:border-red-800/50',   icon: 'text-red-500 dark:text-red-400' }
   if (state === 'warn')   return { wrap: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/40', icon: 'text-amber-500 dark:text-amber-400' }
   return { wrap: 'bg-slate-100 dark:bg-gray-800/80 border-slate-200 dark:border-gray-700/50', icon: 'text-blue-500 dark:text-blue-400' }
+}
+
+// Composite health score 0–100
+function computeHealthScore(drive) {
+  if (!drive.smart_status || drive.smart_status === 'UNKNOWN') return null
+  if (drive.smart_status === 'FAILED') return 0
+  let score = 100
+  const realloc = drive.reallocated_sectors ?? 0
+  const pending = drive.pending_sectors ?? 0
+  const uncorr  = drive.uncorrectable_errors ?? 0
+  if (realloc > 0) score -= Math.min(40, realloc * 4)
+  if (pending > 0) score -= Math.min(25, pending * 5)
+  if (uncorr  > 0) score -= Math.min(35, uncorr * 10)
+  const poh = drive.power_on_hours ?? 0
+  if (poh > 50000) score -= 20
+  else if (poh > 40000) score -= 12
+  else if (poh > 25000) score -= 5
+  const temp = drive.temperature_c
+  if (temp != null) {
+    if (temp >= 60) score -= 15
+    else if (temp >= 55) score -= 8
+    else if (temp >= 50) score -= 3
+  }
+  return Math.max(0, Math.round(score))
+}
+function scoreLabel(score) {
+  if (score == null) return { label: 'Unknown', color: '#94a3b8' }
+  if (score >= 90)   return { label: 'Excellent', color: '#22c55e' }
+  if (score >= 75)   return { label: 'Good',      color: '#4ade80' }
+  if (score >= 60)   return { label: 'Fair',      color: '#f59e0b' }
+  if (score >= 40)   return { label: 'Poor',      color: '#f97316' }
+  return               { label: 'Critical',   color: '#ef4444' }
+}
+
+function HealthRing({ score }) {
+  const r = 22
+  const circ = 2 * Math.PI * r
+  const fill = score == null ? 0 : (score / 100) * circ
+  const { label, color } = scoreLabel(score)
+  return (
+    <div className="flex items-center gap-3">
+      <div className="relative w-[52px] h-[52px] shrink-0">
+        <svg width={52} height={52} className="-rotate-90">
+          <circle cx={26} cy={26} r={r} fill="none" stroke="currentColor"
+            className="text-slate-200 dark:text-gray-800" strokeWidth={4} />
+          <circle cx={26} cy={26} r={r} fill="none" stroke={color} strokeWidth={4}
+            strokeDasharray={`${fill} ${circ - fill}`} strokeLinecap="round"
+            style={{ transition: 'stroke-dasharray 0.6s ease' }} />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-xs font-bold" style={{ color }}>
+            {score == null ? '?' : score}
+          </span>
+        </div>
+      </div>
+      <div>
+        <p className="text-sm font-semibold leading-tight" style={{ color }}>{label}</p>
+        <p className="text-[10px] text-slate-400 dark:text-gray-500 leading-snug">Health Score</p>
+        <p className="text-[9px] text-slate-300 dark:text-gray-700 leading-snug mt-0.5">SMART · age · temp</p>
+      </div>
+    </div>
+  )
 }
 
 export default function DriveCard({ drive, profile, bay, poolStats = [], onClose, onEdit, onReassign }) {
@@ -128,20 +171,63 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
   const bayStatusInfo = bay?.status ? BAY_STATUS_INFO[bay.status] : null
   const state = healthState(drive)
   const { wrap: iconWrap, icon: iconCls } = iconStyle(state)
+  const healthScore = computeHealthScore(drive)
 
-  const tempHistory = history.filter(h => h.temperature_c != null).map(h => ({
-    date: new Date(h.recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    temp: h.temperature_c,
-  }))
-  const reallocHistory = history.filter(h => h.reallocated_sectors != null).map(h => ({
-    date: new Date(h.recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    sectors: h.reallocated_sectors,
-  }))
+  const tempHistory = history
+    .filter(h => h.temperature_c != null)
+    .map(h => ({
+      date: new Date(h.recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      temp: h.temperature_c,
+    }))
+
+  const pohHistory = history
+    .filter(h => h.power_on_hours != null)
+    .map(h => ({
+      date: new Date(h.recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      hours: h.power_on_hours,
+    }))
+
+  const reallocHistory = history
+    .filter(h => h.reallocated_sectors != null)
+    .map(h => ({
+      date: new Date(h.recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      sectors: h.reallocated_sectors,
+    }))
   const hasReallocHistory = reallocHistory.some(h => h.sectors > 0)
+
+  // I/O deltas: consecutive cumulative bytes → MB transferred per scan interval
+  const ioHistory = (() => {
+    const pts = history.filter(h => h.read_bytes != null)
+    if (pts.length < 2) return []
+    const result = []
+    for (let i = 1; i < pts.length; i++) {
+      const dr = pts[i].read_bytes - pts[i - 1].read_bytes
+      const dw = pts[i].write_bytes - pts[i - 1].write_bytes
+      if (dr < 0 || dw < 0) continue  // counter reset after reboot
+      result.push({
+        date: new Date(pts[i].recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        readMB:  Math.round(dr / 1048576),
+        writeMB: Math.round(dw / 1048576),
+      })
+    }
+    return result
+  })()
 
   const hasErrors = (drive.reallocated_sectors ?? 0) > 0
     || (drive.pending_sectors ?? 0) > 0
     || (drive.uncorrectable_errors ?? 0) > 0
+
+  // Clamp temp chart domain to [25, 65] but expand if actual values are outside
+  const tempMin = tempHistory.length ? Math.min(...tempHistory.map(h => h.temp)) : 25
+  const tempMax = tempHistory.length ? Math.max(...tempHistory.map(h => h.temp)) : 65
+  const tempDomainLow  = Math.min(25, tempMin - 2)
+  const tempDomainHigh = Math.max(65, tempMax + 2)
+
+  const tooltipStyle = {
+    fontSize: 10, padding: '4px 8px', borderRadius: 6,
+    border: 'none', background: 'rgba(15,23,42,0.85)', color: '#e2e8f0',
+  }
+  const axisStyle = { fontSize: 8, fill: 'currentColor' }
 
   return (
     <div className={`flex flex-col gap-0 rounded-2xl border bg-gradient-to-b overflow-hidden shadow-xl ${healthGradient(state)}`}>
@@ -191,7 +277,14 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
         {drive.device_path && <Chip mono>{drive.device_path}</Chip>}
       </div>
 
-      {/* ── Temperature + Power-on hours (side-by-side) ── */}
+      {/* ── Health score ring ── */}
+      {healthScore !== null && (
+        <div className="mx-4 mb-3 rounded-xl border border-slate-200 dark:border-gray-700/50 bg-slate-50/80 dark:bg-gray-800/20 px-3 py-2.5">
+          <HealthRing score={healthScore} />
+        </div>
+      )}
+
+      {/* ── Temperature + Power-on hours ── */}
       {(drive.temperature_c != null || drive.power_on_hours != null) && (
         <div className={`px-4 pb-3 grid gap-3 ${drive.temperature_c != null && drive.power_on_hours != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {drive.temperature_c != null && (
@@ -266,33 +359,96 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
         ) : null}
       </div>
 
-      {/* ── Temperature history chart ── */}
+      {/* ── Temperature history — gradient area chart, 25–65°C scale ── */}
       {tempHistory.length > 1 && (
         <div className="px-4 pb-3">
           <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-1.5">Temp History (30d)</p>
           <ResponsiveContainer width="100%" height={80}>
-            <LineChart data={tempHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-              <XAxis dataKey="date" tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} domain={['auto', 'auto']} />
-              <Tooltip contentStyle={{ fontSize: 10, padding: '4px 8px', borderRadius: 6, border: 'none', background: 'rgba(15,23,42,0.85)', color: '#e2e8f0' }} formatter={v => [`${v}°C`, 'Temp']} labelStyle={{ color: '#94a3b8' }} />
-              <ReferenceLine y={warnC} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} />
-              <ReferenceLine y={dangerC} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} />
-              <Line type="monotone" dataKey="temp" stroke="#38bdf8" strokeWidth={1.5} dot={false} />
-            </LineChart>
+            <AreaChart data={tempHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+              <defs>
+                <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#38bdf8" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} domain={[tempDomainLow, tempDomainHigh]} />
+              <Tooltip contentStyle={tooltipStyle} formatter={v => [`${v}°C`, 'Temp']} labelStyle={{ color: '#94a3b8' }} />
+              <ReferenceLine y={warnC}   stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} label={{ value: `${warnC}°`, position: 'right', fontSize: 7, fill: '#f59e0b' }} />
+              <ReferenceLine y={dangerC} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} label={{ value: `${dangerC}°`, position: 'right', fontSize: 7, fill: '#ef4444' }} />
+              <Area type="monotone" dataKey="temp" stroke="#38bdf8" fill="url(#tempGrad)" strokeWidth={1.5} dot={false} />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {/* ── Reallocated sectors history ── */}
+      {/* ── Power-on hours trend ── */}
+      {pohHistory.length > 1 && (
+        <div className="px-4 pb-3">
+          <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-1.5">Hours On (30d)</p>
+          <ResponsiveContainer width="100%" height={60}>
+            <AreaChart data={pohHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+              <defs>
+                <linearGradient id="pohGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#818cf8" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={tooltipStyle} formatter={v => [`${v.toLocaleString()}h`, 'Power-on hours']} labelStyle={{ color: '#94a3b8' }} />
+              <Area type="monotone" dataKey="hours" stroke="#818cf8" fill="url(#pohGrad)" strokeWidth={1.5} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* ── Reallocated sectors trend ── */}
       {hasReallocHistory && (
         <div className="px-4 pb-3">
           <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-1.5">Reallocated Sectors (30d)</p>
-          <ResponsiveContainer width="100%" height={64}>
+          <ResponsiveContainer width="100%" height={60}>
             <AreaChart data={reallocHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-              <XAxis dataKey="date" tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={{ fontSize: 10, padding: '4px 8px', borderRadius: 6, border: 'none', background: 'rgba(15,23,42,0.85)', color: '#e2e8f0' }} formatter={v => [v, 'Sectors']} labelStyle={{ color: '#94a3b8' }} />
-              <Area type="monotone" dataKey="sectors" stroke="#f59e0b" fill="#f59e0b22" strokeWidth={1.5} dot={false} />
+              <defs>
+                <linearGradient id="reallocGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={tooltipStyle} formatter={v => [v, 'Sectors']} labelStyle={{ color: '#94a3b8' }} />
+              <Area type="monotone" dataKey="sectors" stroke="#f59e0b" fill="url(#reallocGrad)" strokeWidth={1.5} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* ── I/O activity chart ── */}
+      {ioHistory.length > 0 && (
+        <div className="px-4 pb-3">
+          <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-1.5">I/O Activity (30d)</p>
+          <div className="flex items-center gap-3 mb-1">
+            <span className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-gray-600"><span className="w-2 h-0.5 rounded bg-emerald-400 inline-block" />Read</span>
+            <span className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-gray-600"><span className="w-2 h-0.5 rounded bg-violet-400 inline-block" />Write</span>
+          </div>
+          <ResponsiveContainer width="100%" height={70}>
+            <AreaChart data={ioHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+              <defs>
+                <linearGradient id="readGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#34d399" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="writeGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#a78bfa" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#a78bfa" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} unit=" MB" />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [`${v.toLocaleString()} MB`, n === 'readMB' ? 'Read' : 'Write']} labelStyle={{ color: '#94a3b8' }} />
+              <Area type="monotone" dataKey="readMB"  stroke="#34d399" fill="url(#readGrad)"  strokeWidth={1.5} dot={false} />
+              <Area type="monotone" dataKey="writeMB" stroke="#a78bfa" fill="url(#writeGrad)" strokeWidth={1.5} dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -390,7 +546,7 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
         </div>
       )}
 
-      {/* ── Scanned footer ── */}
+      {/* ── Footer ── */}
       {drive.last_scanned && (
         <div className="flex items-center gap-1.5 px-4 py-2.5 border-t border-slate-200 dark:border-gray-800/50 text-[10px] text-slate-400 dark:text-gray-600">
           <Clock size={10} />
@@ -408,7 +564,6 @@ function Chip({ children, mono = false }) {
     </span>
   )
 }
-
 function Row({ label, value, warn }) {
   return (
     <>

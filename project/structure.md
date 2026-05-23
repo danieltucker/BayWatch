@@ -1,7 +1,7 @@
 # Project Structure
 
 > Last updated: 2026-05-22
-> Status: v0.16.0 — DriveCard redesign, health gradients, blue vdev peer highlight, array stats/collapse, enclosure collapse/reorder, array reorder, ZFS scan status + per-disk errors, sub-1GB partition display
+> Status: v0.18.0 — I/O activity chart (read/write MB per scan via /proc/diskstats), health score ring, temp chart gradient/scale, POH trend chart, SM/MD bay redesign (make·size), LG blue gradient peers, array health bar, reorder buttons in header, 4 new widget modals, CSV export
 
 ## Current Layout
 
@@ -49,6 +49,7 @@ drive-position/
 │   │   └── notification_config.py  # NotificationConfig ORM model
 │   ├── services/
 │   │   ├── scanner.py              # Orchestrates full disk scan pipeline
+│   │   ├── diskstats.py            # /proc/diskstats reader; device name → (read_bytes, write_bytes)
 │   │   ├── smartctl.py             # smartctl subprocess wrapper
 │   │   ├── lsblk.py                # lsblk subprocess wrapper; ZFS pool detection via FSTYPE/LABEL
 │   │   ├── nvme.py                 # nvme-cli wrapper

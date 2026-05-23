@@ -16,6 +16,50 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.18.0] — 2026-05-23
+
+### Added
+- **I/O activity chart** — DriveCard now shows a 30-day read/write history chart below the reallocated-sectors trend. Data is captured from `/proc/diskstats` at each scan and stored as cumulative `read_bytes`/`write_bytes` columns in `drive_history`. The chart displays per-interval deltas in MB with green (read) and violet (write) gradient fills. Negative deltas (counter reset after reboot) are automatically skipped. Non-Linux hosts (no `/proc/diskstats`) degrade gracefully with null values.
+
+### Backend
+- `services/diskstats.py` — new service; reads `/proc/diskstats`, maps device name → (read_bytes, write_bytes). Sector size is hardcoded to 512 bytes (kernel invariant).
+- `models/drive_history.py` — added `read_bytes` and `write_bytes` nullable integer columns.
+- `services/scanner.py` — reads diskstats once per scan, attaches per-device I/O bytes to each `DriveHistory` entry.
+- `api/schemas.py` — `DriveHistoryRead` now includes `read_bytes` and `write_bytes` optional fields.
+- `main.py` — two new startup migrations (`ALTER TABLE drive_history ADD COLUMN read_bytes/write_bytes INTEGER`); version bumped to `0.18.0`.
+- `docker-compose.truenas.yml` — image tag bumped to `0.18.0`.
+
+---
+
+## [0.17.0] — 2026-05-23
+
+### Added
+- **Drive health score** — composite 0–100 score shown as an SVG ring gauge in DriveCard. Factors: SMART pass/fail, reallocated/pending/uncorrectable sector counts, power-on hours age, and current temperature. Labels: Excellent (90+), Good (75+), Fair (60+), Poor (40+), Critical (<40).
+- **Temperature history chart redesign** — switched from LineChart to AreaChart with sky-blue gradient fill. Y-axis now defaults to [25°C, 65°C] (expands automatically if actual temps are outside that range). Warn and danger reference lines now include temperature labels at the right edge.
+- **Power-on hours trend chart** — new AreaChart in DriveCard showing POH accumulation over 30 days, using indigo gradient fill. Complements the reallocated-sectors chart below it.
+- **Four new clickable widget modals** — `Healthy` (clean vs. degraded breakdown + full PASSED drive list), `Avg Temp` (temperature distribution histogram + 5 hottest drives), `Drive Health %` (donut chart + per-category progress bars), `Total Drives` (SSD/HDD split + by-form-factor bars).
+- **Widget modal redesign** — all detail modals now open with a rounded icon chip header, `StatPill` summary row at the top, and richer per-row content: `TempBar` and `PohBar` inline progress indicators, error-count grids for FAILED drives, bar chart for reallocated sectors distribution.
+- **CSV data export** — "Export" button next to the Scan button downloads a full drive inventory as `drivemap-export-YYYY-MM-DD.csv`. Columns: serial, make, model, capacity, form factor, RPM, firmware, device path, SMART status, temperature, power-on hours, error counts, ZFS pool/vdev, last scanned, purchase date, warranty months, vendor, notes. Client-side only — no backend changes required.
+- **Array health bar** — a 3 px segmented bar above each array's stats text shows the proportional split of healthy (green) / degraded (amber) / failed (red) / empty (slate) bays at a glance.
+- **Array reorder buttons integrated into header** — up/down arrows now live in the BayGrid header row (left of the SM/MD/LG toggle), eliminating the z-index conflict with the size buttons. Passed as `onMoveUp`/`onMoveDown` props; hidden when array has no siblings.
+
+### Changed
+- **SM bay slot** — primary text changed from last-8 serial to `Make · Size` (e.g. "Seagate · 16 TB"). Falls back to serial if make and capacity are both absent. vdev badge (Z1/Z2 etc.) removed.
+- **MD bay slot** — primary text changed from serial to make; serial (last 6) moved to secondary line below. vdev badge removed. Layout otherwise unchanged.
+- **LG bay slot** — vdev peer highlight now applies a proper blue gradient (`from-blue-50 to-white`) instead of a flat `!bg-blue-50` override that killed the gradient. Ring is `ring-1 ring-blue-400/50`. vdev badge removed from card body; vdev name still visible as plain text in the pool line.
+- **Array stats wording** — "All OK" → "All healthy"; failure count uses "failure/failures"; warn count uses "degraded" for clearer language.
+- **Array reorder** — removed wrapper `div` + absolute-positioned buttons from Dashboard; reorder is now a BayGrid-level prop pattern.
+
+### Backend
+- `main.py`: version bumped to `0.17.0`.
+- `docker-compose.truenas.yml`: image tag bumped to `0.17.0`.
+
+### Not yet implemented (needs backend)
+- **I/O metrics** — read/write throughput and IOPS require `/proc/diskstats` or `iostat` integration in the scanner service. No frontend-ready data exists yet.
+- **Disk space history** — per-drive partition utilization over time requires a new column in `DriveHistory`. POH trend chart is the current proxy for "drive activity over time."
+
+---
+
 ## [0.16.0] — 2026-05-22
 
 ### Fixed

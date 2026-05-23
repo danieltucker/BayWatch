@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from models.drive import Drive
 from models.drive_history import DriveHistory
 from models.pool_history import PoolHistory
+from services import diskstats as diskstats_svc
 from services import lsblk as lsblk_svc
 from services import nvme as nvme_svc
 from services import ses as ses_svc
@@ -98,13 +99,18 @@ def run_scan(db: Session) -> list[Drive]:
 
     # Record history snapshots
     now = datetime.datetime.utcnow()
+    io_stats = diskstats_svc.read_io_bytes()
     for drive in updated:
+        dev_name = drive.device_path.split("/")[-1] if drive.device_path else None
+        rb, wb = io_stats.get(dev_name, (None, None)) if dev_name else (None, None)
         db.add(DriveHistory(
             drive_serial=drive.serial,
             recorded_at=now,
             temperature_c=drive.temperature_c,
             reallocated_sectors=drive.reallocated_sectors,
             power_on_hours=drive.power_on_hours,
+            read_bytes=rb,
+            write_bytes=wb,
         ))
 
     pool_stats = zpool_svc.get_pool_stats()
