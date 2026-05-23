@@ -180,11 +180,11 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
       temp: h.temperature_c,
     }))
 
-  const pohHistory = history
-    .filter(h => h.power_on_hours != null)
+  const spaceHistory = history
+    .filter(h => h.used_bytes != null)
     .map(h => ({
       date: new Date(h.recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      hours: h.power_on_hours,
+      usedGB: parseFloat((h.used_bytes / 1e9).toFixed(2)),
     }))
 
   const reallocHistory = history
@@ -382,22 +382,22 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
         </div>
       )}
 
-      {/* ── Power-on hours trend ── */}
-      {pohHistory.length > 1 && (
+      {/* ── Used space trend ── */}
+      {spaceHistory.length > 1 && (
         <div className="px-4 pb-3">
-          <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-1.5">Hours On (30d)</p>
+          <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-1.5">Used Space (30d)</p>
           <ResponsiveContainer width="100%" height={60}>
-            <AreaChart data={pohHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+            <AreaChart data={spaceHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
               <defs>
-                <linearGradient id="pohGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#818cf8" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
+                <linearGradient id="spaceGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#2dd4bf" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={tooltipStyle} formatter={v => [`${v.toLocaleString()}h`, 'Power-on hours']} labelStyle={{ color: '#94a3b8' }} />
-              <Area type="monotone" dataKey="hours" stroke="#818cf8" fill="url(#pohGrad)" strokeWidth={1.5} dot={false} />
+              <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} unit=" GB" />
+              <Tooltip contentStyle={tooltipStyle} formatter={v => [`${v} GB`, 'Used']} labelStyle={{ color: '#94a3b8' }} />
+              <Area type="monotone" dataKey="usedGB" stroke="#2dd4bf" fill="url(#spaceGrad)" strokeWidth={1.5} dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

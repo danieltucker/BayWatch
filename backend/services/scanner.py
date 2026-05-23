@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 
 from sqlalchemy.orm import Session
 
@@ -14,6 +15,28 @@ from services import smartctl as smartctl_svc
 from services import zpool as zpool_svc
 
 logger = logging.getLogger(__name__)
+
+
+def _drive_used_bytes(device_path: str) -> int | None:
+    """Sum used bytes across all mounted partitions on device_path via statvfs.
+
+    Returns None when no mounted partitions are found (e.g. raw ZFS member disks),
+    so callers can distinguish "zero used" from "unmeasurable".
+    """
+    partitions = lsblk_svc.get_partitions(device_path)
+    total = 0
+    found = False
+    for p in partitions:
+        mp = p.get("mountpoint")
+        if not mp:
+            continue
+        try:
+            st = os.statvfs(mp)
+            total += (st.f_blocks - st.f_bfree) * st.f_frsize
+            found = True
+        except (PermissionError, OSError):
+            continue
+    return total if found else None
 
 
 def run_scan(db: Session) -> list[Drive]:
@@ -103,6 +126,7 @@ def run_scan(db: Session) -> list[Drive]:
     for drive in updated:
         dev_name = drive.device_path.split("/")[-1] if drive.device_path else None
         rb, wb = io_stats.get(dev_name, (None, None)) if dev_name else (None, None)
+        ub = _drive_used_bytes(drive.device_path) if drive.device_path else None
         db.add(DriveHistory(
             drive_serial=drive.serial,
             recorded_at=now,
@@ -111,6 +135,7 @@ def run_scan(db: Session) -> list[Drive]:
             power_on_hours=drive.power_on_hours,
             read_bytes=rb,
             write_bytes=wb,
+            used_bytes=ub,
         ))
 
     pool_stats = zpool_svc.get_pool_stats()

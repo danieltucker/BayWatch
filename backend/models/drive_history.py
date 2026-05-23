@@ -23,3 +23,4 @@ class DriveHistory(Base):
     power_on_hours: Mapped[int | None] = mapped_column(nullable=True)
     read_bytes: Mapped[int | None] = mapped_column(nullable=True)
     write_bytes: Mapped[int | None] = mapped_column(nullable=True)
+    used_bytes: Mapped[int | None] = mapped_column(nullable=True)

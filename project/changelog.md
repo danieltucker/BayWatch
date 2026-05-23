@@ -16,6 +16,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.19.0] — 2026-05-23
+
+### Added
+- **Used space trend chart** — DriveCard now shows a "Used Space (30d)" AreaChart with a teal gradient fill, replacing the uninformative power-on-hours trend. Data is captured at each scan via `os.statvfs()` across all mounted partitions on the drive and stored as `used_bytes` in `DriveHistory`. ZFS member disks and unmounted partitions contribute nothing and degrade gracefully to null. The current POH progress bar (snapshot) is retained.
+- **CSV export: enclosure and bay columns** — The drive inventory export now includes three additional columns at the end: `Enclosure`, `Array`, and `Bay`. Bay labels use the user-assigned label if set, otherwise fall back to `R{row}C{col}` position notation. Drives not assigned to any bay export empty strings for these columns.
+
+### Backend
+- `models/drive_history.py` — added `used_bytes` nullable integer column.
+- `services/scanner.py` — `_drive_used_bytes()` helper computes total used bytes across mounted partitions via `os.statvfs()`; called once per drive per scan.
+- `api/schemas.py` — `DriveHistoryRead` now includes `used_bytes` optional field.
+- `main.py` — startup migration for `used_bytes` column; version bumped to `0.19.0`.
+- `docker-compose.truenas.yml` — image tag bumped to `0.19.0`.
+
+---
+
 ## [0.18.0] — 2026-05-23
 
 ### Added

@@ -16,17 +16,36 @@ import {
   getPools, getPoolTopology, updateEnclosure, updateBayArray,
 } from '../api/client'
 
-function exportDrivesCSV(drives, profiles) {
+function exportDrivesCSV(drives, profiles, enclosures, baysMap) {
   const profileMap = Object.fromEntries(profiles.map(p => [p.serial, p]))
+
+  // Build serial → { enclosureName, arrayName, bayLabel } from enclosures + baysMap
+  const bayLocMap = {}
+  for (const enc of (enclosures || [])) {
+    for (const arr of (enc.arrays || [])) {
+      for (const bay of (baysMap[arr.id] || [])) {
+        if (bay.drive_serial) {
+          bayLocMap[bay.drive_serial] = {
+            enclosureName: enc.name,
+            arrayName: arr.name,
+            bayLabel: bay.label || `R${bay.row + 1}C${bay.col + 1}`,
+          }
+        }
+      }
+    }
+  }
+
   const headers = [
     'Serial', 'Make', 'Model', 'Capacity', 'Form Factor', 'RPM', 'Firmware',
     'Device Path', 'SMART Status', 'Temperature (C)', 'Power On Hours',
     'Reallocated Sectors', 'Pending Sectors', 'Uncorrectable Errors',
     'ZFS Pool', 'vDev', 'Last Scanned',
     'Purchase Date', 'Warranty (months)', 'Vendor', 'Notes',
+    'Enclosure', 'Array', 'Bay',
   ]
   const rows = drives.map(d => {
     const p = profileMap[d.serial] || {}
+    const loc = bayLocMap[d.serial] || {}
     const cap = d.capacity_bytes
       ? d.capacity_bytes >= 1e12
         ? `${(d.capacity_bytes / 1e12).toFixed(1)} TB`
@@ -45,6 +64,7 @@ function exportDrivesCSV(drives, profiles) {
       d.last_scanned ? new Date(d.last_scanned).toISOString() : '',
       p.purchase_date || '', p.warranty_months != null ? p.warranty_months : '',
       p.vendor || '', p.notes ? `"${p.notes.replace(/"/g, '""')}"` : '',
+      loc.enclosureName || '', loc.arrayName || '', loc.bayLabel || '',
     ].map(v => String(v).includes(',') ? `"${v}"` : v)
   })
   const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
@@ -237,7 +257,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                 )}
                 {drives.length > 0 && (
                   <button
-                    onClick={() => exportDrivesCSV(drives, profiles)}
+                    onClick={() => exportDrivesCSV(drives, profiles, enclosures, baysMap)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-gray-700/60 text-xs text-slate-500 dark:text-gray-500 hover:text-slate-700 dark:hover:text-gray-300 hover:border-slate-300 dark:hover:border-gray-600 hover:bg-slate-50 dark:hover:bg-gray-800/40 transition-colors"
                     title="Export drives to CSV"
                   >

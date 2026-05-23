@@ -1,7 +1,7 @@
 # Project Structure
 
 > Last updated: 2026-05-22
-> Status: v0.18.0 — I/O activity chart (read/write MB per scan via /proc/diskstats), health score ring, temp chart gradient/scale, POH trend chart, SM/MD bay redesign (make·size), LG blue gradient peers, array health bar, reorder buttons in header, 4 new widget modals, CSV export
+> Status: v0.19.0 — Used space trend chart (statvfs per scan), CSV export with enclosure/bay, I/O activity chart, health score ring, temp chart gradient/scale, SM/MD bay redesign (make·size), LG blue gradient peers, array health bar, reorder buttons in header, 4 new widget modals
 
 ## Current Layout
 

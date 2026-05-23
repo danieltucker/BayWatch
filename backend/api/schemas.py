@@ -215,6 +215,7 @@ class DriveHistoryRead(BaseModel):
     power_on_hours: Optional[int] = None
     read_bytes: Optional[int] = None
     write_bytes: Optional[int] = None
+    used_bytes: Optional[int] = None
 
 
 class PoolHistoryRead(BaseModel):
