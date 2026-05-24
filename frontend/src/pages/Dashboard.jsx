@@ -14,6 +14,7 @@ import PoolTopologyPanel from '../components/PoolTopologyPanel'
 import {
   getEnclosures, getDrives, getBays, getProfile, assignDrive,
   getPools, getPoolTopology, updateEnclosure, updateBayArray,
+  getFederationData,
 } from '../api/client'
 
 function exportDrivesCSV(drives, profiles, enclosures, baysMap) {
@@ -100,6 +101,9 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
   const [lastRefreshed, setLastRefreshed] = useState(null)
   const [, setTick] = useState(0)
   const [collapsedEncs, setCollapsedEncs] = useState({})
+  const [federationData, setFederationData] = useState([])
+  const [collapsedFederation, setCollapsedFederation] = useState(false)
+  const [collapsedRemotes, setCollapsedRemotes] = useState({})
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -115,12 +119,14 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
 
   const loadAll = useCallback(async () => {
     try {
-      const [encs, drvs, pools, topology] = await Promise.all([
+      const [encs, drvs, pools, topology, fedData] = await Promise.all([
         getEnclosures(),
         getDrives(),
         getPools().catch(() => []),
         getPoolTopology().catch(() => []),
+        getFederationData().catch(() => []),
       ])
+      setFederationData(fedData)
       setPoolStats(pools)
       setPoolTopology(topology)
       setEnclosures(encs)
@@ -375,6 +381,94 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                 driveMap={driveMap}
                 onDriveSelect={handleDriveSelect}
               />
+            )}
+
+            {federationData.length > 0 && (
+              <div className="rounded-2xl bg-white dark:bg-gray-900/50 border border-slate-200 dark:border-gray-800/60 overflow-hidden">
+                <div
+                  className="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-gray-800/60 bg-slate-50 dark:bg-gray-900/80 cursor-pointer select-none"
+                  onClick={() => setCollapsedFederation(v => !v)}
+                >
+                  <span className="text-slate-400 dark:text-gray-600">
+                    {collapsedFederation ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                  </span>
+                  <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-gray-800 flex items-center justify-center">
+                    <Server size={13} className="text-blue-500" />
+                  </div>
+                  <h2 className="font-semibold text-slate-800 dark:text-gray-200 text-sm flex-1">Remote Instances</h2>
+                  <span className="text-xs text-slate-500 dark:text-gray-600 bg-slate-100 dark:bg-gray-800/60 px-2 py-0.5 rounded-full">
+                    {federationData.length} {federationData.length === 1 ? 'instance' : 'instances'}
+                  </span>
+                </div>
+
+                {!collapsedFederation && (
+                  <div className="p-4 flex flex-col gap-4">
+                    {federationData.map(snapshot => {
+                      const isCollapsed = collapsedRemotes[snapshot.target_id] ?? false
+                      return (
+                        <div key={snapshot.target_id} className="rounded-xl border border-slate-200 dark:border-gray-800/60 overflow-hidden">
+                          <div
+                            className="flex items-center gap-2 px-3 py-2.5 bg-slate-50/70 dark:bg-gray-900/60 cursor-pointer select-none"
+                            onClick={() => setCollapsedRemotes(prev => ({ ...prev, [snapshot.target_id]: !prev[snapshot.target_id] }))}
+                          >
+                            <span className="text-slate-400 dark:text-gray-600">
+                              {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+                            </span>
+                            <span className="font-medium text-sm text-slate-700 dark:text-gray-300 flex-1">{snapshot.target_name}</span>
+                            <span className="text-xs text-slate-400 dark:text-gray-600 font-mono truncate max-w-[160px]">{snapshot.target_url}</span>
+                            <span className="text-xs text-slate-400 dark:text-gray-600 shrink-0">
+                              {snapshot.drives.length} drives
+                            </span>
+                          </div>
+
+                          {!isCollapsed && (
+                            <div className="divide-y divide-slate-100 dark:divide-gray-800/60">
+                              {snapshot.drives.length === 0 && (
+                                <p className="px-4 py-3 text-xs text-slate-400 dark:text-gray-600 italic">No drives reported</p>
+                              )}
+                              {snapshot.drives.map(d => {
+                                const smartOk = d.smart_status === 'PASSED'
+                                const smartFail = d.smart_status === 'FAILED'
+                                return (
+                                  <div key={d.serial} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-gray-900/40 transition-colors">
+                                    <span className={clsx(
+                                      'w-2 h-2 rounded-full shrink-0',
+                                      smartOk ? 'bg-emerald-400' : smartFail ? 'bg-red-400' : 'bg-slate-300 dark:bg-gray-600'
+                                    )} />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-mono text-slate-700 dark:text-gray-300 truncate">
+                                        {d.serial}
+                                      </p>
+                                      <p className="text-xs text-slate-400 dark:text-gray-600 truncate">
+                                        {[d.make, d.model].filter(Boolean).join(' ') || 'Unknown'}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-gray-500 shrink-0">
+                                      {d.temperature_c != null && (
+                                        <span className={clsx(
+                                          d.temperature_c >= 55 ? 'text-red-500' : d.temperature_c >= 45 ? 'text-amber-500' : ''
+                                        )}>
+                                          {d.temperature_c}°C
+                                        </span>
+                                      )}
+                                      {d.zfs_pool && (
+                                        <span className="font-mono text-blue-500 dark:text-blue-400">{d.zfs_pool}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                              <p className="px-4 py-1.5 text-[10px] text-slate-300 dark:text-gray-700">
+                                Synced {snapshot.fetched_at ? new Date(snapshot.fetched_at).toLocaleString() : '—'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

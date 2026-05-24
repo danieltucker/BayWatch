@@ -73,4 +73,17 @@ export const getDriveHistory = (serial, days = 30) =>
 export const getPoolHistory = (poolName, days = 30) =>
   api.get(`/history/pools/${poolName}`, { params: { days } }).then(r => r.data)
 
+// ── API Keys ──────────────────────────────────────────────────────────────────
+export const getApiKeys = () => api.get('/api-keys').then(r => r.data)
+export const createApiKey = (name) => api.post('/api-keys', { name }).then(r => r.data)
+export const deleteApiKey = (id) => api.delete(`/api-keys/${id}`)
+
+// ── Federation ────────────────────────────────────────────────────────────────
+export const getFederationTargets = () => api.get('/federation/targets').then(r => r.data)
+export const createFederationTarget = (data) => api.post('/federation/targets', data).then(r => r.data)
+export const updateFederationTarget = (id, data) => api.patch(`/federation/targets/${id}`, data).then(r => r.data)
+export const deleteFederationTarget = (id) => api.delete(`/federation/targets/${id}`)
+export const syncFederationTarget = (id) => api.post(`/federation/targets/${id}/sync`).then(r => r.data)
+export const getFederationData = () => api.get('/federation/data').then(r => r.data)
+
 export default api

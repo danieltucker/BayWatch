@@ -17,7 +17,7 @@ from db.base import SessionLocal
 from models.drive import Drive
 from models.drive_profile import DriveProfile
 from models.notification_config import NotificationConfig
-from services import notifications, scanner
+from services import federation, notifications, scanner
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +62,10 @@ async def _scan_and_check() -> None:
         await _check_critical_conditions(drives, temp_threshold)
     finally:
         db.close()
+    # Poll federation targets whose sync interval has elapsed (runs in executor
+    # to keep the event loop free — federation.poll_due_targets is synchronous)
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, federation.poll_due_targets)
 
 
 async def _check_critical_conditions(drives: list[Drive], temp_threshold: int) -> None:

@@ -226,3 +226,54 @@ class PoolHistoryRead(BaseModel):
     capacity_pct: Optional[int] = None
     size_bytes: Optional[int] = None
     alloc_bytes: Optional[int] = None
+
+
+# ── API Keys ──────────────────────────────────────────────────────────────────
+
+class ApiKeyCreate(BaseModel):
+    name: str
+
+class ApiKeyRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    key_prefix: str
+    created_at: datetime.datetime
+    last_used_at: Optional[datetime.datetime] = None
+
+class ApiKeyCreated(ApiKeyRead):
+    key: str  # plaintext — returned once on creation, never stored
+
+
+# ── External API ──────────────────────────────────────────────────────────────
+
+class ExternalBayRead(BayRead):
+    enclosure_name: str
+    array_name: str
+
+
+# ── Federation ────────────────────────────────────────────────────────────────
+
+class FederatedTargetCreate(BaseModel):
+    name: str
+    url: str
+    api_key: str
+    sync_interval_minutes: int = 15
+    enabled: bool = True
+
+class FederatedTargetUpdate(BaseModel):
+    name: Optional[str] = None
+    url: Optional[str] = None
+    api_key: Optional[str] = None
+    enabled: Optional[bool] = None
+    sync_interval_minutes: Optional[int] = None
+
+class FederatedTargetRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    url: str
+    enabled: bool
+    sync_interval_minutes: int
+    last_synced_at: Optional[datetime.datetime] = None
+    last_error: Optional[str] = None

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Trash2, Save, Server, Upload, CheckCircle2, AlertCircle, X, Bell, Sun, Moon, Monitor, Pencil, Download, Thermometer, Settings2 } from 'lucide-react'
+import { Plus, Trash2, Save, Server, Upload, CheckCircle2, AlertCircle, X, Bell, Sun, Moon, Monitor, Pencil, Download, Settings2, Key, Globe, Copy, RefreshCw, ToggleLeft, ToggleRight, Eye, EyeOff } from 'lucide-react'
 import {
   getEnclosures, createEnclosure, updateEnclosure, deleteEnclosure,
   createBayArray, deleteBayArray, updateBayArray,
   getAlertConfig, updateAlertConfig,
   importCSV,
+  getApiKeys, createApiKey, deleteApiKey,
+  getFederationTargets, createFederationTarget, updateFederationTarget, deleteFederationTarget, syncFederationTarget,
 } from '../api/client'
 import { useTheme } from '../context/ThemeContext'
 
@@ -12,6 +14,8 @@ const TABS = [
   { key: 'general', label: 'General', icon: Settings2 },
   { key: 'enclosures', label: 'Enclosures', icon: Server },
   { key: 'notifications', label: 'Notifications', icon: Bell },
+  { key: 'api_keys', label: 'API Keys', icon: Key },
+  { key: 'federation', label: 'Federation', icon: Globe },
   { key: 'import', label: 'Import', icon: Upload },
   { key: 'appearance', label: 'Appearance', icon: Sun },
 ]
@@ -56,6 +60,22 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
   const fileInputRef = useRef(null)
   const { theme, setTheme } = useTheme()
 
+  // ── API Keys state ──
+  const [apiKeys, setApiKeys] = useState([])
+  const [newKeyName, setNewKeyName] = useState('')
+  const [generatedKey, setGeneratedKey] = useState(null)
+  const [generatingKey, setGeneratingKey] = useState(false)
+  const [confirmDeleteKeyId, setConfirmDeleteKeyId] = useState(null)
+  const [keyCopied, setKeyCopied] = useState(false)
+
+  // ── Federation state ──
+  const [fedTargets, setFedTargets] = useState([])
+  const [newTarget, setNewTarget] = useState({ name: '', url: '', api_key: '', sync_interval_minutes: 15 })
+  const [showTargetKey, setShowTargetKey] = useState({})
+  const [confirmDeleteTargetId, setConfirmDeleteTargetId] = useState(null)
+  const [addingTarget, setAddingTarget] = useState(false)
+  const [syncingTargetId, setSyncingTargetId] = useState(null)
+
   async function load() {
     const [encs, cfg] = await Promise.all([getEnclosures(), getAlertConfig()])
     setEnclosures(encs)
@@ -70,7 +90,84 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
     }))
   }
 
-  useEffect(() => { if (open) load() }, [open])
+  async function loadApiKeys() {
+    getApiKeys().then(setApiKeys).catch(() => {})
+  }
+
+  async function loadFedTargets() {
+    getFederationTargets().then(setFedTargets).catch(() => {})
+  }
+
+  useEffect(() => {
+    if (open) {
+      load()
+      loadApiKeys()
+      loadFedTargets()
+    }
+  }, [open])
+
+  async function handleGenerateKey(e) {
+    e.preventDefault()
+    if (!newKeyName.trim()) return
+    setGeneratingKey(true)
+    try {
+      const result = await createApiKey(newKeyName.trim())
+      setGeneratedKey(result)
+      setNewKeyName('')
+      loadApiKeys()
+    } finally {
+      setGeneratingKey(false)
+    }
+  }
+
+  async function handleDeleteKey(id) {
+    await deleteApiKey(id)
+    setConfirmDeleteKeyId(null)
+    loadApiKeys()
+  }
+
+  async function handleAddTarget(e) {
+    e.preventDefault()
+    if (!newTarget.name.trim() || !newTarget.url.trim() || !newTarget.api_key.trim()) return
+    setAddingTarget(true)
+    try {
+      await createFederationTarget(newTarget)
+      setNewTarget({ name: '', url: '', api_key: '', sync_interval_minutes: 15 })
+      loadFedTargets()
+    } finally {
+      setAddingTarget(false)
+    }
+  }
+
+  async function handleToggleTarget(target) {
+    await updateFederationTarget(target.id, { enabled: !target.enabled })
+    loadFedTargets()
+  }
+
+  async function handleSyncTarget(id) {
+    setSyncingTargetId(id)
+    try {
+      await syncFederationTarget(id)
+      setTimeout(loadFedTargets, 1500)
+    } finally {
+      setSyncingTargetId(null)
+    }
+  }
+
+  async function handleDeleteTarget(id) {
+    await deleteFederationTarget(id)
+    setConfirmDeleteTargetId(null)
+    loadFedTargets()
+  }
+
+  function relTimeAgo(dateStr) {
+    if (!dateStr) return 'Never'
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
+    if (diff < 60) return 'Just now'
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+    return `${Math.floor(diff / 86400)}d ago`
+  }
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
@@ -506,6 +603,210 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                   {alertSaved && <span className="text-sm text-green-500 dark:text-green-400">Saved!</span>}
                 </div>
               </form>
+            )}
+
+            {/* ── API Keys ── */}
+            {tab === 'api_keys' && (
+              <div className="flex flex-col gap-5">
+                <p className="text-sm text-slate-500 dark:text-gray-500">
+                  Generate API keys to access drive data programmatically via the <span className="font-mono text-xs">/v1/</span> endpoints.
+                </p>
+
+                {/* Generate form */}
+                <form onSubmit={handleGenerateKey} className="flex items-center gap-2">
+                  <input
+                    placeholder="Key name (e.g. Grafana, Home Assistant)"
+                    value={newKeyName}
+                    onChange={e => setNewKeyName(e.target.value)}
+                    className="flex-1 rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-3 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={generatingKey || !newKeyName.trim()}
+                    className="flex items-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 text-sm font-medium text-white shrink-0"
+                  >
+                    <Key size={14} /> Generate
+                  </button>
+                </form>
+
+                {/* Newly generated key — shown once */}
+                {generatedKey && (
+                  <div className="rounded-xl border border-amber-200 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-950/20 p-4 flex flex-col gap-3">
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">Copy this key — it won't be shown again</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs font-mono bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg px-3 py-2 text-slate-800 dark:text-gray-200 break-all">
+                        {generatedKey.key}
+                      </code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedKey.key)
+                          setKeyCopied(true)
+                          setTimeout(() => setKeyCopied(false), 2000)
+                        }}
+                        className="shrink-0 p-2 rounded-lg bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                        title="Copy to clipboard"
+                      >
+                        {keyCopied ? <CheckCircle2 size={15} className="text-green-500" /> : <Copy size={15} />}
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setGeneratedKey(null)}
+                      className="text-xs text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 self-end"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+
+                {/* Key list */}
+                {apiKeys.length === 0 ? (
+                  <p className="text-sm text-slate-400 dark:text-gray-600 text-center py-6">No API keys yet</p>
+                ) : (
+                  <div className="rounded-xl border border-slate-200 dark:border-gray-800 overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-gray-900/60 border-b border-slate-200 dark:border-gray-800">
+                          <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium">Name</th>
+                          <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium">Prefix</th>
+                          <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium">Created</th>
+                          <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium">Last used</th>
+                          <th className="px-3 py-2" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {apiKeys.map(k => (
+                          <tr key={k.id} className="border-b border-slate-100 dark:border-gray-800/60 last:border-0">
+                            <td className="px-3 py-2.5 text-slate-800 dark:text-gray-200 text-sm">{k.name}</td>
+                            <td className="px-3 py-2.5 font-mono text-xs text-slate-500 dark:text-gray-400">{k.key_prefix}…</td>
+                            <td className="px-3 py-2.5 text-xs text-slate-400 dark:text-gray-600">{new Date(k.created_at).toLocaleDateString()}</td>
+                            <td className="px-3 py-2.5 text-xs text-slate-400 dark:text-gray-600">{k.last_used_at ? relTimeAgo(k.last_used_at) : '—'}</td>
+                            <td className="px-3 py-2.5 text-right">
+                              {confirmDeleteKeyId === k.id ? (
+                                <span className="flex items-center gap-1.5 justify-end">
+                                  <span className="text-xs text-slate-500 dark:text-gray-500">Delete?</span>
+                                  <button onClick={() => handleDeleteKey(k.id)} className="text-xs text-red-500 hover:text-red-400 font-medium">Yes</button>
+                                  <button onClick={() => setConfirmDeleteKeyId(null)} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-gray-300">No</button>
+                                </span>
+                              ) : (
+                                <button onClick={() => setConfirmDeleteKeyId(k.id)} className="text-slate-400 hover:text-red-400 p-1 transition-colors">
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Federation ── */}
+            {tab === 'federation' && (
+              <div className="flex flex-col gap-5">
+                <p className="text-sm text-slate-500 dark:text-gray-500">
+                  Add remote DriveMap instances to aggregate their drive data here. Each target needs an API key generated on the remote instance.
+                </p>
+
+                {/* Add target form */}
+                <form onSubmit={handleAddTarget} className="rounded-xl border border-slate-200 dark:border-gray-800 p-4 flex flex-col gap-3 bg-slate-50 dark:bg-gray-900/40">
+                  <p className="text-xs font-medium text-slate-600 dark:text-gray-400 uppercase tracking-wider">Add Target</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      placeholder="Name (e.g. JBOD Shelf)"
+                      value={newTarget.name}
+                      onChange={e => setNewTarget(t => ({ ...t, name: e.target.value }))}
+                      className="flex-1 rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-3 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                    <select
+                      value={newTarget.sync_interval_minutes}
+                      onChange={e => setNewTarget(t => ({ ...t, sync_interval_minutes: Number(e.target.value) }))}
+                      className="rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-2 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none"
+                    >
+                      <option value={5}>5 min</option>
+                      <option value={15}>15 min</option>
+                      <option value={30}>30 min</option>
+                      <option value={60}>60 min</option>
+                    </select>
+                  </div>
+                  <input
+                    placeholder="URL (e.g. http://192.168.1.50:8585)"
+                    value={newTarget.url}
+                    onChange={e => setNewTarget(t => ({ ...t, url: e.target.value }))}
+                    className="rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-3 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <input
+                    type="password"
+                    placeholder="API key (dm_…)"
+                    value={newTarget.api_key}
+                    onChange={e => setNewTarget(t => ({ ...t, api_key: e.target.value }))}
+                    className="rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-3 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={addingTarget || !newTarget.name.trim() || !newTarget.url.trim() || !newTarget.api_key.trim()}
+                    className="flex items-center gap-1.5 self-end rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 text-sm font-medium text-white"
+                  >
+                    <Plus size={14} /> Add Target
+                  </button>
+                </form>
+
+                {/* Target list */}
+                {fedTargets.length === 0 ? (
+                  <p className="text-sm text-slate-400 dark:text-gray-600 text-center py-6">No federation targets configured</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {fedTargets.map(t => (
+                      <div key={t.id} className="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 p-3 flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${t.enabled ? 'bg-emerald-400' : 'bg-slate-300 dark:bg-gray-700'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-800 dark:text-gray-200 truncate">{t.name}</p>
+                            <p className="text-xs font-mono text-slate-400 dark:text-gray-600 truncate">{t.url}</p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => handleToggleTarget(t)}
+                              className={`p-1 rounded transition-colors ${t.enabled ? 'text-emerald-500 hover:text-emerald-400' : 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400'}`}
+                              title={t.enabled ? 'Disable' : 'Enable'}
+                            >
+                              {t.enabled ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                            </button>
+                            <button
+                              onClick={() => handleSyncTarget(t.id)}
+                              disabled={syncingTargetId === t.id}
+                              className="p-1 rounded text-slate-400 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                              title="Sync now"
+                            >
+                              <RefreshCw size={14} className={syncingTargetId === t.id ? 'animate-spin' : ''} />
+                            </button>
+                            {confirmDeleteTargetId === t.id ? (
+                              <span className="flex items-center gap-1.5">
+                                <button onClick={() => handleDeleteTarget(t.id)} className="text-xs text-red-500 hover:text-red-400 font-medium">Delete</button>
+                                <button onClick={() => setConfirmDeleteTargetId(null)} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-gray-300">Cancel</button>
+                              </span>
+                            ) : (
+                              <button onClick={() => setConfirmDeleteTargetId(t.id)} className="p-1 rounded text-slate-400 hover:text-red-400 transition-colors">
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-gray-600">
+                          <span>Sync: every {t.sync_interval_minutes}m</span>
+                          <span>Last: {relTimeAgo(t.last_synced_at)}</span>
+                          {t.last_error && (
+                            <span className="text-red-400 dark:text-red-500 truncate" title={t.last_error}>
+                              ⚠ {t.last_error.slice(0, 60)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* ── Import ── */}

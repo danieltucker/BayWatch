@@ -11,8 +11,40 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ### Planned
 - Tests (backend scanner, route integration)
 - SES auto-detection surfaced as bay assignment suggestions
-- CSV/JSON export of drive inventory
-- Optional basic auth
+
+---
+
+## [1.0.0] — 2026-05-23
+
+### Added
+- **External API** — all key drive data (drives, bays, enclosures, pools, history) accessible via authenticated `/v1/` REST endpoints. Optional `?serial=X` and `?days=N` query parameters. Unauthenticated `/v1/health` for connectivity checks. Full documentation in README.
+- **API key management** — generate named API keys in Settings → API Keys. Each key is displayed once in plaintext at creation time; only the SHA-256 hash is stored. Keys show a display prefix (e.g. `dm_xK9p…`), creation date, and last-used timestamp. Keys can be deleted at any time.
+- **Federation** — configure remote DriveMap instances as federation targets (Settings → Federation). Each target requires a URL and the target's API key. The host polls enabled targets on each scheduler tick (configurable interval: 5/15/30/60 min) and caches their drive, bay, and pool snapshots in memory. The Dashboard shows a collapsible "Remote Instances" panel with a compact per-instance drive list when any snapshots are available.
+
+### Security
+- API keys generated with `secrets.token_urlsafe(32)`, prefixed `dm_`, stored as SHA-256 hashes only.
+- Constant-time comparison (`hmac.compare_digest`) on every auth check to prevent timing attacks.
+- In-memory sliding-window rate limiter: 120 requests/minute per key prefix; returns 429 on exceed.
+- Federation target API keys stored as plaintext (same threat model as the Telegram bot token — local SQLite, LAN-only). Documented in code.
+- CORS remains permissive (`allow_origins=["*"]`) — LAN appliance; restrict origins before any internet exposure.
+
+### Backend
+- `models/api_key.py` — `ApiKey` ORM model (id, name, key_prefix, key_hash, created_at, last_used_at).
+- `models/federated_target.py` — `FederatedTarget` ORM model (id, name, url, api_key, enabled, sync_interval_minutes, last_synced_at, last_error).
+- `api/deps.py` — `require_api_key` FastAPI dependency: reads `Authorization: Bearer` header, rate-checks, constant-time hash compare, schedules `last_used_at` update as a background task.
+- `api/routes/api_keys.py` — `GET/POST/DELETE /api/api-keys`.
+- `api/routes/external.py` — `GET /v1/health`, `GET /v1/drives`, `GET /v1/drives/{serial}`, `GET /v1/drives/{serial}/history`, `GET /v1/bays`, `GET /v1/enclosures`, `GET /v1/pools`.
+- `api/routes/federation.py` — `GET/POST/PATCH/DELETE /api/federation/targets`, `POST /api/federation/targets/{id}/sync`, `GET /api/federation/data`.
+- `services/federation.py` — `RemoteSnapshot` dataclass; in-memory `_snapshots` cache; `poll_due_targets()` (called by scheduler); `poll_target_by_id()` (on-demand sync).
+- `services/scheduler.py` — federation polling added to each scheduler tick via `run_in_executor`.
+- `main.py` — two new `CREATE TABLE IF NOT EXISTS` migrations; routers registered; version bumped to `1.0.0`.
+- `api/schemas.py` — `ApiKeyCreate`, `ApiKeyRead`, `ApiKeyCreated`, `ExternalBayRead`, `FederatedTargetCreate`, `FederatedTargetUpdate`, `FederatedTargetRead`.
+
+### Frontend
+- `components/SettingsModal.jsx` — two new tabs: **API Keys** (generate form, one-time key display with copy button, key table) and **Federation** (add-target form, target list with enable toggle, sync now, error badge, delete with confirmation).
+- `pages/Dashboard.jsx` — `federationData` state fetched from `/api/federation/data` on load and 5-min refresh; collapsible "Remote Instances" panel below pool topology; per-instance collapsible drive list (status dot, serial, model, temp, ZFS pool).
+- `api/client.js` — `getApiKeys`, `createApiKey`, `deleteApiKey`, `getFederationTargets`, `createFederationTarget`, `updateFederationTarget`, `deleteFederationTarget`, `syncFederationTarget`, `getFederationData`.
+- `docker-compose.truenas.yml` — image tag bumped to `1.0.0`.
 
 ---
 

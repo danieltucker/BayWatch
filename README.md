@@ -222,6 +222,104 @@ Supported columns (all optional except **Serial**):
 
 ---
 
+## External API
+
+DriveMap exposes a versioned REST API at `/v1/` for external access — useful for dashboards, monitoring systems, and federation between instances.
+
+### Authentication
+
+All `/v1/` endpoints (except `/v1/health`) require an API key passed as a Bearer token:
+
+```
+Authorization: Bearer dm_your_key_here
+```
+
+Generate keys in **Settings → API Keys**. The full plaintext key is shown once at creation — store it securely.
+
+**Rate limit:** 120 requests per minute per key. Exceeding the limit returns `429 Too Many Requests`.
+
+### Endpoints
+
+#### Health (unauthenticated)
+
+```bash
+curl http://192.168.1.50:8585/v1/health
+# {"status":"ok","version":"1.0.0","instance_name":"truenas"}
+```
+
+#### Drives
+
+```bash
+# All drives
+curl -H "Authorization: Bearer dm_..." http://192.168.1.50:8585/v1/drives
+
+# Filter by serial
+curl -H "Authorization: Bearer dm_..." "http://192.168.1.50:8585/v1/drives?serial=WD-WX41E23T1234"
+
+# Single drive
+curl -H "Authorization: Bearer dm_..." http://192.168.1.50:8585/v1/drives/WD-WX41E23T1234
+```
+
+#### Drive History
+
+```bash
+# Last 30 days (default)
+curl -H "Authorization: Bearer dm_..." http://192.168.1.50:8585/v1/drives/WD-WX41E23T1234/history
+
+# Custom range (max 90 days)
+curl -H "Authorization: Bearer dm_..." "http://192.168.1.50:8585/v1/drives/WD-WX41E23T1234/history?days=7"
+```
+
+Response fields per history entry: `scanned_at`, `temperature_c`, `reallocated_sectors`, `power_on_hours`, `read_bytes`, `write_bytes`, `used_bytes`.
+
+#### Bays
+
+```bash
+# All bays across all enclosures (includes enclosure_name, array_name)
+curl -H "Authorization: Bearer dm_..." http://192.168.1.50:8585/v1/bays
+
+# Filter by array
+curl -H "Authorization: Bearer dm_..." "http://192.168.1.50:8585/v1/bays?array_id=1"
+```
+
+#### Enclosures
+
+```bash
+curl -H "Authorization: Bearer dm_..." http://192.168.1.50:8585/v1/enclosures
+```
+
+#### Pools
+
+```bash
+curl -H "Authorization: Bearer dm_..." http://192.168.1.50:8585/v1/pools
+```
+
+---
+
+## Federation
+
+Federation lets you configure a DriveMap instance as a hub that pulls data from one or more remote DriveMap instances ("targets") and displays them in the Dashboard under **Remote Instances**.
+
+### Setup
+
+**On each target instance:**
+1. Go to **Settings → API Keys** and generate a key. Copy it — it's shown once.
+
+**On the hub instance:**
+1. Go to **Settings → Federation** and click **Add Target**.
+2. Enter a name, the target's URL (e.g. `http://192.168.1.51:8585`), the API key from step 1, and a sync interval.
+3. The hub will poll the target at the configured interval and cache its drive, bay, and pool data in memory.
+
+The **Remote Instances** panel appears in the Dashboard when at least one target has synced successfully. Each remote instance shows a compact list of its drives with SMART status, temperature, and ZFS pool.
+
+### Notes
+
+- Federation targets must be running DriveMap v1.0.0 or later (requires the `/v1/` API endpoints).
+- Federation target API keys are stored in plaintext in the local SQLite database — the same threat model as the Telegram bot token. This is appropriate for LAN-only deployments with a trusted host.
+- Before exposing any DriveMap instance to the internet, restrict CORS origins and place the app behind a reverse proxy with TLS and authentication.
+
+---
+
 ## Changelog
 
 See [project/changelog.md](project/changelog.md).

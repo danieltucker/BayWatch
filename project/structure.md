@@ -1,7 +1,7 @@
 # Project Structure
 
-> Last updated: 2026-05-22
-> Status: v0.19.0 — Used space trend chart (statvfs per scan), CSV export with enclosure/bay, I/O activity chart, health score ring, temp chart gradient/scale, SM/MD bay redesign (make·size), LG blue gradient peers, array health bar, reorder buttons in header, 4 new widget modals
+> Last updated: 2026-05-23
+> Status: v1.0.0 — External API (/v1/ endpoints, API key auth, rate limiting), API key management, federation (remote instance polling + Remote Instances dashboard panel)
 
 ## Current Layout
 
@@ -28,7 +28,7 @@ drive-position/
 │   ├── requirements.txt
 │   ├── main.py                     # FastAPI app entrypoint + router registration
 │   ├── api/
-│   │   ├── deps.py                 # Shared DI: DB session
+│   │   ├── deps.py                 # Shared DI: DB session + require_api_key (auth + rate limiter)
 │   │   └── routes/
 │   │       ├── drives.py           # /api/drives — scan, list, get
 │   │       ├── bays.py             # /api/bays — list, assign, unassign, status
@@ -36,7 +36,10 @@ drive-position/
 │   │       ├── profiles.py         # /api/profiles — drive profile CRUD
 │   │       ├── alerts.py           # /api/alerts — list, config
 │   │       ├── pools.py            # /api/pools — ZFS pool stats (GET)
-│   │       └── history.py          # /api/history — drive + pool time-series
+│   │       ├── history.py          # /api/history — drive + pool time-series
+│   │       ├── api_keys.py         # /api/api-keys — key generation, list, delete
+│   │       ├── external.py         # /v1/ — authenticated external API (drives, bays, enclosures, pools, history)
+│   │       └── federation.py       # /api/federation — target CRUD, sync, data snapshot endpoint
 │   ├── models/
 │   │   ├── enclosure.py            # Enclosure ORM model
 │   │   ├── bay_array.py            # BayArray ORM model
@@ -46,7 +49,9 @@ drive-position/
 │   │   ├── pool_history.py         # PoolHistory ORM model (capacity_pct per scan)
 │   │   ├── drive_profile.py        # DriveProfile ORM model (+ warranty helpers)
 │   │   ├── alert.py                # Alert ORM model
-│   │   └── notification_config.py  # NotificationConfig ORM model
+│   │   ├── notification_config.py  # NotificationConfig ORM model
+│   │   ├── api_key.py              # ApiKey ORM model (prefix + SHA-256 hash; plaintext never stored)
+│   │   └── federated_target.py     # FederatedTarget ORM model (remote instance URL + API key)
 │   ├── services/
 │   │   ├── scanner.py              # Orchestrates full disk scan pipeline
 │   │   ├── diskstats.py            # /proc/diskstats reader; device name → (read_bytes, write_bytes)
@@ -57,7 +62,8 @@ drive-position/
 │   │   ├── zpool.py                # zpool list/status wrapper; PoolStats + PoolTopology; vdev tree parser; graceful if ZFS absent
 │   │   ├── notifications.py        # Pluggable notification dispatch
 │   │   ├── log_buffer.py           # In-memory log ring buffer (500 entries); custom logging.Handler
-│   │   └── csv_import.py           # CSV bulk import: Drive + DriveProfile upsert + bay assignment
+│   │   ├── csv_import.py           # CSV bulk import: Drive + DriveProfile upsert + bay assignment
+│   │   └── federation.py           # Remote instance polling; in-memory snapshot cache; poll_due_targets()
 │   ├── db/
 │   │   └── base.py                 # SQLAlchemy engine + SessionLocal + Base
 │   └── tests/
@@ -91,13 +97,13 @@ drive-position/
         │   ├── LogConsole.jsx           # Slide-down console: log level filters + terminal REPL; pinned alerts with Clear All
         │   ├── PoolTopologyPanel.jsx    # Collapsible ZFS pool topology panel; vdev rows + drive chips; onDriveSelect
         │   ├── ScanButton.jsx
-        │   ├── SettingsModal.jsx        # Tabbed modal (General / Enclosures / Notifications / Import / Appearance)
+        │   ├── SettingsModal.jsx        # Tabbed modal (General / Enclosures / Notifications / API Keys / Federation / Import / Appearance)
         │   ├── WarningBadge.jsx
         │   ├── WidgetBar.jsx            # Draggable widget bar; 13 widget types; fixed h-72px; localStorage config
         │   ├── WidgetDetailModal.jsx    # Per-widget detail modal (hottest, oldest, failed, warranty, reallocated)
         │   └── WidgetPickerModal.jsx    # Widget picker modal
         ├── pages/
-        │   ├── Dashboard.jsx            # DnD context, WidgetBar, bay grid, topology panel, drive sidebar; 5-min auto-refresh
+        │   ├── Dashboard.jsx            # DnD context, WidgetBar, bay grid, topology panel, Remote Instances panel, drive sidebar; 5-min auto-refresh
         │   └── DriveDetail.jsx          # Drive detail + profile edit page
         └── utils/
             └── driveIcon.js             # getDriveIcon(formFactor, rpm) → lucide icon
