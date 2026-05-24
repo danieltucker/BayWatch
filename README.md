@@ -20,39 +20,13 @@ No more pulling drives to figure out which one is which.
 - **Federation** — aggregate drive data from multiple remote DriveMap instances into one dashboard
 - Works on **TrueNAS Scale**, **Unraid**, or any Linux-based Docker host
 
----
-
-## Screenshots
-
-### Dashboard
 ![Dashboard overview with bay grid, widget bar, and drive sidebar](screenshots/hero.png)
 
-### Drive Details
-![Drive details panel showing health score, SMART attributes, and warranty info](screenshots/drive-details.png)
-
-### Widget Bar
 ![Customizable widget bar with drag-to-reorder and 13 widget types](screenshots/widgets.png)
 
-### ZFS Pool Topology
 ![ZFS vdev topology panel showing pool hierarchy and drive assignments](screenshots/zfs-vdev.png)
 
-### Terminal Console
-![Terminal console with log level filtering and command interface](screenshots/console.png)
-
-### Dark Mode
 ![Dashboard in dark mode](screenshots/dark-mode.png)
-
-### Settings — Enclosures
-![Settings: Enclosures tab for managing enclosures and bay arrays](screenshots/settings-enclosures.png)
-
-### Settings — Notifications
-![Settings: Notifications tab with Telegram config and temperature thresholds](screenshots/settings-notifications.png)
-
-### Settings — API Keys
-![Settings: API Keys tab for generating and managing API keys](screenshots/settings-api-keys.png)
-
-### Settings — Federation
-![Settings: Federation tab for managing remote DriveMap instances](screenshots/settings-federation.png)
 
 ---
 
@@ -182,6 +156,8 @@ http://<host-ip>:8585
 4. Click **Scan** on the Dashboard to detect all connected drives
 5. Drag drives from the sidebar into the correct bay slots
 
+![Settings: Enclosures tab for managing enclosures and bay arrays](screenshots/settings-enclosures.png)
+
 ---
 
 ## Installing on Other Systems
@@ -208,6 +184,8 @@ Then open `http://localhost:8585`.
 
 Temperature thresholds, log level, Telegram credentials, and warranty warning days are all configured inside the app under **Settings → Notifications**.
 
+![Settings: Notifications tab with Telegram config and temperature thresholds](screenshots/settings-notifications.png)
+
 ---
 
 ## Console Commands
@@ -227,6 +205,8 @@ Press `` ` `` to open the terminal console. Type `help` for a full command list.
 | `unassign <bay-label>` | Remove a bay assignment |
 | `logs [level]` | Toggle log level filter |
 | `clear` | Clear console output |
+
+![Terminal console with log level filtering and command interface](screenshots/console.png)
 
 ---
 
@@ -290,6 +270,8 @@ The final score is floored at 0. Only the highest matching power-on hours tier a
 
 **Example:** A drive with SMART `PASSED`, no sector errors, 30,000 power-on hours, and 48°C would score **95** (−5 for POH tier). The same drive at 56°C would score **87** (−5 POH −8 temp).
 
+![Drive details panel showing health score, SMART attributes, and warranty info](screenshots/drive-details.png)
+
 ---
 
 ## External API
@@ -307,6 +289,8 @@ Authorization: Bearer dm_your_key_here
 Generate keys under **Settings → API Keys**. The full plaintext key is shown **once** at creation — copy it immediately. After leaving the tab, use the **Show** button to reveal it again within the same browser session, or **Regenerate** to issue a new key (the old key is revoked immediately).
 
 **Rate limit:** 120 requests per minute per key prefix. Exceeding this returns `429 Too Many Requests`.
+
+![Settings: API Keys tab for generating and managing API keys](screenshots/settings-api-keys.png)
 
 ### Error Responses
 
@@ -624,6 +608,8 @@ The hub polls each target's `/v1/` API at a configurable interval (5, 15, 30, or
 3. Click **Add Target** — the hub will begin polling on the next scheduler tick
 
 The **Remote Instances** panel appears in the Dashboard automatically once at least one target has synced successfully. Each remote instance shows a compact drive list with SMART status, temperature, and ZFS pool assignments. Click **Sync Now** in Settings → Federation to trigger an immediate poll.
+
+![Settings: Federation tab for managing remote DriveMap instances](screenshots/settings-federation.png)
 
 ### Notes
 
