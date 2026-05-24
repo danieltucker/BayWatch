@@ -14,6 +14,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.0] — 2026-05-23
+
+### Changed
+- **Settings modal — left-nav layout** — replaced the horizontal top tab bar with a fixed left sidebar navigation. Each tab shows an icon and label; the active tab is highlighted in blue. The right panel displays the section title and a one-line description in its header alongside the close button. On narrow screens the modal collapses to a single-column flow: the sidebar list fills the screen first, tapping a tab pushes to the content view with a "← Back" button at the top.
+- **Settings version footer** — the sidebar shows "DriveMap v1.1.0" at the bottom, matching the WatchTower-style pattern.
+
+### Fixed
+- **API keys not appearing after generate** — `loadApiKeys()` was fire-and-forget; the list now refreshes immediately via an optimistic state update (new key appended) followed by an awaited server fetch. The key table updates without leaving the tab.
+
+### Added
+- **API key session reveal** — after generating a key, its plaintext is stored in `sessionStorage` keyed by ID. Switching tabs and returning within the same browser session shows a Copy button on that key's row. On page reload the session value is gone (intentional — no plaintext persistence).
+- **API key regenerate** — rows without a session key show a Regenerate button (↺). Clicking asks for confirmation, then deletes the old key and creates a new one with the same name, stores it in `sessionStorage`, and shows it in the amber one-time box. The old key immediately stops working.
+- **README: Drive Health Score section** — documents the 0–100 composite score formula: starting at 100 for PASSED, 0 for FAILED, with deduction table for reallocated sectors (−4/ea, max −40), pending sectors (−5/ea, max −25), uncorrectable errors (−10/ea, max −35), power-on hours tiers (−5/−12/−20), and temperature tiers (−3/−8/−15). Score label thresholds (Excellent/Good/Fair/Poor/Critical) also documented.
+
+### Backend
+- `main.py` — version bumped to `1.1.0`.
+- `docker-compose.truenas.yml` — image tag bumped to `1.1.0`.
+
+---
+
 ## [1.0.0] — 2026-05-23
 
 ### Added

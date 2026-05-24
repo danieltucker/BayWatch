@@ -1,7 +1,7 @@
 # Project Structure
 
 > Last updated: 2026-05-23
-> Status: v1.0.0 — External API (/v1/ endpoints, API key auth, rate limiting), API key management, federation (remote instance polling + Remote Instances dashboard panel)
+> Status: v1.1.0 — Settings left-nav layout, API key session reveal + regenerate, API key list refresh fix, README health score docs
 
 ## Current Layout
 

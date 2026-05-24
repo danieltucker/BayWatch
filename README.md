@@ -222,6 +222,45 @@ Supported columns (all optional except **Serial**):
 
 ---
 
+## Drive Health Score
+
+Each drive displays a composite health score from 0–100, shown as a ring gauge in the drive details panel.
+
+### How it's calculated
+
+The score starts at **100** for any drive with a `PASSED` SMART status. Drives with a `FAILED` SMART status are immediately scored **0**. Drives with an `UNKNOWN` status show no score.
+
+Deductions are then applied based on the following factors:
+
+| Factor | Condition | Deduction |
+|---|---|---|
+| **SMART status** | `FAILED` | Score = 0 immediately |
+| **Reallocated sectors** | > 0 | −4 per sector, max −40 |
+| **Pending sectors** | > 0 | −5 per sector, max −25 |
+| **Uncorrectable errors** | > 0 | −10 per error, max −35 |
+| **Power-on hours** | > 50,000 h | −20 |
+| **Power-on hours** | > 40,000 h | −12 |
+| **Power-on hours** | > 25,000 h | −5 |
+| **Temperature** | ≥ 60°C | −15 |
+| **Temperature** | ≥ 55°C | −8 |
+| **Temperature** | ≥ 50°C | −3 |
+
+The final score is floored at 0. Only the highest matching power-on hours tier and temperature tier apply (they are `else if` conditions, not additive).
+
+### Score labels
+
+| Score | Label |
+|---|---|
+| 90–100 | Excellent |
+| 75–89 | Good |
+| 60–74 | Fair |
+| 40–59 | Poor |
+| 0–39 | Critical |
+
+A drive with SMART `PASSED`, no sector errors, 30,000 power-on hours, and a 48°C temperature would score **95** (−5 for POH tier). The same drive at 56°C would score **87** (−5 POH −8 temp).
+
+---
+
 ## External API
 
 DriveMap exposes a versioned REST API at `/v1/` for external access — useful for dashboards, monitoring systems, and federation between instances.
