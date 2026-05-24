@@ -68,6 +68,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
   const [confirmRegenerateKeyId, setConfirmRegenerateKeyId] = useState(null)
   const [keyCopied, setKeyCopied] = useState(false)
   const [copiedRowId, setCopiedRowId] = useState(null)
+  const [revealedKeyId, setRevealedKeyId] = useState(null)
 
   // ── Federation state ──
   const [fedTargets, setFedTargets] = useState([])
@@ -345,7 +346,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
               })}
             </nav>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-gray-800">
-              <p className="text-[10px] text-slate-300 dark:text-gray-700">DriveMap v1.1.0</p>
+              <p className="text-[10px] text-slate-300 dark:text-gray-700">DriveMap v1.2.0</p>
             </div>
           </div>
 
@@ -707,7 +708,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                             <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium">Prefix</th>
                             <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium">Created</th>
                             <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium">Last used</th>
-                            <th className="px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium text-center" title="Copy (session) or Regenerate">Key</th>
+                            <th className="px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium text-center" title="Show/copy key (this session) or Regenerate">Key</th>
                             <th className="px-3 py-2" />
                           </tr>
                         </thead>
@@ -717,20 +718,47 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                             return (
                               <tr key={k.id} className="border-b border-slate-100 dark:border-gray-800/60 last:border-0">
                                 <td className="px-3 py-2.5 text-slate-800 dark:text-gray-200 text-sm">{k.name}</td>
-                                <td className="px-3 py-2.5 font-mono text-xs text-slate-500 dark:text-gray-400">{k.key_prefix}…</td>
-                                <td className="px-3 py-2.5 text-xs text-slate-400 dark:text-gray-600">{new Date(k.created_at).toLocaleDateString()}</td>
-                                <td className="px-3 py-2.5 text-xs text-slate-400 dark:text-gray-600">{k.last_used_at ? relTimeAgo(k.last_used_at) : '—'}</td>
-                                <td className="px-3 py-2.5 text-center">
-                                  {sessionKey ? (
-                                    <button
+                                <td className="px-3 py-2.5 font-mono text-xs text-slate-500 dark:text-gray-400 max-w-0">
+                                  {sessionKey && revealedKeyId === k.id ? (
+                                    <code
+                                      className="break-all cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
                                       onClick={() => copyRowKey(k.id)}
-                                      className="p-1 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-                                      title="Copy key (available this session)"
+                                      title="Click to copy"
                                     >
-                                      {copiedRowId === k.id
-                                        ? <CheckCircle2 size={13} className="text-green-500" />
-                                        : <Copy size={13} />}
-                                    </button>
+                                      {sessionKey}
+                                    </code>
+                                  ) : (
+                                    `${k.key_prefix}…`
+                                  )}
+                                </td>
+                                <td className="px-3 py-2.5 text-xs text-slate-400 dark:text-gray-600 whitespace-nowrap">{new Date(k.created_at).toLocaleDateString()}</td>
+                                <td className="px-3 py-2.5 text-xs text-slate-400 dark:text-gray-600 whitespace-nowrap">{k.last_used_at ? relTimeAgo(k.last_used_at) : '—'}</td>
+                                <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                                  {sessionKey ? (
+                                    revealedKeyId === k.id ? (
+                                      <span className="flex items-center gap-1 justify-center">
+                                        <button
+                                          onClick={() => copyRowKey(k.id)}
+                                          className="p-1 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                                          title="Copy key"
+                                        >
+                                          {copiedRowId === k.id ? <CheckCircle2 size={13} className="text-green-500" /> : <Copy size={13} />}
+                                        </button>
+                                        <button
+                                          onClick={() => setRevealedKeyId(null)}
+                                          className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-gray-300 px-1"
+                                        >
+                                          Hide
+                                        </button>
+                                      </span>
+                                    ) : (
+                                      <button
+                                        onClick={() => setRevealedKeyId(k.id)}
+                                        className="text-xs text-blue-500 hover:text-blue-400 font-medium px-1"
+                                      >
+                                        Show
+                                      </button>
+                                    )
                                   ) : confirmRegenerateKeyId === k.id ? (
                                     <span className="flex items-center gap-1 justify-center">
                                       <button onClick={() => handleRegenerateKey(k)} className="text-xs text-amber-500 hover:text-amber-400 font-medium">Regen</button>

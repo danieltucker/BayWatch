@@ -14,6 +14,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.0] — 2026-05-23
+
+### Fixed
+- **API key generation bug** — `create_api_key` was calling `ApiKeyCreated.model_validate(orm_obj)` which fails in Pydantic v2 because the `key: str` field is required but not present on the ORM object. This caused a 500 response on every create, which the frontend caught as an exception — the key was committed to the DB but the response never arrived, so the list never refreshed and the plaintext key was never returned. Fixed by validating as `ApiKeyRead` first, then constructing `ApiKeyCreated(**read.model_dump(), key=plaintext)`.
+
+### Added
+- **API key Show/Hide toggle** — rows in the API Keys table that have a session-cached plaintext key now show a "Show" button. Clicking reveals the full key inline in the Prefix column as a monospace code element; clicking the key text copies it to the clipboard. A Copy icon button and a "Hide" button appear in the Key column. The key collapses back when "Hide" is clicked or when a different row is revealed.
+- **README — Screenshots section** — ten labelled screenshots added: Dashboard overview, Drive Details, Widget Bar, ZFS Pool Topology, Terminal Console, Dark Mode, and all four Settings tabs (Enclosures, Notifications, API Keys, Federation).
+- **README — Full API request/response documentation** — each `/v1/` endpoint now documents the full HTTP request (method, URL, headers), all query parameters with types/defaults/limits, the complete success response JSON with field-level notes, and every possible error status code (`401`, `404`, `422`, `429`) with example response bodies.
+- **README — general polish** — features list expanded to cover ZFS integration, health score, REST API, and federation; first-time setup, CSV import, and installation sections tightened; Federation section updated with Sync Now detail and failure behaviour.
+
+### Backend
+- `api/routes/api_keys.py` — `create_api_key` Pydantic v2 fix.
+- `main.py` — version bumped to `1.2.0`.
+- `docker-compose.truenas.yml` — image tag bumped to `1.2.0`.
+
+### Frontend
+- `components/SettingsModal.jsx` — `revealedKeyId` state; Show/Hide/Copy UX in API Keys table; version footer updated to `v1.2.0`.
+
+---
+
 ## [1.1.0] — 2026-05-23
 
 ### Changed

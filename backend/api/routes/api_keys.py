@@ -32,10 +32,9 @@ def create_api_key(body: ApiKeyCreate, db: Session = Depends(get_db)):
     db.add(key)
     db.commit()
     db.refresh(key)
-    # Attach plaintext for the one-time response — not persisted
-    result = ApiKeyCreated.model_validate(key)
-    result.key = plaintext
-    return result
+    # Build the one-time response with the plaintext key — not persisted
+    read = ApiKeyRead.model_validate(key)
+    return ApiKeyCreated(**read.model_dump(), key=plaintext)
 
 
 @router.delete("/{key_id}", status_code=204)

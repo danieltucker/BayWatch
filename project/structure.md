@@ -1,7 +1,7 @@
 # Project Structure
 
 > Last updated: 2026-05-23
-> Status: v1.1.0 — Settings left-nav layout, API key session reveal + regenerate, API key list refresh fix, README health score docs
+> Status: v1.2.0 — API key generation bug fix, inline Show/Hide key reveal, README screenshots + full API docs + general polish
 
 ## Current Layout
 
