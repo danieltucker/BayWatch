@@ -31,6 +31,7 @@ export const getDrives = () => api.get('/drives').then(r => r.data)
 export const getDrive = (serial) => api.get(`/drives/${serial}`).then(r => r.data)
 export const createDrive = (data) => api.post('/drives', data).then(r => r.data)
 export const patchDrive = (serial, data) => api.patch(`/drives/${serial}`, data).then(r => r.data)
+export const deleteDrive = (serial) => api.delete(`/drives/${serial}`)
 export const triggerScan = () => api.post('/drives/scan').then(r => r.data)
 export const triggerScanSync = () => api.post('/drives/scan/sync').then(r => r.data)
 export const importCSV = (file) => {
@@ -79,6 +80,10 @@ export const getArrayTempHistory = (arrayId, days = 30) =>
 export const getApiKeys = () => api.get('/api-keys').then(r => r.data)
 export const createApiKey = (name) => api.post('/api-keys', { name }).then(r => r.data)
 export const deleteApiKey = (id) => api.delete(`/api-keys/${id}`)
+
+// ── App config ────────────────────────────────────────────────────────────────
+export const getAppConfig = (key) => api.get(`/config/${key}`).then(r => r.data)
+export const saveAppConfig = (key, value) => api.put(`/config/${key}`, { value }).then(r => r.data)
 
 // ── Federation ────────────────────────────────────────────────────────────────
 export const getFederationTargets = () => api.get('/federation/targets').then(r => r.data)

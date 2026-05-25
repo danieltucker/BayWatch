@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
 } from '@dnd-kit/core'
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import WidgetPickerModal from './WidgetPickerModal'
 import WidgetDetailModal, { WIDGET_HAS_DETAIL } from './WidgetDetailModal'
+import { getAppConfig, saveAppConfig } from '../api/client'
 
 // ── Widget definitions ─────────────────────────────────────────────────────
 
@@ -190,7 +191,7 @@ function SortableWidgetCard({ id, drives, profiles, baysMap, onRemove, onOpenDet
 // ── Widget bar ─────────────────────────────────────────────────────────────
 
 export default function WidgetBar({ drives, profiles, baysMap }) {
-  const [widgetIds, setWidgetIds] = useState(loadWidgetIds)
+  const [widgetIds, setWidgetIds] = useState(loadWidgetIds)  // localStorage for fast initial render
   const [pickerOpen, setPickerOpen] = useState(false)
   const [detailWidget, setDetailWidget] = useState(null)
 
@@ -198,9 +199,22 @@ export default function WidgetBar({ drives, profiles, baysMap }) {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   )
 
+  // Override with backend data on mount — backend is cross-browser source of truth
+  useEffect(() => {
+    getAppConfig('widgets').then(data => {
+      const ids = JSON.parse(data.value)
+      if (Array.isArray(ids) && ids.every(id => WIDGET_DEFS[id])) {
+        setWidgetIds(ids)
+        localStorage.setItem(STORAGE_KEY, data.value)
+      }
+    }).catch(() => {})
+  }, [])
+
   function save(ids) {
     setWidgetIds(ids)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(ids))
+    const json = JSON.stringify(ids)
+    localStorage.setItem(STORAGE_KEY, json)
+    saveAppConfig('widgets', json).catch(() => {})
   }
 
   function handleDragEnd(event) {

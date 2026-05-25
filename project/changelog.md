@@ -14,6 +14,34 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.5.0] — 2026-05-24
+
+### Added
+- **Hover-to-preview** — hovering over a bay slot highlights all vdev peers (drives sharing the same `vdev_name`) and shows the hovered drive's details in the sidebar. Hover is transient: the permanent selection is preserved when the cursor leaves. Clicking a bay still opens BayModal.
+- **Drive deletion** — drives can be permanently deleted via a trash icon + inline confirmation in DriveCard. Cascades manually (SQLite FK enforcement off): clears `Bay.drive_serial`, deletes `DriveHistory` rows, nullifies `Alert.drive_serial`. `DriveProfile` is deleted by SQLAlchemy ORM cascade. Detected drives reappear after next scan (without history); manually-created drives are gone permanently.
+- **Widget persistence** — widget selection and order are now saved to the backend (`app_config` table, key `widgets`) and synced across browsers. localStorage is still used for fast initial render; backend is source of truth. Persistence is best-effort (localStorage fallback if backend unreachable).
+- **Backend config endpoint** — `GET/PUT /api/config/{key}` — generic key-value store backed by new `app_config` SQLite table. Used by widget persistence; available for future settings.
+
+### Changed
+- **LG bay size** — min-height increased from 160px to 190px; inner gap and padding increased; icon bumped from 28px to 32px; make text from 11px to 12px; model text from 10px to 11px. More breathing room and more readable make/model at large size.
+
+### Frontend
+- `components/BaySlot.jsx` — `onHover`/`onHoverEnd` props wired to `onMouseEnter`/`onMouseLeave`; LG size metrics increased.
+- `components/BayGrid.jsx` — `onBayHover`/`onBayHoverEnd` props forwarded to each `BaySlot`.
+- `components/DriveCard.jsx` — `onDelete` prop; `Trash2` icon button; inline delete confirmation banner; `confirmDelete` state.
+- `components/WidgetBar.jsx` — loads widget config from backend on mount; saves to backend on every change; localStorage retained as write-through cache.
+- `pages/Dashboard.jsx` — `hoveredBay` state; derived `displayBay`/`displayDrive`/`displayProfile`/`highlightVdev`; sidebar uses display vars; `onDelete` handler wired to `DriveCard`; `deleteDrive` imported.
+- `api/client.js` — `deleteDrive(serial)`, `getAppConfig(key)`, `saveAppConfig(key, value)`.
+
+### Backend
+- `api/routes/drives.py` — `DELETE /api/drives/{serial}`: manual FK cascade + ORM delete.
+- `api/routes/config.py` — new route: `GET/PUT /api/config/{key}` key-value config store.
+- `main.py` — `app_config` table migration added; `config` router registered; version bumped to `1.5.0`.
+- `api/routes/external.py` — `_VERSION` bumped to `1.5.0`.
+- `docker-compose.truenas.yml` — image tag bumped to `1.5.0`.
+
+---
+
 ## [1.4.0] — 2026-05-24
 
 ### Fixed

@@ -1,10 +1,13 @@
 import time
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from api.deps import get_db
 from api.schemas import DriveCreate, DrivePatch, DriveRead, PartitionRead
+from models.alert import Alert
+from models.bay import Bay
 from models.drive import Drive
+from models.drive_history import DriveHistory
 from services import csv_import as csv_import_svc
 from services import lsblk as lsblk_svc
 from services import log_buffer
@@ -72,6 +75,20 @@ async def import_drives(file: UploadFile = File(...), db: Session = Depends(get_
         raise HTTPException(status_code=422, detail="File must be a .csv")
     content = await file.read()
     return csv_import_svc.run_import(content, db)
+
+
+@router.delete("/{serial}", status_code=204)
+def delete_drive(serial: str, db: Session = Depends(get_db)):
+    drive = db.get(Drive, serial)
+    if not drive:
+        raise HTTPException(status_code=404, detail="Drive not found")
+    # SQLite FK enforcement is off — cascade manually
+    db.query(Bay).filter(Bay.drive_serial == serial).update({"drive_serial": None})
+    db.query(DriveHistory).filter(DriveHistory.drive_serial == serial).delete()
+    db.query(Alert).filter(Alert.drive_serial == serial).update({"drive_serial": None})
+    db.delete(drive)  # ORM cascade deletes DriveProfile
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.patch("/{serial}", response_model=DriveRead)

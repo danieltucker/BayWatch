@@ -351,7 +351,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
               })}
             </nav>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-gray-800">
-              <p className="text-[10px] text-slate-300 dark:text-gray-700">DriveMap v1.4.0</p>
+              <p className="text-[10px] text-slate-300 dark:text-gray-700">DriveMap v1.5.0</p>
             </div>
           </div>
 

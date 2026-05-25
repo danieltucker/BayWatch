@@ -13,7 +13,7 @@ import PoolTopologyPanel from '../components/PoolTopologyPanel'
 import {
   getEnclosures, getDrives, getBays, getProfile, assignDrive,
   getPools, getPoolTopology, updateEnclosure, updateBayArray,
-  getFederationData,
+  getFederationData, deleteDrive,
 } from '../api/client'
 
 function exportDrivesCSV(drives, profiles, enclosures, baysMap) {
@@ -91,6 +91,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
   const [profiles, setProfiles] = useState([])
   const [selectedBay, setSelectedBay] = useState(null)
   const [selectedDriveSerial, setSelectedDriveSerial] = useState(null)
+  const [hoveredBay, setHoveredBay] = useState(null)
   const [bayModal, setBayModal] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeDriveSerial, setActiveDriveSerial] = useState(null)
@@ -232,7 +233,12 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
     ? driveMap[selectedDriveSerial]
     : null
   const selectedProfile = selectedDrive ? profileMap[selectedDrive.serial] : null
-  const highlightVdev = selectedDrive?.vdev_name ?? null
+
+  const hoveredDrive = hoveredBay?.drive_serial ? driveMap[hoveredBay.drive_serial] : null
+  const displayBay    = hoveredBay ?? selectedBay
+  const displayDrive  = hoveredDrive ?? selectedDrive
+  const displayProfile = displayDrive ? profileMap[displayDrive.serial] : null
+  const highlightVdev = displayDrive?.vdev_name ?? null
 
   const activeDrive = activeDriveSerial ? driveMap[activeDriveSerial] : null
 
@@ -373,6 +379,8 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                             const profile = drive ? profileMap[drive.serial] : null
                             setBayModal({ bay, drive, profile, arrayName: arr.name })
                           }}
+                          onBayHover={bay => setHoveredBay(bay)}
+                          onBayHoverEnd={() => setHoveredBay(null)}
                         />
                       ))}
                     </div>
@@ -498,23 +506,29 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
         <div className="w-full lg:w-[340px] shrink-0 flex flex-col bg-white dark:bg-gray-950 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-gray-800 lg:sticky lg:top-[49px] lg:h-[calc(100vh-49px)] lg:self-start">
           <div className="px-4 py-3 border-b border-slate-200 dark:border-gray-800/60">
             <p className="text-xs font-medium text-slate-500 dark:text-gray-500 uppercase tracking-widest">
-              {selectedDrive ? 'Drive Details' : 'All Drives'}
+              {displayDrive ? 'Drive Details' : 'All Drives'}
             </p>
           </div>
           <div className="flex-1 overflow-y-auto p-3">
-            {selectedDrive ? (
+            {displayDrive ? (
               <DriveCard
-                drive={selectedDrive}
-                profile={selectedProfile}
-                bay={selectedBay}
+                drive={displayDrive}
+                profile={displayProfile}
+                bay={displayBay}
                 poolStats={poolStats}
-                onEdit={() => setBayModal({
+                onEdit={selectedBay ? () => setBayModal({
                   bay: selectedBay,
                   drive: selectedDrive,
                   profile: selectedProfile,
                   arrayName: findArrayName(selectedBay?.id),
-                })}
-                onClose={() => { setSelectedBay(null); setSelectedDriveSerial(null) }}
+                }) : undefined}
+                onClose={selectedDrive ? () => { setSelectedBay(null); setSelectedDriveSerial(null) } : undefined}
+                onDelete={selectedDrive ? async (serial) => {
+                  await deleteDrive(serial)
+                  setSelectedBay(null)
+                  setSelectedDriveSerial(null)
+                  loadAll()
+                } : undefined}
                 onReassign={undefined}
               />
             ) : (

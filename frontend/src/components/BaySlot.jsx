@@ -75,7 +75,7 @@ const STATUS_TILE_HOVER = {
 
 const GAP = { sm: 'gap-1', md: 'gap-1.5', lg: 'gap-2' }
 
-export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, onClick, size = 'sm' }) {
+export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, onClick, onHover, onHoverEnd, size = 'sm' }) {
   const { setNodeRef, isOver } = useDroppable({ id: bay.id })
   const { warnC, dangerC } = useTempThresholds()
   const isEmpty = !drive
@@ -103,6 +103,8 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
       <div
         ref={setNodeRef}
         onClick={() => onClick?.(bay)}
+        onMouseEnter={() => onHover?.(bay)}
+        onMouseLeave={onHoverEnd}
         className={clsx(
           'h-8 flex items-center px-2 gap-1.5 rounded border cursor-pointer select-none transition-all duration-150',
           isEmpty
@@ -151,6 +153,8 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
       <div
         ref={setNodeRef}
         onClick={() => onClick?.(bay)}
+        onMouseEnter={() => onHover?.(bay)}
+        onMouseLeave={onHoverEnd}
         className={clsx(
           'relative min-h-[80px] flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-xl border cursor-pointer select-none transition-all duration-150 group',
           isEmpty
@@ -228,8 +232,10 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
     <div
       ref={setNodeRef}
       onClick={() => onClick?.(bay)}
+      onMouseEnter={() => onHover?.(bay)}
+      onMouseLeave={onHoverEnd}
       className={clsx(
-        'relative min-h-[160px] flex flex-col rounded-xl border cursor-pointer select-none transition-all duration-150 overflow-hidden group',
+        'relative min-h-[190px] flex flex-col rounded-xl border cursor-pointer select-none transition-all duration-150 overflow-hidden group',
         lgBg,
         selectionHighlight,
         isPeer && !isSelected && 'ring-1 ring-blue-400/50',
@@ -248,18 +254,18 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           <span className="text-slate-200 dark:text-gray-800 text-3xl">·</span>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col gap-1.5 px-2.5 pt-6 pb-2.5">
+        <div className="flex-1 flex flex-col gap-2 px-2.5 pt-7 pb-3">
           {/* Icon + make/model */}
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-white/70 dark:bg-gray-800/60 border border-slate-200/80 dark:border-gray-700/40 flex items-center justify-center shrink-0">
-              <Icon size={14} className={s.icon} />
+            <div className="w-8 h-8 rounded-lg bg-white/70 dark:bg-gray-800/60 border border-slate-200/80 dark:border-gray-700/40 flex items-center justify-center shrink-0">
+              <Icon size={15} className={s.icon} />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-slate-800 dark:text-gray-200 leading-tight truncate">
+              <p className="text-[12px] font-semibold text-slate-800 dark:text-gray-200 leading-tight truncate">
                 {drive.make || 'Unknown'}
               </p>
               {drive.model && (
-                <p className="text-[10px] text-slate-400 dark:text-gray-500 leading-none truncate">{drive.model}</p>
+                <p className="text-[11px] text-slate-400 dark:text-gray-500 leading-none truncate">{drive.model}</p>
               )}
             </div>
           </div>

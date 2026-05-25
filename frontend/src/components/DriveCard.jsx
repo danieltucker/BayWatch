@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Clock, X, Pencil, AlertTriangle, Zap, Archive, ArrowLeftRight, CheckCircle2, ShieldAlert } from 'lucide-react'
+import { Clock, X, Pencil, Trash2, AlertTriangle, Zap, Archive, ArrowLeftRight, CheckCircle2, ShieldAlert } from 'lucide-react'
 import {
   ResponsiveContainer, AreaChart, Area,
   XAxis, YAxis, Tooltip, ReferenceLine,
@@ -150,10 +150,11 @@ function HealthRing({ score }) {
   )
 }
 
-export default function DriveCard({ drive, profile, bay, poolStats = [], onClose, onEdit, onReassign }) {
+export default function DriveCard({ drive, profile, bay, poolStats = [], onClose, onEdit, onReassign, onDelete }) {
   const { warnC, dangerC } = useTempThresholds()
   const [history, setHistory] = useState([])
   const [partitions, setPartitions] = useState([])
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     if (!drive) return
@@ -264,6 +265,11 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
               <Pencil size={14} />
             </button>
           )}
+          {onDelete && (
+            <button onClick={() => setConfirmDelete(true)} className="text-slate-400 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors p-0.5 rounded" title="Delete drive">
+              <Trash2 size={14} />
+            </button>
+          )}
           {onClose && (
             <button onClick={onClose} className="text-slate-400 dark:text-gray-600 hover:text-slate-700 dark:hover:text-gray-300 transition-colors p-0.5 rounded">
               <X size={15} />
@@ -271,6 +277,21 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
           )}
         </div>
       </div>
+
+      {/* ── Delete confirm ── */}
+      {confirmDelete && (
+        <div className="mx-4 mb-1 rounded-lg border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30 px-3 py-2.5 flex items-center gap-3">
+          <p className="text-xs text-red-700 dark:text-red-300 flex-1">Permanently delete this drive?</p>
+          <button
+            onClick={() => { onDelete(drive.serial); setConfirmDelete(false) }}
+            className="px-2.5 py-1 rounded-md bg-red-500 hover:bg-red-600 text-white text-xs font-medium transition-colors"
+          >Delete</button>
+          <button
+            onClick={() => setConfirmDelete(false)}
+            className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-gray-700 text-slate-600 dark:text-gray-400 text-xs transition-colors hover:border-slate-300 dark:hover:border-gray-600"
+          >Cancel</button>
+        </div>
+      )}
 
       {/* ── Spec chips ── */}
       <div className="px-4 pb-3 flex flex-wrap gap-1.5">

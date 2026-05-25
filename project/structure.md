@@ -1,7 +1,7 @@
 # Project Structure
 
-> Last updated: 2026-05-23
-> Status: v1.4.0 — I/O chart auto-scale, bay health dots, bay status tile colors, unified BayModal
+> Last updated: 2026-05-24
+> Status: v1.5.0 — hover-to-preview vdev peers, drive deletion, widget persistence, larger LG bays
 
 ## Current Layout
 
@@ -39,6 +39,7 @@ drive-position/
 │   │       ├── history.py          # /api/history — drive + pool time-series
 │   │       ├── api_keys.py         # /api/api-keys — key generation, list, delete
 │   │       ├── external.py         # /v1/ — authenticated external API (drives, bays, enclosures, pools, history)
+│   │       ├── config.py           # /api/config — generic key-value config store (app_config table)
 │   │       └── federation.py       # /api/federation — target CRUD, sync, data snapshot endpoint
 │   ├── models/
 │   │   ├── enclosure.py            # Enclosure ORM model

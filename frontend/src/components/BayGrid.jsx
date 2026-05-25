@@ -90,7 +90,7 @@ function HealthBar({ stats }) {
 
 export default function BayGrid({
   array, bays, driveMap, profileMap, selectedBayId, onBayClick, highlightVdev,
-  onMoveUp, onMoveDown,
+  onMoveUp, onMoveDown, onBayHover, onBayHoverEnd,
 }) {
   const sizeKey = `array-size-${array.id}`
   const collapseKey = `array-collapsed-${array.id}`
@@ -250,6 +250,8 @@ export default function BayGrid({
                     !!(highlightVdev && drive?.vdev_name === highlightVdev && bay.id !== selectedBayId)
                   }
                   onClick={onBayClick}
+                  onHover={onBayHover}
+                  onHoverEnd={onBayHoverEnd}
                 />
               )
             })
