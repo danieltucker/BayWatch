@@ -49,6 +49,30 @@ const BAY_STATUS_STYLE = {
   cold_spare: { badge: 'bg-violet-500/20 text-violet-400 border border-violet-500/40', label: 'CS',  ring: 'ring-1 ring-violet-500/40 !border-violet-500/50' },
 }
 
+function healthDotColor(drive) {
+  if (!drive) return 'bg-slate-200 dark:bg-gray-700'
+  if (drive.smart_status === 'FAILED') return 'bg-red-400 dark:bg-red-500'
+  if (drive.smart_status === 'PASSED') {
+    const hasErrors = (drive.reallocated_sectors ?? 0) > 0
+      || (drive.pending_sectors ?? 0) > 0
+      || (drive.uncorrectable_errors ?? 0) > 0
+    return hasErrors ? 'bg-amber-400' : 'bg-emerald-400 dark:bg-emerald-500'
+  }
+  return 'bg-slate-300 dark:bg-gray-600'
+}
+
+const STATUS_TILE = {
+  damaged:    'bg-red-50 dark:bg-red-950/25 border-red-200 dark:border-red-800/60',
+  hot_spare:  'bg-amber-50 dark:bg-amber-950/25 border-amber-200 dark:border-amber-700/60',
+  cold_spare: 'bg-sky-50 dark:bg-sky-950/25 border-sky-200 dark:border-sky-700/60',
+}
+
+const STATUS_TILE_HOVER = {
+  damaged:    'hover:bg-red-100/80 dark:hover:bg-red-950/40',
+  hot_spare:  'hover:bg-amber-100/80 dark:hover:bg-amber-950/40',
+  cold_spare: 'hover:bg-sky-100/80 dark:hover:bg-sky-950/40',
+}
+
 const GAP = { sm: 'gap-1', md: 'gap-1.5', lg: 'gap-2' }
 
 export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, onClick, size = 'sm' }) {
@@ -83,8 +107,9 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           'h-8 flex items-center px-2 gap-1.5 rounded border cursor-pointer select-none transition-all duration-150',
           isEmpty
             ? 'border-dashed border-slate-200 dark:border-gray-800/50 hover:border-slate-300 dark:hover:border-gray-700/60 bg-transparent'
+            : STATUS_TILE[bay.status]
+            ? clsx(STATUS_TILE[bay.status], STATUS_TILE_HOVER[bay.status])
             : clsx(s.border, s.bg, s.hover),
-          bayStatus?.ring,
           selectionHighlight,
           peerFlat,
         )}
@@ -105,7 +130,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
                 {drive.temperature_c}°
               </span>
             )}
-            <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', s.dot)} />
+            <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', healthDotColor(drive))} />
           </>
         ) : (
           <span className="text-slate-200 dark:text-gray-800 text-sm flex-1">·</span>
@@ -130,13 +155,15 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           'relative min-h-[80px] flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-xl border cursor-pointer select-none transition-all duration-150 group',
           isEmpty
             ? 'border-dashed border-slate-300 dark:border-gray-700/50 bg-slate-50 dark:bg-gray-900/20 hover:border-slate-400 dark:hover:border-gray-600/70 hover:bg-slate-100 dark:hover:bg-gray-800/20'
+            : STATUS_TILE[bay.status]
+            ? clsx(STATUS_TILE[bay.status], STATUS_TILE_HOVER[bay.status])
             : clsx(s.border, s.bg, s.hover),
           selectionHighlight,
           peerFlat,
         )}
       >
         <span className="absolute top-1 left-1.5 text-[9px] text-slate-400 dark:text-gray-700 font-mono leading-none">{label}</span>
-        {drive && !bayStatus && <span className={clsx('absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full', s.dot)} />}
+        {drive && <span className={clsx('absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full', healthDotColor(drive))} />}
         {bayStatus && (
           <span className={clsx('absolute top-1 right-1 text-[9px] font-mono font-bold px-1 py-0.5 rounded leading-none', bayStatus.badge)}>
             {bayStatus.label}
@@ -191,6 +218,8 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
   // For LG, apply blue gradient directly (no !important needed) for vdev peers
   const lgBg = isEmpty
     ? 'border-dashed border-slate-200 dark:border-gray-700/50 bg-slate-50/50 dark:bg-gray-900/10 hover:border-slate-300 dark:hover:border-gray-600'
+    : STATUS_TILE[bay.status]
+    ? clsx(STATUS_TILE[bay.status], STATUS_TILE_HOVER[bay.status])
     : isPeer
     ? 'bg-gradient-to-b from-blue-50 to-white dark:from-blue-950/30 dark:to-gray-900/60 border-blue-300/70 dark:border-blue-700/50 hover:from-blue-100/70 dark:hover:from-blue-950/50'
     : clsx('bg-gradient-to-b to-white dark:to-gray-900/60', s.lgFrom, s.lgBorder, s.hover)
@@ -200,14 +229,14 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
       ref={setNodeRef}
       onClick={() => onClick?.(bay)}
       className={clsx(
-        'relative min-h-[150px] flex flex-col rounded-xl border cursor-pointer select-none transition-all duration-150 overflow-hidden group',
+        'relative min-h-[160px] flex flex-col rounded-xl border cursor-pointer select-none transition-all duration-150 overflow-hidden group',
         lgBg,
         selectionHighlight,
         isPeer && !isSelected && 'ring-1 ring-blue-400/50',
       )}
     >
       <span className="absolute top-1.5 left-2 text-[9px] text-slate-400 dark:text-gray-600 font-mono leading-none z-10">{label}</span>
-      {drive && !bayStatus && <span className={clsx('absolute top-1.5 right-1.5 w-2 h-2 rounded-full shadow-sm z-10', s.dot)} />}
+      {drive && <span className={clsx('absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full shadow-sm z-10', healthDotColor(drive))} />}
       {bayStatus && (
         <span className={clsx('absolute top-1.5 right-1.5 z-10 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded leading-none', bayStatus.badge)}>
           {bayStatus.label}
@@ -230,7 +259,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
                 {drive.make || 'Unknown'}
               </p>
               {drive.model && (
-                <p className="text-[9px] text-slate-400 dark:text-gray-500 leading-none truncate">{drive.model}</p>
+                <p className="text-[10px] text-slate-400 dark:text-gray-500 leading-none truncate">{drive.model}</p>
               )}
             </div>
           </div>
@@ -243,11 +272,11 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           {/* Pool info */}
           {drive.zfs_pool && (
             <div className="flex items-center gap-1.5">
-              <span className="text-[9px] text-slate-400 dark:text-gray-500 font-mono truncate flex-1">
+              <span className="text-[10px] text-slate-400 dark:text-gray-500 font-mono truncate flex-1">
                 {drive.zfs_pool}
               </span>
               {drive.vdev_name && (
-                <span className="text-[9px] font-mono text-slate-400 dark:text-gray-600 shrink-0">
+                <span className="text-[10px] font-mono text-slate-400 dark:text-gray-600 shrink-0">
                   {drive.vdev_name}
                 </span>
               )}
@@ -258,7 +287,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           {drive.temperature_c != null && (
             <div>
               <div className="flex items-center justify-between mb-0.5">
-                <span className="text-[9px] text-slate-400 dark:text-gray-600 uppercase tracking-wide">Temp</span>
+                <span className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wide">Temp</span>
                 <span className={clsx(
                   'text-[10px] font-mono font-bold',
                   drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
@@ -282,9 +311,9 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
 
           {/* Capacity + device path */}
           <div className="flex items-center justify-between gap-1 mt-auto">
-            {cap && <span className="text-[9px] text-slate-500 dark:text-gray-500">{cap}</span>}
+            {cap && <span className="text-[10px] text-slate-500 dark:text-gray-500">{cap}</span>}
             {drive.device_path && (
-              <span className="text-[9px] font-mono text-slate-400 dark:text-gray-600 truncate">{drive.device_path}</span>
+              <span className="text-[10px] font-mono text-slate-400 dark:text-gray-600 truncate">{drive.device_path}</span>
             )}
           </div>
 

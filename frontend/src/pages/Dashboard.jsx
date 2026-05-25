@@ -5,10 +5,9 @@ import clsx from 'clsx'
 import BayGrid from '../components/BayGrid'
 import DriveCard from '../components/DriveCard'
 import DriveList from '../components/DriveList'
-import DriveEditModal from '../components/DriveEditModal'
+import BayModal from '../components/BayModal'
 import SettingsModal from '../components/SettingsModal'
 import ScanButton from '../components/ScanButton'
-import EmptyBayModal from '../components/EmptyBayModal'
 import WidgetBar from '../components/WidgetBar'
 import PoolTopologyPanel from '../components/PoolTopologyPanel'
 import {
@@ -92,10 +91,9 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
   const [profiles, setProfiles] = useState([])
   const [selectedBay, setSelectedBay] = useState(null)
   const [selectedDriveSerial, setSelectedDriveSerial] = useState(null)
-  const [emptyBay, setEmptyBay] = useState(null)
+  const [bayModal, setBayModal] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeDriveSerial, setActiveDriveSerial] = useState(null)
-  const [editTarget, setEditTarget] = useState(null)
   const [poolStats, setPoolStats] = useState([])
   const [poolTopology, setPoolTopology] = useState([])
   const [lastRefreshed, setLastRefreshed] = useState(null)
@@ -163,6 +161,16 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
     const tick = setInterval(() => setTick(n => n + 1), 60 * 1000)
     return () => { clearInterval(refresh); clearInterval(tick) }
   }, [loadAll])
+
+  function findArrayName(bayId) {
+    if (!bayId) return null
+    for (const enc of enclosures) {
+      for (const arr of enc.arrays) {
+        if ((baysMap[arr.id] || []).some(b => b.id === bayId)) return arr.name
+      }
+    }
+    return null
+  }
 
   function toggleEncCollapse(encId) {
     setCollapsedEncs(prev => {
@@ -359,12 +367,11 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                           onMoveUp={arrIdx > 0 ? () => moveArray(enc, arrIdx, -1) : undefined}
                           onMoveDown={arrIdx < enc.arrays.length - 1 ? () => moveArray(enc, arrIdx, 1) : undefined}
                           onBayClick={bay => {
-                            if (!bay.drive_serial) {
-                              setEmptyBay(bay)
-                            } else {
-                              setSelectedBay(bay)
-                              setSelectedDriveSerial(null)
-                            }
+                            setSelectedBay(bay)
+                            setSelectedDriveSerial(null)
+                            const drive = driveMap[bay.drive_serial] || null
+                            const profile = drive ? profileMap[drive.serial] : null
+                            setBayModal({ bay, drive, profile, arrayName: arr.name })
                           }}
                         />
                       ))}
@@ -473,21 +480,15 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
           </div>
         </div>
 
-        {emptyBay && (
-          <EmptyBayModal
-            bay={emptyBay}
+        {bayModal && (
+          <BayModal
+            bay={bayModal.bay}
+            drive={bayModal.drive}
+            profile={bayModal.profile}
             drives={drives}
-            onClose={() => setEmptyBay(null)}
-            onCreated={() => { setEmptyBay(null); loadAll() }}
-          />
-        )}
-
-        {editTarget && (
-          <DriveEditModal
-            drive={editTarget.drive}
-            profile={editTarget.profile}
-            onClose={() => setEditTarget(null)}
-            onSaved={() => { setEditTarget(null); loadAll() }}
+            arrayName={bayModal.arrayName}
+            onClose={() => setBayModal(null)}
+            onSaved={() => { setBayModal(null); loadAll() }}
           />
         )}
 
@@ -507,9 +508,14 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                 profile={selectedProfile}
                 bay={selectedBay}
                 poolStats={poolStats}
-                onEdit={() => setEditTarget({ drive: selectedDrive, profile: selectedProfile })}
+                onEdit={() => setBayModal({
+                  bay: selectedBay,
+                  drive: selectedDrive,
+                  profile: selectedProfile,
+                  arrayName: findArrayName(selectedBay?.id),
+                })}
                 onClose={() => { setSelectedBay(null); setSelectedDriveSerial(null) }}
-                onReassign={selectedBay ? () => setEmptyBay(selectedBay) : undefined}
+                onReassign={undefined}
               />
             ) : (
               <DriveList

@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import clsx from 'clsx'
 import { ChevronDown, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react'
+import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import BaySlot from './BaySlot'
+import { getArrayTempHistory } from '../api/client'
+import { useTempThresholds } from '../context/TempThresholdContext'
 
 const SIZES = ['sm', 'md', 'lg']
 
@@ -34,6 +37,44 @@ function computeStats(bays, driveMap) {
     }
   }
   return { total, occupied, avgTemp, passed, failed, warn, empty: total - occupied }
+}
+
+function ArrayTempSparkline({ arrayId }) {
+  const [data, setData] = useState([])
+  const { warnC, dangerC } = useTempThresholds()
+
+  useEffect(() => {
+    getArrayTempHistory(arrayId).then(setData).catch(() => {})
+  }, [arrayId])
+
+  if (data.length < 2) return null
+
+  const latest = data[data.length - 1]?.avg_temp_c ?? 0
+  const color = latest >= dangerC ? '#f87171' : latest >= warnC ? '#fbbf24' : '#38bdf8'
+
+  return (
+    <div className="w-full h-7">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
+          <defs>
+            <linearGradient id={`tg-${arrayId}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={color} stopOpacity={0.35} />
+              <stop offset="95%" stopColor={color} stopOpacity={0.03} />
+            </linearGradient>
+          </defs>
+          <Area
+            type="monotone"
+            dataKey="avg_temp_c"
+            stroke={color}
+            strokeWidth={1.5}
+            fill={`url(#tg-${arrayId})`}
+            dot={false}
+            isAnimationActive={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  )
 }
 
 function HealthBar({ stats }) {
@@ -158,6 +199,7 @@ export default function BayGrid({
       {/* ── Stats strip ── */}
       <div className="flex flex-col gap-1 mb-3 px-0.5">
         <HealthBar stats={stats} />
+        <ArrayTempSparkline arrayId={array.id} />
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-slate-400 dark:text-gray-600">
             <span className="font-semibold text-slate-600 dark:text-gray-400">{stats.occupied}</span>

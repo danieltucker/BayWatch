@@ -213,6 +213,12 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
     return result
   })()
 
+  const ioMaxMB = ioHistory.length ? Math.max(...ioHistory.map(h => Math.max(h.readMB, h.writeMB))) : 0
+  const ioUnit = ioMaxMB >= 1000 ? 'GB' : 'MB'
+  const ioData = ioUnit === 'GB'
+    ? ioHistory.map(h => ({ ...h, readMB: +(h.readMB / 1024).toFixed(2), writeMB: +(h.writeMB / 1024).toFixed(2) }))
+    : ioHistory
+
   const hasErrors = (drive.reallocated_sectors ?? 0) > 0
     || (drive.pending_sectors ?? 0) > 0
     || (drive.uncorrectable_errors ?? 0) > 0
@@ -427,13 +433,14 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
       {/* ── I/O activity chart ── */}
       {ioHistory.length > 0 && (
         <div className="px-4 pb-3">
-          <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-1.5">I/O Activity (30d)</p>
+          <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-0.5">I/O Activity (30d)</p>
+          <p className="text-[9px] text-slate-300 dark:text-gray-700 mb-1.5">{ioUnit} per scan interval · this drive</p>
           <div className="flex items-center gap-3 mb-1">
             <span className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-gray-600"><span className="w-2 h-0.5 rounded bg-emerald-400 inline-block" />Read</span>
             <span className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-gray-600"><span className="w-2 h-0.5 rounded bg-violet-400 inline-block" />Write</span>
           </div>
           <ResponsiveContainer width="100%" height={70}>
-            <AreaChart data={ioHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+            <AreaChart data={ioData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
               <defs>
                 <linearGradient id="readGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%"  stopColor="#34d399" stopOpacity={0.35} />
@@ -445,8 +452,8 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
                 </linearGradient>
               </defs>
               <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} unit=" MB" />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [`${v.toLocaleString()} MB`, n === 'readMB' ? 'Read' : 'Write']} labelStyle={{ color: '#94a3b8' }} />
+              <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} unit={` ${ioUnit}`} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [`${v.toLocaleString()} ${ioUnit}`, n === 'readMB' ? 'Read' : 'Write']} labelStyle={{ color: '#94a3b8' }} />
               <Area type="monotone" dataKey="readMB"  stroke="#34d399" fill="url(#readGrad)"  strokeWidth={1.5} dot={false} />
               <Area type="monotone" dataKey="writeMB" stroke="#a78bfa" fill="url(#writeGrad)" strokeWidth={1.5} dot={false} />
             </AreaChart>

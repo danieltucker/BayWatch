@@ -14,6 +14,54 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.4.0] — 2026-05-24
+
+### Fixed
+- **I/O chart Y-axis truncation** — values ≥ 1,000 MB now auto-scale to GB. `ioUnit` is computed from the dataset max; all chart values and the Y-axis unit string update accordingly. Tooltip formatter also uses the dynamic unit.
+
+### Changed
+- **I/O chart clarity** — added a subtitle line below the "I/O Activity (30d)" heading: `"MB/GB per scan interval · this drive"`. Makes clear the data is per-drive cumulative delta between scans, not per-second throughput, and not pool/vdev-level.
+- **Bay health indicator** — all three bay sizes (SM/MD/LG) now show a colored dot reflecting drive health: emerald=PASSED (no errors), amber=PASSED (with reallocated/pending/uncorrectable sectors), red=FAILED, slate=unknown, dark-slate=empty. Dot is positioned bottom-right of the bay tile. LG dot moved from top-right to bottom-right to coexist with the bay status badge. Dot is always visible regardless of bay status.
+- **Bay status tile colors** — the bay tile's background and border now reflect `bay.status`: `damaged` = red tint + red border; `hot_spare` = amber tint + amber border; `cold_spare` = sky tint + sky border; `normal` = default SMART-status styling (unchanged). Replaces the previous ring-only approach. Status badge (DMG/HS/CS) retained for quick identification at small sizes.
+- **LG bay text sizes** — model, pool, vdev, temp label, capacity, and device path labels bumped from `text-[9px]` to `text-[10px]`. Tile min-height increased from 150px to 160px.
+- **Unified bay+drive modal** — `DriveEditModal` and `EmptyBayModal` replaced by a single `BayModal` component. Clicking any bay (empty or occupied) opens one modal covering: bay label, bay status picker, drive fields (make/model/form factor/type), ownership profile (purchase date, warranty, notes), assign-existing (search list), create-new drive, and remove-from-bay (inline confirmation). Drive data is preserved on removal.
+
+### Frontend
+- `components/DriveCard.jsx` — I/O chart auto-scaling: `ioMaxMB`, `ioUnit`, `ioData` derived from `ioHistory`; Y-axis unit and tooltip formatter use `ioUnit`; subtitle added.
+- `components/BaySlot.jsx` — `healthDotColor(drive)` function; `STATUS_TILE` and `STATUS_TILE_HOVER` constants; SM/MD/LG dot uses `healthDotColor`; MD/LG dot repositioned to bottom-right and always rendered; tile classes conditioned on `STATUS_TILE[bay.status]`; LG text sizes bumped; LG min-h increased.
+- `components/BayModal.jsx` — new unified modal; handles all bay + drive + profile actions; makes API calls internally; `onSaved()` called on any successful action.
+- `pages/Dashboard.jsx` — imports swapped to `BayModal`; `emptyBay`/`editTarget` state replaced by `bayModal`; `findArrayName(bayId)` helper; `onBayClick` always opens `BayModal`; `onEdit` in `DriveCard` opens `BayModal` with bay context when available.
+
+### Backend
+- `main.py` — version bumped to `1.4.0`.
+- `api/routes/external.py` — `_VERSION` bumped to `1.4.0`.
+- `docker-compose.truenas.yml` — image tag bumped to `1.4.0`.
+
+---
+
+## [1.3.0] — 2026-05-24
+
+### Fixed
+- **API key generate/regen list not updating** — replaced bare `try/finally` with `try/catch/finally` in both `handleGenerateKey` and `handleRegenerateKey`. Previously, any exception from the API call (including the Pydantic v2 bug in older images) silently swallowed the error and skipped all state updates. Now on failure: an inline error banner is shown and `loadApiKeys()` is called anyway so any partially-created key surfaces immediately without the user needing to close and reopen settings. Removed the optimistic list prepend that was masking the real issue.
+
+### Changed
+- **API Keys table — "Prefix" column replaced with "Key" column** — the column now always shows the full plaintext key (from `sessionStorage`) when available, or the key prefix + `…` when not. A copy button is always present: it copies the full key if in session, or the prefix otherwise. The separate Show/Hide toggle is removed. The Regenerate button (↺ with confirm) only appears for rows without a session key (i.e. keys generated in a prior session).
+
+### Added
+- **Array temperature sparkline** — each bay array now shows a 30-day daily-average temperature sparkline spanning the full width of the array stats strip, between the health bar and the occupied/status counts. Color-coded: sky-blue below warn threshold, amber between warn and danger, red above danger. Renders only when at least 2 days of history exist; hidden otherwise. Data fetched from the new `GET /api/history/arrays/{array_id}?days=30` endpoint.
+
+### Backend
+- `api/routes/history.py` — new `GET /history/arrays/{array_id}` endpoint: joins `DriveHistory` with `Bay` on `drive_serial`, filters by `array_id` and date range, groups by date, returns daily avg temps as `[{date, avg_temp_c}]`.
+- `main.py` — version bumped to `1.3.0`.
+- `docker-compose.truenas.yml` — image tag bumped to `1.3.0`.
+
+### Frontend
+- `api/client.js` — added `getArrayTempHistory(arrayId, days)`.
+- `components/BayGrid.jsx` — `ArrayTempSparkline` component: fetches array history on mount, renders a recharts `AreaChart` in a 28px `ResponsiveContainer`, color-coded via `useTempThreshold()`.
+- `components/SettingsModal.jsx` — fixed generate/regen error handling; redesigned Key column; added `keyError` state with inline error banner; version footer bumped to `v1.3.0`.
+
+---
+
 ## [1.2.0] — 2026-05-23
 
 ### Fixed

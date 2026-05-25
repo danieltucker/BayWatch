@@ -72,6 +72,8 @@ export const getDriveHistory = (serial, days = 30) =>
   api.get(`/history/drives/${serial}`, { params: { days } }).then(r => r.data)
 export const getPoolHistory = (poolName, days = 30) =>
   api.get(`/history/pools/${poolName}`, { params: { days } }).then(r => r.data)
+export const getArrayTempHistory = (arrayId, days = 30) =>
+  api.get(`/history/arrays/${arrayId}`, { params: { days } }).then(r => r.data)
 
 // ── API Keys ──────────────────────────────────────────────────────────────────
 export const getApiKeys = () => api.get('/api-keys').then(r => r.data)

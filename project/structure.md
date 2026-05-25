@@ -1,7 +1,7 @@
 # Project Structure
 
 > Last updated: 2026-05-23
-> Status: v1.2.0 — API key generation bug fix, inline Show/Hide key reveal, README screenshots + full API docs + general polish
+> Status: v1.4.0 — I/O chart auto-scale, bay health dots, bay status tile colors, unified BayModal
 
 ## Current Layout
 
@@ -89,11 +89,10 @@ drive-position/
         │   └── TempThresholdContext.jsx  # warnC/dangerC from alert config; avoids prop drilling
         ├── components/
         │   ├── BayGrid.jsx              # Bay array grid with S/M/L size toggle (localStorage per array)
-        │   ├── BaySlot.jsx              # Individual bay slot; form-factor icon; three size variants
+        │   ├── BayModal.jsx             # Unified bay+drive modal: status, label, assign, create, edit, remove
+        │   ├── BaySlot.jsx              # Individual bay slot; health dot; status tile colors; three size variants
         │   ├── DriveCard.jsx            # Drive details card; form-factor icon; warranty expiry display
-        │   ├── DriveEditModal.jsx       # Edit drive fields + profile; warranty in years
         │   ├── DriveList.jsx            # Sidebar list; search; hide-assigned toggle; form-factor icon
-        │   ├── EmptyBayModal.jsx        # Manual drive entry form; opens on empty bay click
         │   ├── LogConsole.jsx           # Slide-down console: log level filters + terminal REPL; pinned alerts with Clear All
         │   ├── PoolTopologyPanel.jsx    # Collapsible ZFS pool topology panel; vdev rows + drive chips; onDriveSelect
         │   ├── ScanButton.jsx

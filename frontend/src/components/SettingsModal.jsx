@@ -68,7 +68,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
   const [confirmRegenerateKeyId, setConfirmRegenerateKeyId] = useState(null)
   const [keyCopied, setKeyCopied] = useState(false)
   const [copiedRowId, setCopiedRowId] = useState(null)
-  const [revealedKeyId, setRevealedKeyId] = useState(null)
+  const [keyError, setKeyError] = useState(null)
 
   // ── Federation state ──
   const [fedTargets, setFedTargets] = useState([])
@@ -118,16 +118,15 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
     e.preventDefault()
     if (!newKeyName.trim()) return
     setGeneratingKey(true)
+    setKeyError(null)
     try {
       const result = await createApiKey(newKeyName.trim())
       sessionStorage.setItem(`apikey-${result.id}`, result.key)
       setGeneratedKey(result)
       setNewKeyName('')
-      // Optimistically add to list, then sync from server
-      setApiKeys(prev => [...prev, {
-        id: result.id, name: result.name, key_prefix: result.key_prefix,
-        created_at: result.created_at, last_used_at: null,
-      }])
+      await loadApiKeys()
+    } catch {
+      setKeyError('Key generation failed — check the app logs.')
       await loadApiKeys()
     } finally {
       setGeneratingKey(false)
@@ -143,16 +142,22 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
 
   async function handleRegenerateKey(key) {
     setConfirmRegenerateKeyId(null)
-    await deleteApiKey(key.id)
-    sessionStorage.removeItem(`apikey-${key.id}`)
-    const result = await createApiKey(key.name)
-    sessionStorage.setItem(`apikey-${result.id}`, result.key)
-    setGeneratedKey(result)
-    await loadApiKeys()
+    setKeyError(null)
+    try {
+      await deleteApiKey(key.id)
+      sessionStorage.removeItem(`apikey-${key.id}`)
+      const result = await createApiKey(key.name)
+      sessionStorage.setItem(`apikey-${result.id}`, result.key)
+      setGeneratedKey(result)
+      await loadApiKeys()
+    } catch {
+      setKeyError('Regenerate failed — check the app logs.')
+      await loadApiKeys()
+    }
   }
 
-  function copyRowKey(id) {
-    const key = sessionStorage.getItem(`apikey-${id}`)
+  function copyRowKey(id, fallback) {
+    const key = sessionStorage.getItem(`apikey-${id}`) || fallback
     if (!key) return
     navigator.clipboard.writeText(key)
     setCopiedRowId(id)
@@ -346,7 +351,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
               })}
             </nav>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-gray-800">
-              <p className="text-[10px] text-slate-300 dark:text-gray-700">DriveMap v1.2.0</p>
+              <p className="text-[10px] text-slate-300 dark:text-gray-700">DriveMap v1.4.0</p>
             </div>
           </div>
 
@@ -696,6 +701,14 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                     </div>
                   )}
 
+                  {/* Error banner */}
+                  {keyError && (
+                    <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-700/40 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+                      <AlertCircle size={14} className="shrink-0" />
+                      {keyError}
+                    </div>
+                  )}
+
                   {/* Key list */}
                   {apiKeys.length === 0 ? (
                     <p className="text-sm text-slate-400 dark:text-gray-600 text-center py-6">No API keys yet</p>
@@ -705,87 +718,65 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                         <thead>
                           <tr className="bg-slate-50 dark:bg-gray-900/60 border-b border-slate-200 dark:border-gray-800">
                             <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium">Name</th>
-                            <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium">Prefix</th>
-                            <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium">Created</th>
-                            <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium">Last used</th>
-                            <th className="px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium text-center" title="Show/copy key (this session) or Regenerate">Key</th>
+                            <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium">Key</th>
+                            <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium whitespace-nowrap">Created</th>
+                            <th className="text-left px-3 py-2 text-xs text-slate-500 dark:text-gray-500 font-medium whitespace-nowrap">Last used</th>
                             <th className="px-3 py-2" />
                           </tr>
                         </thead>
                         <tbody>
                           {apiKeys.map(k => {
                             const sessionKey = sessionStorage.getItem(`apikey-${k.id}`)
+                            const displayKey = sessionKey || `${k.key_prefix}…`
                             return (
                               <tr key={k.id} className="border-b border-slate-100 dark:border-gray-800/60 last:border-0">
-                                <td className="px-3 py-2.5 text-slate-800 dark:text-gray-200 text-sm">{k.name}</td>
-                                <td className="px-3 py-2.5 font-mono text-xs text-slate-500 dark:text-gray-400 max-w-0">
-                                  {sessionKey && revealedKeyId === k.id ? (
-                                    <code
-                                      className="break-all cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-                                      onClick={() => copyRowKey(k.id)}
-                                      title="Click to copy"
+                                <td className="px-3 py-2.5 text-slate-800 dark:text-gray-200 text-sm whitespace-nowrap">{k.name}</td>
+                                <td className="px-3 py-2.5 max-w-[180px]">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <code className="font-mono text-xs text-slate-500 dark:text-gray-400 truncate flex-1">{displayKey}</code>
+                                    <button
+                                      onClick={() => copyRowKey(k.id, displayKey)}
+                                      className="shrink-0 p-1 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                                      title={sessionKey ? 'Copy key' : 'Copy prefix'}
                                     >
-                                      {sessionKey}
-                                    </code>
-                                  ) : (
-                                    `${k.key_prefix}…`
-                                  )}
+                                      {copiedRowId === k.id
+                                        ? <CheckCircle2 size={13} className="text-green-500" />
+                                        : <Copy size={13} />}
+                                    </button>
+                                  </div>
                                 </td>
                                 <td className="px-3 py-2.5 text-xs text-slate-400 dark:text-gray-600 whitespace-nowrap">{new Date(k.created_at).toLocaleDateString()}</td>
                                 <td className="px-3 py-2.5 text-xs text-slate-400 dark:text-gray-600 whitespace-nowrap">{k.last_used_at ? relTimeAgo(k.last_used_at) : '—'}</td>
-                                <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                                  {sessionKey ? (
-                                    revealedKeyId === k.id ? (
-                                      <span className="flex items-center gap-1 justify-center">
+                                <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                                  <div className="flex items-center gap-0.5 justify-end">
+                                    {!sessionKey && (
+                                      confirmRegenerateKeyId === k.id ? (
+                                        <span className="flex items-center gap-1 mr-1">
+                                          <button onClick={() => handleRegenerateKey(k)} className="text-xs text-amber-500 hover:text-amber-400 font-medium">Regen</button>
+                                          <button onClick={() => setConfirmRegenerateKeyId(null)} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-gray-300">✕</button>
+                                        </span>
+                                      ) : (
                                         <button
-                                          onClick={() => copyRowKey(k.id)}
-                                          className="p-1 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-                                          title="Copy key"
+                                          onClick={() => setConfirmRegenerateKeyId(k.id)}
+                                          className="p-1 text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors"
+                                          title="Regenerate key (old key stops working)"
                                         >
-                                          {copiedRowId === k.id ? <CheckCircle2 size={13} className="text-green-500" /> : <Copy size={13} />}
+                                          <RefreshCw size={13} />
                                         </button>
-                                        <button
-                                          onClick={() => setRevealedKeyId(null)}
-                                          className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-gray-300 px-1"
-                                        >
-                                          Hide
-                                        </button>
+                                      )
+                                    )}
+                                    {confirmDeleteKeyId === k.id ? (
+                                      <span className="flex items-center gap-1.5">
+                                        <span className="text-xs text-slate-500 dark:text-gray-500">Delete?</span>
+                                        <button onClick={() => handleDeleteKey(k.id)} className="text-xs text-red-500 hover:text-red-400 font-medium">Yes</button>
+                                        <button onClick={() => setConfirmDeleteKeyId(null)} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-gray-300">No</button>
                                       </span>
                                     ) : (
-                                      <button
-                                        onClick={() => setRevealedKeyId(k.id)}
-                                        className="text-xs text-blue-500 hover:text-blue-400 font-medium px-1"
-                                      >
-                                        Show
+                                      <button onClick={() => setConfirmDeleteKeyId(k.id)} className="text-slate-400 hover:text-red-400 p-1 transition-colors">
+                                        <Trash2 size={14} />
                                       </button>
-                                    )
-                                  ) : confirmRegenerateKeyId === k.id ? (
-                                    <span className="flex items-center gap-1 justify-center">
-                                      <button onClick={() => handleRegenerateKey(k)} className="text-xs text-amber-500 hover:text-amber-400 font-medium">Regen</button>
-                                      <button onClick={() => setConfirmRegenerateKeyId(null)} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-gray-300">✕</button>
-                                    </span>
-                                  ) : (
-                                    <button
-                                      onClick={() => setConfirmRegenerateKeyId(k.id)}
-                                      className="p-1 text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors"
-                                      title="Regenerate key (old key stops working)"
-                                    >
-                                      <RefreshCw size={13} />
-                                    </button>
-                                  )}
-                                </td>
-                                <td className="px-3 py-2.5 text-right">
-                                  {confirmDeleteKeyId === k.id ? (
-                                    <span className="flex items-center gap-1.5 justify-end">
-                                      <span className="text-xs text-slate-500 dark:text-gray-500">Delete?</span>
-                                      <button onClick={() => handleDeleteKey(k.id)} className="text-xs text-red-500 hover:text-red-400 font-medium">Yes</button>
-                                      <button onClick={() => setConfirmDeleteKeyId(null)} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-gray-300">No</button>
-                                    </span>
-                                  ) : (
-                                    <button onClick={() => setConfirmDeleteKeyId(k.id)} className="text-slate-400 hover:text-red-400 p-1 transition-colors">
-                                      <Trash2 size={14} />
-                                    </button>
-                                  )}
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             )
