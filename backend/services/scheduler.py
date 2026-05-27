@@ -58,8 +58,9 @@ async def _scan_and_check() -> None:
     try:
         config = db.query(NotificationConfig).filter_by(channel="telegram").first()
         temp_threshold = config.temp_alert_threshold_c if config else 55
-        drives = scanner.run_scan(db)
-        await _check_critical_conditions(drives, temp_threshold)
+        connected_drives, newly_disconnected = scanner.run_scan(db)
+        await _check_critical_conditions(connected_drives, temp_threshold)
+        await _check_disconnected(newly_disconnected)
     finally:
         db.close()
     # Poll federation targets whose sync interval has elapsed (runs in executor
@@ -90,6 +91,14 @@ async def _check_critical_conditions(drives: list[Drive], temp_threshold: int) -
                 f"has {drive.reallocated_sectors} reallocated sectors.",
                 drive_serial=drive.serial,
             )
+
+
+async def _check_disconnected(drives: list[Drive]) -> None:
+    for drive in drives:
+        await notifications.dispatch_critical(
+            f"⚠️ Drive <b>{drive.serial}</b> ({drive.model or 'unknown'}) is no longer detected.",
+            drive_serial=drive.serial,
+        )
 
 
 async def _maybe_send_status_digest() -> None:

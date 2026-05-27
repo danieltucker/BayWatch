@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Clock, X, Pencil, Trash2, AlertTriangle, Zap, Archive, ArrowLeftRight, CheckCircle2, ShieldAlert } from 'lucide-react'
+import { Clock, X, Pencil, Trash2, AlertTriangle, Zap, Archive, ArrowLeftRight, CheckCircle2, ShieldAlert, WifiOff } from 'lucide-react'
 import {
   ResponsiveContainer, AreaChart, Area,
   XAxis, YAxis, Tooltip, ReferenceLine,
@@ -290,6 +290,21 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
             onClick={() => setConfirmDelete(false)}
             className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-gray-700 text-slate-600 dark:text-gray-400 text-xs transition-colors hover:border-slate-300 dark:hover:border-gray-600"
           >Cancel</button>
+        </div>
+      )}
+
+      {/* ── Disconnected banner ── */}
+      {drive.is_connected === false && (
+        <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg px-3 py-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40">
+          <WifiOff size={14} className="text-amber-500 dark:text-amber-400 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">Drive not detected</p>
+            {drive.last_scanned && (
+              <p className="text-[10px] text-amber-600/70 dark:text-amber-500/70 leading-snug">
+                Last seen {new Date(drive.last_scanned).toLocaleString()}
+              </p>
+            )}
+          </div>
         </div>
       )}
 

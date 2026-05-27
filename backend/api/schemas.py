@@ -106,6 +106,7 @@ class DriveRead(BaseModel):
     last_scanned: Optional[datetime.datetime] = None
     zfs_pool: Optional[str] = None
     vdev_name: Optional[str] = None
+    is_connected: bool = True
 
 
 # ── Pool ──────────────────────────────────────────────────────────────────────

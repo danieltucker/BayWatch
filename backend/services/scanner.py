@@ -39,7 +39,7 @@ def _drive_used_bytes(device_path: str) -> int | None:
     return total if found else None
 
 
-def run_scan(db: Session) -> list[Drive]:
+def run_scan(db: Session) -> tuple[list[Drive], list[Drive]]:
     logger.info("Scan started")
     ses_slots = ses_svc.get_enclosure_slots()
     devices = lsblk_svc.list_disks()
@@ -90,6 +90,7 @@ def run_scan(db: Session) -> list[Drive]:
                         info.serial, info.temperature_c, info.power_on_hours, info.smart_status)
 
         # Always update live SMART telemetry
+        drive.is_connected = True
         drive.device_path = dev.path
         drive.by_id_path = dev.by_id_path or drive.by_id_path
         drive.zfs_pool = dev.zfs_pool
@@ -119,6 +120,22 @@ def run_scan(db: Session) -> list[Drive]:
         updated.append(drive)
 
     db.commit()
+
+    # Mark drives that were connected last scan but weren't seen this time
+    seen_serials = {d.serial for d in updated}
+    newly_disconnected = db.query(Drive).filter(
+        Drive.is_connected == True,  # noqa: E712
+        Drive.serial.notin_(seen_serials),
+    ).all()
+    for drive in newly_disconnected:
+        drive.is_connected = False
+        drive.device_path = None
+        drive.temperature_c = None
+        drive.zfs_pool = None
+        drive.vdev_name = None
+        logger.warning("Drive no longer detected: %s (%s)", drive.serial, drive.model)
+    if newly_disconnected:
+        db.commit()
 
     # Record history snapshots
     now = datetime.datetime.utcnow()
@@ -154,5 +171,5 @@ def run_scan(db: Session) -> list[Drive]:
     db.query(PoolHistory).filter(PoolHistory.recorded_at < cutoff).delete()
 
     db.commit()
-    logger.info("Scan complete: %d drives found", len(updated))
-    return updated
+    logger.info("Scan complete: %d drives found, %d newly disconnected", len(updated), len(newly_disconnected))
+    return updated, newly_disconnected

@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import { useDroppable } from '@dnd-kit/core'
+import { WifiOff } from 'lucide-react'
 import { getDriveIcon } from '../utils/driveIcon'
 import { useTempThresholds } from '../context/TempThresholdContext'
 
@@ -79,6 +80,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
   const { setNodeRef, isOver } = useDroppable({ id: bay.id })
   const { warnC, dangerC } = useTempThresholds()
   const isEmpty = !drive
+  const isDisconnected = !!drive && drive.is_connected === false
   const label = bay.label || `${bay.row + 1}-${bay.col + 1}`
   const s = drive ? statusStyle(drive.smart_status) : null
   const bayStatus = BAY_STATUS_STYLE[bay.status] ?? null
@@ -118,22 +120,25 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
       >
         <span className="text-[10px] text-slate-400 dark:text-gray-700 font-mono w-5 shrink-0 leading-none">{label}</span>
         {drive ? (
-          <>
+          <div className={clsx('flex-1 flex items-center gap-1.5 min-w-0', isDisconnected && 'opacity-50')}>
             <span className={clsx('text-[10px] flex-1 truncate leading-none', s.text)}>
               {makeSize || drive.serial?.slice(-8)}
             </span>
-            {drive.temperature_c != null && (
-              <span className={clsx(
-                'text-[10px] font-mono shrink-0 leading-none',
-                drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
-                drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
-                'text-slate-400 dark:text-gray-600'
-              )}>
-                {drive.temperature_c}°
-              </span>
-            )}
+            {isDisconnected
+              ? <WifiOff size={10} className="text-amber-500 dark:text-amber-400 shrink-0" />
+              : drive.temperature_c != null && (
+                <span className={clsx(
+                  'text-[10px] font-mono shrink-0 leading-none',
+                  drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
+                  drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
+                  'text-slate-400 dark:text-gray-600'
+                )}>
+                  {drive.temperature_c}°
+                </span>
+              )
+            }
             <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', healthDotColor(drive))} />
-          </>
+          </div>
         ) : (
           <span className="text-slate-200 dark:text-gray-800 text-sm flex-1">·</span>
         )}
@@ -176,17 +181,17 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
         {isEmpty ? (
           <span className="text-slate-300 dark:text-gray-800 text-xl">·</span>
         ) : (
-          <>
+          <div className={clsx('flex flex-col items-center gap-1', isDisconnected && 'opacity-50')}>
             <Icon size={18} className={clsx('mt-0.5 transition-transform group-hover:scale-110', s.icon)} />
-            {/* Make as primary */}
             <span className={clsx('text-[10px] font-medium px-1 truncate w-full text-center leading-none', s.text)}>
               {drive.make || drive.model || '—'}
             </span>
-            {/* Serial as secondary */}
             <span className="text-[9px] font-mono text-slate-400 dark:text-gray-500 px-1 truncate w-full text-center leading-none">
               {drive.serial?.slice(-6)}
             </span>
-            {drive.temperature_c != null && (
+            {isDisconnected ? (
+              <WifiOff size={10} className="text-amber-500 dark:text-amber-400 mt-0.5" />
+            ) : drive.temperature_c != null && (
               <div className="w-full px-1 mt-0.5">
                 <div className="flex items-center gap-1.5">
                   <div className="h-[3px] flex-1 rounded-full bg-slate-200/80 dark:bg-gray-800 overflow-hidden">
@@ -208,7 +213,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     )
@@ -254,7 +259,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           <span className="text-slate-200 dark:text-gray-800 text-3xl">·</span>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col gap-2 px-2.5 pt-7 pb-3">
+        <div className={clsx('flex-1 flex flex-col gap-2 px-2.5 pt-7 pb-3', isDisconnected && 'opacity-50')}>
           {/* Icon + make/model */}
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-white/70 dark:bg-gray-800/60 border border-slate-200/80 dark:border-gray-700/40 flex items-center justify-center shrink-0">
@@ -289,8 +294,13 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
             </div>
           )}
 
-          {/* Temp bar */}
-          {drive.temperature_c != null && (
+          {/* Temp bar or disconnected indicator */}
+          {isDisconnected ? (
+            <div className="flex items-center gap-1.5">
+              <WifiOff size={11} className="text-amber-500 dark:text-amber-400 shrink-0" />
+              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Not detected</span>
+            </div>
+          ) : drive.temperature_c != null && (
             <div>
               <div className="flex items-center justify-between mb-0.5">
                 <span className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wide">Temp</span>

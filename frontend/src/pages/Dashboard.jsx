@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { Server, HardDrive, ChevronDown, ChevronRight, ArrowUp, ArrowDown, Download } from 'lucide-react'
+import { Server, HardDrive, ChevronDown, ChevronRight, ArrowUp, ArrowDown, Download, WifiOff, X } from 'lucide-react'
 import clsx from 'clsx'
 import BayGrid from '../components/BayGrid'
 import DriveCard from '../components/DriveCard'
@@ -103,6 +103,8 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
   const [federationData, setFederationData] = useState([])
   const [collapsedFederation, setCollapsedFederation] = useState(false)
   const [collapsedRemotes, setCollapsedRemotes] = useState({})
+  const [toasts, setToasts] = useState([])
+  const prevConnectedRef = useRef(null)
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -130,6 +132,18 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
       setPoolTopology(topology)
       setEnclosures(encs)
       setDrives(drvs)
+
+      if (prevConnectedRef.current) {
+        for (const d of drvs) {
+          if (!d.is_connected && prevConnectedRef.current.get(d.serial) === true) {
+            const id = Date.now() + Math.random()
+            const label = [d.make, d.model].filter(Boolean).join(' ') || d.serial
+            setToasts(prev => [...prev, { id, label, serial: d.serial }])
+            setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 8000)
+          }
+        }
+      }
+      prevConnectedRef.current = new Map(drvs.map(d => [d.serial, d.is_connected !== false]))
 
       const allArrayIds = encs.flatMap(e => e.arrays.map(a => a.id))
       const bayResults = await Promise.all(allArrayIds.map(id => getBays(id)))
@@ -257,6 +271,23 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
       onDragStart={e => setActiveDriveSerial(e.active.data.current?.serial)}
       onDragEnd={handleDragEnd}
     >
+      {/* ── Disconnect toasts ── */}
+      {toasts.length > 0 && (
+        <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
+          {toasts.map(t => (
+            <div key={t.id} className="pointer-events-auto flex items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-800/50 bg-white dark:bg-gray-900 shadow-lg px-4 py-3 min-w-[240px]">
+              <WifiOff size={15} className="text-amber-500 dark:text-amber-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-slate-800 dark:text-gray-200 truncate">{t.label}</p>
+                <p className="text-[10px] text-slate-500 dark:text-gray-500">Drive no longer detected</p>
+              </div>
+              <button onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))} className="text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 shrink-0">
+                <X size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="flex flex-col lg:flex-row gap-0 min-h-[calc(100vh-49px)]">
         {/* Main area */}
         <div className="flex-1 flex flex-col min-w-0 border-r border-slate-200 dark:border-gray-800/60">
