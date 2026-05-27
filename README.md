@@ -11,10 +11,12 @@ No more pulling drives to figure out which one is which.
 - **Drive health score** — composite 0–100 score with ring gauge, letter grade, and detailed deduction breakdown
 - **Per-drive metadata** — make, model, serial, capacity, firmware, form factor, RPM, ZFS pool assignment
 - **ZFS pool integration** — pool topology panel with vdev tree, pool capacity widgets, and per-drive pool labels
+- **Disconnected drive detection** — drives no longer found by the scanner are flagged in the bay grid and Drive Details panel; a toast and Telegram notification fire on disconnect
+- **Drive history modal** — 90-day charts for temperature, used space, I/O activity, and reallocated sectors, accessible from any drive's details panel
 - **Customizable widget bar** — drag-to-reorder: Total Drives, Health %, Avg Temp, Hottest Drive, Total Capacity, Oldest Drive, and more
 - **Terminal console** — press `` ` `` for live log streaming with level filters and a full command interface
 - **Warranty tracking** — expiry alerts and warnings configurable in advance
-- **Telegram notifications** — SMART failures, overtemp, warranty warnings, scheduled status reports
+- **Telegram notifications** — SMART failures, overtemp, disconnect events, warranty warnings, scheduled status reports
 - **CSV bulk import** — import existing drive inventories from a spreadsheet
 - **REST API** — `/v1/` endpoints with API key auth for Grafana, Home Assistant, scripts, and integrations
 - **Federation** — aggregate drive data from multiple remote DriveMap instances into one dashboard
@@ -319,7 +321,7 @@ Host: 192.168.1.50:8585
 ```json
 {
   "status": "ok",
-  "version": "1.2.0",
+  "version": "1.6.0",
   "instance_name": "truenas"
 }
 ```
@@ -630,10 +632,9 @@ The **Remote Instances** panel appears in the Dashboard automatically once at le
 
 ## Changelog
 
-See [project/changelog.md](project/changelog.md).
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## Project Docs
 
 - [Data model, tech stack, decisions](project/info.md)
 - [File structure](project/structure.md)
-- [Version history](project/changelog.md)

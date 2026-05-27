@@ -42,7 +42,7 @@ function Field({ label, type = 'text', value, onChange, placeholder, mono, step 
   )
 }
 
-export default function BayModal({ bay, drive, profile, drives = [], arrayName, onClose, onSaved }) {
+export default function BayModal({ bay, drive, profile, drives = [], arrayName, onClose, onSaved, drivePanel }) {
   const posLabel = bay ? (bay.label || `Row ${bay.row + 1}, Slot ${bay.col + 1}`) : null
 
   // Bay config state
@@ -203,7 +203,7 @@ export default function BayModal({ bay, drive, profile, drives = [], arrayName, 
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="flex min-h-full items-start justify-center p-4 pt-16">
-        <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 shadow-2xl overflow-hidden">
+        <div className={`relative w-full ${drivePanel ? 'max-w-5xl' : 'max-w-md'} rounded-2xl bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 shadow-2xl overflow-hidden`}>
 
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-gray-800">
@@ -224,7 +224,8 @@ export default function BayModal({ bay, drive, profile, drives = [], arrayName, 
             </button>
           </div>
 
-          <div className="p-5 flex flex-col gap-5 overflow-y-auto max-h-[calc(90vh-130px)]">
+          <div className={drivePanel ? 'flex' : undefined}>
+          <div className={`p-5 flex flex-col gap-5 overflow-y-auto max-h-[calc(90vh-130px)] ${drivePanel ? 'w-[420px] shrink-0 border-r border-slate-200 dark:border-gray-800' : ''}`}>
 
             {/* Bay config section */}
             {bay && (
@@ -471,6 +472,14 @@ export default function BayModal({ bay, drive, profile, drives = [], arrayName, 
                 {saveErr}
               </p>
             )}
+          </div>
+
+          </div>
+          {drivePanel && (
+            <div className="flex-1 overflow-y-auto max-h-[calc(90vh-130px)] p-3 bg-slate-50/50 dark:bg-gray-900/30">
+              {drivePanel}
+            </div>
+          )}
           </div>
 
           {/* Footer */}

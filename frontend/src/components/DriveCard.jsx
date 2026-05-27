@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Clock, X, Pencil, Trash2, AlertTriangle, Zap, Archive, ArrowLeftRight, CheckCircle2, ShieldAlert, WifiOff } from 'lucide-react'
+import { Clock, X, Pencil, Trash2, AlertTriangle, Zap, Archive, ArrowLeftRight, CheckCircle2, ShieldAlert, WifiOff, History } from 'lucide-react'
 import {
   ResponsiveContainer, AreaChart, Area,
   XAxis, YAxis, Tooltip, ReferenceLine,
   PieChart, Pie, Cell,
 } from 'recharts'
 import WarningBadge from './WarningBadge'
+import DriveHistoryModal from './DriveHistoryModal'
 import { getDriveIcon } from '../utils/driveIcon'
 import { useTempThresholds } from '../context/TempThresholdContext'
 import { getDriveHistory, getDrivePartitions } from '../api/client'
@@ -155,6 +156,7 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
   const [history, setHistory] = useState([])
   const [partitions, setPartitions] = useState([])
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   useEffect(() => {
     if (!drive) return
@@ -590,11 +592,29 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
       )}
 
       {/* ── Footer ── */}
-      {drive.last_scanned && (
-        <div className="flex items-center gap-1.5 px-4 py-2.5 border-t border-slate-200 dark:border-gray-800/50 text-[10px] text-slate-400 dark:text-gray-600">
-          <Clock size={10} />
-          Scanned {new Date(drive.last_scanned).toLocaleString()}
-        </div>
+      <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-200 dark:border-gray-800/50">
+        {drive.last_scanned ? (
+          <span className="flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-gray-600">
+            <Clock size={10} />
+            Scanned {new Date(drive.last_scanned).toLocaleString()}
+          </span>
+        ) : <span />}
+        <button
+          onClick={() => setHistoryOpen(true)}
+          className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+        >
+          <History size={10} />
+          History
+        </button>
+      </div>
+
+      {historyOpen && (
+        <DriveHistoryModal
+          serial={drive.serial}
+          make={drive.make}
+          model={drive.model}
+          onClose={() => setHistoryOpen(false)}
+        />
       )}
     </div>
   )
