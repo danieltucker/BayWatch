@@ -6,6 +6,7 @@ import BayGrid from '../components/BayGrid'
 import DriveCard from '../components/DriveCard'
 import DriveList from '../components/DriveList'
 import BayModal from '../components/BayModal'
+import RemoteDriveModal from '../components/RemoteDriveModal'
 import SettingsModal from '../components/SettingsModal'
 import ScanButton from '../components/ScanButton'
 import WidgetBar from '../components/WidgetBar'
@@ -103,6 +104,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
   const [federationData, setFederationData] = useState([])
   const [collapsedFederation, setCollapsedFederation] = useState(false)
   const [collapsedRemotes, setCollapsedRemotes] = useState({})
+  const [selectedRemoteDrive, setSelectedRemoteDrive] = useState(null)
   const [toasts, setToasts] = useState([])
   const prevConnectedRef = useRef(null)
 
@@ -471,38 +473,54 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                               {snapshot.drives.length === 0 && (
                                 <p className="px-4 py-3 text-xs text-slate-400 dark:text-gray-600 italic">No drives reported</p>
                               )}
-                              {snapshot.drives.map(d => {
-                                const smartOk = d.smart_status === 'PASSED'
-                                const smartFail = d.smart_status === 'FAILED'
-                                return (
-                                  <div key={d.serial} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-gray-900/40 transition-colors">
-                                    <span className={clsx(
-                                      'w-2 h-2 rounded-full shrink-0',
-                                      smartOk ? 'bg-emerald-400' : smartFail ? 'bg-red-400' : 'bg-slate-300 dark:bg-gray-600'
-                                    )} />
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-xs font-mono text-slate-700 dark:text-gray-300 truncate">
-                                        {d.serial}
-                                      </p>
-                                      <p className="text-xs text-slate-400 dark:text-gray-600 truncate">
-                                        {[d.make, d.model].filter(Boolean).join(' ') || 'Unknown'}
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-gray-500 shrink-0">
-                                      {d.temperature_c != null && (
-                                        <span className={clsx(
-                                          d.temperature_c >= 55 ? 'text-red-500' : d.temperature_c >= 45 ? 'text-amber-500' : ''
-                                        )}>
-                                          {d.temperature_c}°C
-                                        </span>
-                                      )}
-                                      {d.zfs_pool && (
-                                        <span className="font-mono text-blue-500 dark:text-blue-400">{d.zfs_pool}</span>
-                                      )}
-                                    </div>
-                                  </div>
+                              {(() => {
+                                const bayBySerial = Object.fromEntries(
+                                  snapshot.bays.filter(b => b.drive_serial).map(b => [b.drive_serial, b])
                                 )
-                              })}
+                                return snapshot.drives.map(d => {
+                                  const smartOk = d.smart_status === 'PASSED'
+                                  const smartFail = d.smart_status === 'FAILED'
+                                  const bayInfo = bayBySerial[d.serial] || null
+                                  const bayLabel = bayInfo
+                                    ? [bayInfo.enclosure_name, bayInfo.array_name, bayInfo.label || `R${(bayInfo.row ?? 0) + 1}S${(bayInfo.col ?? 0) + 1}`].filter(Boolean).join(' › ')
+                                    : null
+                                  return (
+                                    <button
+                                      key={d.serial}
+                                      onClick={() => setSelectedRemoteDrive({ drive: d, bayInfo, instanceName: snapshot.target_name })}
+                                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-gray-900/40 transition-colors text-left"
+                                    >
+                                      <span className={clsx(
+                                        'w-2 h-2 rounded-full shrink-0',
+                                        smartOk ? 'bg-emerald-400' : smartFail ? 'bg-red-400' : 'bg-slate-300 dark:bg-gray-600'
+                                      )} />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-mono text-slate-700 dark:text-gray-300 truncate">
+                                          {d.serial}
+                                        </p>
+                                        <p className="text-xs text-slate-400 dark:text-gray-600 truncate">
+                                          {[d.make, d.model].filter(Boolean).join(' ') || 'Unknown'}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-gray-500 shrink-0">
+                                        {bayLabel && (
+                                          <span className="text-slate-400 dark:text-gray-600 truncate max-w-[120px]">{bayLabel}</span>
+                                        )}
+                                        {d.temperature_c != null && (
+                                          <span className={clsx(
+                                            d.temperature_c >= 55 ? 'text-red-500' : d.temperature_c >= 45 ? 'text-amber-500' : ''
+                                          )}>
+                                            {d.temperature_c}°C
+                                          </span>
+                                        )}
+                                        {d.zfs_pool && (
+                                          <span className="font-mono text-blue-500 dark:text-blue-400">{d.zfs_pool}</span>
+                                        )}
+                                      </div>
+                                    </button>
+                                  )
+                                })
+                              })()}
                               <p className="px-4 py-1.5 text-[10px] text-slate-300 dark:text-gray-700">
                                 Synced {snapshot.fetched_at ? new Date(snapshot.fetched_at).toLocaleString() : '—'}
                               </p>
@@ -517,6 +535,15 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
             )}
           </div>
         </div>
+
+        {selectedRemoteDrive && (
+          <RemoteDriveModal
+            drive={selectedRemoteDrive.drive}
+            bayInfo={selectedRemoteDrive.bayInfo}
+            instanceName={selectedRemoteDrive.instanceName}
+            onClose={() => setSelectedRemoteDrive(null)}
+          />
+        )}
 
         {bayModal && (
           <BayModal

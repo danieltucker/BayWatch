@@ -40,7 +40,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
   const [tab, setTab] = useState('general')
   const [mobileShowContent, setMobileShowContent] = useState(false)
   const [tildeOverride, setTildeOverride] = useState(
-    () => localStorage.getItem('console-tilde-override') === 'true'
+    () => localStorage.getItem('console-tilde-override') !== 'false'
   )
   const [enclosures, setEnclosures] = useState([])
   const [newEnc, setNewEnc] = useState({ name: '', type: 'server' })
@@ -76,6 +76,8 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
   const [confirmDeleteTargetId, setConfirmDeleteTargetId] = useState(null)
   const [addingTarget, setAddingTarget] = useState(false)
   const [syncingTargetId, setSyncingTargetId] = useState(null)
+  const [renamingTargetId, setRenamingTargetId] = useState(null)
+  const [renameValue, setRenameValue] = useState('')
 
   async function load() {
     const [encs, cfg] = await Promise.all([getEnclosures(), getAlertConfig()])
@@ -195,6 +197,14 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
   async function handleDeleteTarget(id) {
     await deleteFederationTarget(id)
     setConfirmDeleteTargetId(null)
+    await loadFedTargets()
+  }
+
+  async function handleRenameTarget(id) {
+    const name = renameValue.trim()
+    if (name) await updateFederationTarget(id, { name })
+    setRenamingTargetId(null)
+    setRenameValue('')
     await loadFedTargets()
   }
 
@@ -351,7 +361,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
               })}
             </nav>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-gray-800">
-              <p className="text-[10px] text-slate-300 dark:text-gray-700">BayWatch v1.6.1</p>
+              <p className="text-[10px] text-slate-300 dark:text-gray-700">BayWatch v1.7.0</p>
             </div>
           </div>
 
@@ -846,10 +856,30 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                           <div className="flex items-center gap-3">
                             <div className={`w-2 h-2 rounded-full shrink-0 ${t.enabled ? 'bg-emerald-400' : 'bg-slate-300 dark:bg-gray-700'}`} />
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-slate-800 dark:text-gray-200 truncate">{t.name}</p>
+                              {renamingTargetId === t.id ? (
+                                <form onSubmit={e => { e.preventDefault(); handleRenameTarget(t.id) }} className="flex items-center gap-1">
+                                  <input
+                                    autoFocus
+                                    value={renameValue}
+                                    onChange={e => setRenameValue(e.target.value)}
+                                    onBlur={() => handleRenameTarget(t.id)}
+                                    onKeyDown={e => e.key === 'Escape' && (setRenamingTargetId(null), setRenameValue(''))}
+                                    className="flex-1 rounded bg-white dark:bg-gray-800 border border-blue-500 px-2 py-0.5 text-sm text-slate-900 dark:text-gray-100 focus:outline-none"
+                                  />
+                                </form>
+                              ) : (
+                                <p className="text-sm font-medium text-slate-800 dark:text-gray-200 truncate">{t.name}</p>
+                              )}
                               <p className="text-xs font-mono text-slate-400 dark:text-gray-600 truncate">{t.url}</p>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => { setRenamingTargetId(t.id); setRenameValue(t.name) }}
+                                className="p-1 rounded text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-300 transition-colors"
+                                title="Rename"
+                              >
+                                <Pencil size={13} />
+                              </button>
                               <button
                                 onClick={() => handleToggleTarget(t)}
                                 className={`p-1 rounded transition-colors ${t.enabled ? 'text-emerald-500 hover:text-emerald-400' : 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400'}`}

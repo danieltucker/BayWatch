@@ -75,7 +75,7 @@ export default function App() {
     function onKey(e) {
       if (e.key === '`' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const tag = document.activeElement?.tagName
-        const override = localStorage.getItem('console-tilde-override') === 'true'
+        const override = localStorage.getItem('console-tilde-override') !== 'false'
         if (!override && (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT')) return
         e.preventDefault()
         setLogOpen(v => !v)
