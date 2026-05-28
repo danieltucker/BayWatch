@@ -21,7 +21,7 @@ function Nav({ onSettings, onBell, alertCount, alertSeverity }) {
           <HardDrive size={14} className="text-white" strokeWidth={2.5} />
         </div>
         <span className="font-bold text-slate-900 dark:text-white tracking-tight">
-          Drive<span className="text-blue-500 dark:text-blue-400">Map</span>
+          Bay<span className="text-blue-500 dark:text-blue-400">Watch</span>
         </span>
       </div>
       <div className="flex items-center gap-1">

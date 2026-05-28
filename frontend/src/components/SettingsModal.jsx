@@ -15,7 +15,7 @@ const TABS = [
   { key: 'enclosures',    label: 'Enclosures',     icon: Server,    description: 'Manage enclosures and bay arrays' },
   { key: 'notifications', label: 'Notifications',  icon: Bell,      description: 'Telegram alerts and thresholds' },
   { key: 'api_keys',      label: 'API Keys',       icon: Key,       description: 'Generate keys for external API access' },
-  { key: 'federation',    label: 'Federation',     icon: Globe,     description: 'Connect remote DriveMap instances' },
+  { key: 'federation',    label: 'Federation',     icon: Globe,     description: 'Connect remote BayWatch instances' },
   { key: 'import',        label: 'Import',         icon: Upload,    description: 'Bulk import drive inventory from CSV' },
   { key: 'appearance',    label: 'Appearance',     icon: Sun,       description: 'Theme and display preferences' },
 ]
@@ -306,7 +306,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'drivemap-import-template.csv'
+    a.download = 'baywatch-import-template.csv'
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -351,7 +351,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
               })}
             </nav>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-gray-800">
-              <p className="text-[10px] text-slate-300 dark:text-gray-700">DriveMap v1.5.0</p>
+              <p className="text-[10px] text-slate-300 dark:text-gray-700">BayWatch v1.6.0</p>
             </div>
           </div>
 
@@ -792,7 +792,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
               {tab === 'federation' && (
                 <div className="flex flex-col gap-5">
                   <p className="text-sm text-slate-500 dark:text-gray-500">
-                    Add remote DriveMap instances to aggregate their drive data here. Each target needs an API key generated on the remote instance.
+                    Add remote BayWatch instances to aggregate their drive data here. Each target needs an API key generated on the remote instance.
                   </p>
 
                   <form onSubmit={handleAddTarget} className="rounded-xl border border-slate-200 dark:border-gray-800 p-4 flex flex-col gap-3 bg-slate-50 dark:bg-gray-900/40">

@@ -14,6 +14,10 @@ class BlockDevice:
     zfs_pool: str | None = field(default=None)
 
 
+# Virtual/pseudo device name prefixes to skip — never contain scannable drives
+_VIRTUAL_PREFIXES = ("loop", "nbd", "ram", "zram", "dm-", "md", "sr")
+
+
 def list_disks() -> list[BlockDevice]:
     """Return block devices of type 'disk' visible to the host."""
     result = subprocess.run(
@@ -28,7 +32,8 @@ def list_disks() -> list[BlockDevice]:
     data = json.loads(result.stdout)
     devices = []
     for dev in data.get("blockdevices", []):
-        if dev.get("type") == "disk":
+        name = dev.get("name", "")
+        if dev.get("type") == "disk" and not any(name.startswith(p) for p in _VIRTUAL_PREFIXES):
             devices.append(
                 BlockDevice(
                     name=dev["name"],
