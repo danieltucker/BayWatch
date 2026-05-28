@@ -35,6 +35,7 @@ class Drive(Base):
     zfs_pool: Mapped[str | None] = mapped_column(String(64), nullable=True)
     vdev_name: Mapped[str | None] = mapped_column(String(32), nullable=True)
     is_connected: Mapped[bool] = mapped_column(default=True, server_default="1")
+    drive_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     bay: Mapped[Bay | None] = relationship("Bay", back_populates="drive", uselist=False)
     profile: Mapped[DriveProfile | None] = relationship(

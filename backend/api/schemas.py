@@ -84,6 +84,7 @@ class DrivePatch(BaseModel):
     model: Optional[str] = None
     form_factor: Optional[str] = None
     rpm: Optional[int] = None
+    drive_type: Optional[str] = None
 
 
 class DriveRead(BaseModel):
@@ -107,6 +108,7 @@ class DriveRead(BaseModel):
     zfs_pool: Optional[str] = None
     vdev_name: Optional[str] = None
     is_connected: bool = True
+    drive_type: Optional[str] = None
 
 
 # ── Pool ──────────────────────────────────────────────────────────────────────
@@ -148,6 +150,7 @@ class DriveProfileBase(BaseModel):
     purchase_price: Optional[float] = None
     vendor: Optional[str] = None
     notes: Optional[str] = None
+    rated_tbw: Optional[int] = None
 
 class DriveProfileCreate(DriveProfileBase):
     pass

@@ -1,7 +1,6 @@
 import { X } from 'lucide-react'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
-  PieChart, Pie, Cell,
 } from 'recharts'
 import { WIDGET_DEFS } from './WidgetBar'
 
@@ -332,48 +331,77 @@ function DetailContent({ widgetId, drives, profiles }) {
 
   // ── Drive health % ───────────────────────────────────────────────────────────
   if (widgetId === 'health_pct') {
-    const passed  = drives.filter(d => d.smart_status === 'PASSED').length
-    const failed  = drives.filter(d => d.smart_status === 'FAILED').length
-    const unknown = drives.length - passed - failed
-    const withErrors = drives.filter(d =>
-      d.smart_status === 'PASSED' &&
-      ((d.reallocated_sectors ?? 0) > 0 || (d.pending_sectors ?? 0) > 0 || (d.uncorrectable_errors ?? 0) > 0)
-    ).length
-    const clean = passed - withErrors
-    const pct = drives.length ? Math.round(passed / drives.length * 100) : 0
+    const classifyDrive = (d) => {
+      if (d.smart_status === 'FAILED') return 'replace_now'
+      const hasErrors = (d.reallocated_sectors ?? 0) > 0 || (d.pending_sectors ?? 0) > 0 || (d.uncorrectable_errors ?? 0) > 0
+      if (hasErrors) return 'replace_soon'
+      if (d.smart_status === 'PASSED') {
+        if ((d.power_on_hours ?? 0) > 45000) return 'monitor'
+        return 'healthy'
+      }
+      return 'monitor'
+    }
 
-    const pieData = [
-      { name: 'Clean', value: clean, color: '#22c55e' },
-      { name: 'Degraded', value: withErrors, color: '#f59e0b' },
-      { name: 'Failed', value: failed, color: '#ef4444' },
-      { name: 'Unknown', value: unknown, color: '#64748b' },
-    ].filter(d => d.value > 0)
+    const TIERS = [
+      { key: 'replace_now',  label: 'Replace Immediately',   dotColor: '#ef4444', badgeClass: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/40 text-red-500' },
+      { key: 'replace_soon', label: 'Replace When Possible', dotColor: '#f97316', badgeClass: 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800/40 text-orange-500' },
+      { key: 'monitor',      label: 'Monitor Closely',       dotColor: '#f59e0b', badgeClass: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/40 text-amber-600' },
+      { key: 'healthy',      label: 'Healthy',               dotColor: '#22c55e', badgeClass: 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40 text-emerald-600' },
+    ]
+
+    const grouped = {}
+    for (const t of TIERS) grouped[t.key] = []
+    for (const d of drives) grouped[classifyDrive(d)].push(d)
 
     return (
       <>
-        <div className="flex items-center gap-6 mb-4">
-          <PieChart width={80} height={80}>
-            <Pie data={pieData} cx={35} cy={35} innerRadius={24} outerRadius={36} dataKey="value" stroke="none">
-              {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-            </Pie>
-          </PieChart>
-          <div>
-            <p className="text-3xl font-bold text-slate-800 dark:text-white">{pct}%</p>
-            <p className="text-xs text-slate-400 dark:text-gray-500">fleet health</p>
-          </div>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          {pieData.map(item => (
-            <div key={item.name} className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full shrink-0" style={{ background: item.color }} />
-              <span className="text-xs text-slate-600 dark:text-gray-400 flex-1">{item.name}</span>
-              <span className="text-xs font-semibold text-slate-700 dark:text-gray-300">{item.value}</span>
-              <div className="w-20 h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden">
-                <div className="h-full rounded-full" style={{ background: item.color, width: `${drives.length ? (item.value / drives.length) * 100 : 0}%` }} />
-              </div>
+        <div className="flex gap-2 mb-5">
+          {TIERS.map(t => (
+            <div key={t.key} className={`flex-1 rounded-xl border px-2 py-2.5 text-center ${t.badgeClass}`}>
+              <p className="text-xl font-bold leading-none">{grouped[t.key].length}</p>
+              <p className="text-[8px] mt-1 leading-tight opacity-80">{t.label}</p>
             </div>
           ))}
         </div>
+
+        {TIERS.filter(t => grouped[t.key].length > 0).map(tier => (
+          <div key={tier.key} className="mb-3">
+            <div className="flex items-center gap-1.5 mb-1.5 mt-2 first:mt-0">
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: tier.dotColor }} />
+              <p className="text-[10px] font-semibold text-slate-500 dark:text-gray-500 uppercase tracking-widest">
+                {tier.label} — {grouped[tier.key].length}
+              </p>
+            </div>
+            {grouped[tier.key].map(d => (
+              <DriveRow key={d.serial} drive={d}>
+                <div className="flex flex-wrap gap-1.5">
+                  {d.smart_status === 'FAILED' && (
+                    <span className="text-[10px] bg-red-100 dark:bg-red-950/40 text-red-500 rounded px-1.5 py-0.5">SMART FAILED</span>
+                  )}
+                  {(d.reallocated_sectors ?? 0) > 0 && (
+                    <span className="text-[10px] bg-amber-100 dark:bg-amber-950/30 text-amber-600 rounded px-1.5 py-0.5">{d.reallocated_sectors} realloc</span>
+                  )}
+                  {(d.pending_sectors ?? 0) > 0 && (
+                    <span className="text-[10px] bg-amber-100 dark:bg-amber-950/30 text-amber-600 rounded px-1.5 py-0.5">{d.pending_sectors} pending</span>
+                  )}
+                  {(d.uncorrectable_errors ?? 0) > 0 && (
+                    <span className="text-[10px] bg-orange-100 dark:bg-orange-950/30 text-orange-600 rounded px-1.5 py-0.5">{d.uncorrectable_errors} uncorr</span>
+                  )}
+                  {tier.key === 'monitor' && (d.reallocated_sectors ?? 0) === 0 && (d.pending_sectors ?? 0) === 0 && (d.uncorrectable_errors ?? 0) === 0 && (
+                    <span className="text-[10px] bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 rounded px-1.5 py-0.5">
+                      {d.smart_status === 'PASSED'
+                        ? `${((d.power_on_hours ?? 0) / 24 / 365).toFixed(1)}y old`
+                        : 'No SMART data'}
+                    </span>
+                  )}
+                  {tier.key === 'healthy' && (
+                    <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 rounded px-1.5 py-0.5">PASSED</span>
+                  )}
+                </div>
+              </DriveRow>
+            ))}
+          </div>
+        ))}
       </>
     )
   }

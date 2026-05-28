@@ -8,8 +8,10 @@ No more pulling drives to figure out which one is which.
 
 - **Visual bay grid** — drag-and-drop drives into slots across one or more enclosures
 - **SMART monitoring** — automated temperature, power-on hours, reallocated/pending sectors, and uncorrectable error collection
-- **Drive health score** — composite 0–100 score with ring gauge, letter grade, and detailed deduction breakdown
-- **Per-drive metadata** — make, model, serial, capacity, firmware, form factor, RPM, ZFS pool assignment
+- **Drive health score** — drive-type-aware composite 0–100 score with ring gauge; click the ring for a per-factor breakdown modal with temperature history chart
+- **Drive classification** — tag each drive as Consumer HDD, NAS HDD, Enterprise HDD, Consumer/Enterprise SSD, NVMe, or Optane; shapes the age curve and heat exposure scoring
+- **Lifetime I/O** — cumulative bytes read and written shown on every drive card, sourced from SMART history
+- **Per-drive metadata** — make, model, serial, capacity, firmware, form factor, RPM, drive type, rated TBW, ZFS pool assignment
 - **ZFS pool integration** — pool topology panel with vdev tree, pool capacity widgets, and per-drive pool labels
 - **Disconnected drive detection** — drives no longer found by the scanner are flagged in the bay grid and Drive Details panel; a toast and Telegram notification fire on disconnect
 - **Drive history modal** — 90-day charts for temperature, used space, I/O activity, and reallocated sectors, accessible from any drive's details panel
@@ -19,7 +21,7 @@ No more pulling drives to figure out which one is which.
 - **Telegram notifications** — SMART failures, overtemp, disconnect events, warranty warnings, scheduled status reports
 - **CSV bulk import** — import existing drive inventories from a spreadsheet
 - **REST API** — `/v1/` endpoints with API key auth for Grafana, Home Assistant, scripts, and integrations
-- **Federation** — aggregate drive data from multiple remote BayWatch instances into one dashboard
+- **Federation** — aggregate drive data from multiple remote BayWatch instances; remote instances show as a bay grid (matching the remote layout) with hover-to-preview and click-to-detail; toggle to flat list per instance
 - Works on **TrueNAS Scale**, **Unraid**, or any Linux-based Docker host
 
 ![Dashboard overview with bay grid, widget bar, and drive sidebar](screenshots/hero.png)
@@ -205,6 +207,10 @@ Press `` ` `` to open the terminal console. Type `help` for a full command list.
 | `bays` | List all enclosures and bay assignments |
 | `assign <serial> <bay-label>` | Assign a drive to a bay |
 | `unassign <bay-label>` | Remove a bay assignment |
+| `fed list` | List all federated instances with status |
+| `fed sync <name>` | Trigger an immediate sync for a named instance |
+| `fed status` | Show last sync time and error for all instances |
+| `fed drives <name>` | List drives reported by a named remote instance |
 | `logs [level]` | Toggle log level filter |
 | `clear` | Clear console output |
 
@@ -237,13 +243,15 @@ Download a pre-formatted template from **Settings → Import → Download Templa
 
 ## Drive Health Score
 
-Each drive displays a composite health score from 0–100, shown as a ring gauge in the drive details panel.
+Each drive displays a composite health score from 0–100, shown as a ring gauge in the drive details panel. Click the ring to open a per-factor breakdown with a recommendation and full temperature history chart.
 
 ### How it's calculated
 
 The score starts at **100** for any drive with a `PASSED` SMART status. Drives with a `FAILED` SMART status are immediately scored **0**. Drives with an `UNKNOWN` SMART status show no score.
 
-Deductions are applied based on the following factors:
+Deductions are applied across four factor categories:
+
+**SMART errors**
 
 | Factor | Condition | Deduction |
 |---|---|---|
@@ -251,14 +259,42 @@ Deductions are applied based on the following factors:
 | **Reallocated sectors** | > 0 | −4 per sector, max −40 |
 | **Pending sectors** | > 0 | −5 per sector, max −25 |
 | **Uncorrectable errors** | > 0 | −10 per error, max −35 |
-| **Power-on hours** | > 50,000 h | −20 |
-| **Power-on hours** | > 40,000 h | −12 |
-| **Power-on hours** | > 25,000 h | −5 |
-| **Temperature** | ≥ 60°C | −15 |
-| **Temperature** | ≥ 55°C | −8 |
-| **Temperature** | ≥ 50°C | −3 |
 
-The final score is floored at 0. Only the highest matching power-on hours tier and the highest matching temperature tier apply — they are not additive.
+**Age (drive-type-aware)**
+
+Age curves vary by drive class so that enterprise and NAS drives are not penalised as early as consumer models:
+
+| Drive type | Warn threshold | Max threshold | Deductions |
+|---|---|---|---|
+| Consumer HDD / Consumer SSD / NVMe consumer | 30,000 h | 50,000 h | −5 / −10 / −20 |
+| NAS HDD | 40,000 h | 60,000 h | −5 / −10 / −20 |
+| Enterprise HDD / Enterprise SSD / NVMe enterprise | 55,000 h | 80,000 h | −5 / −10 / −20 |
+| Intel Optane | 70,000 h | 100,000 h | −5 / −10 / −20 |
+
+Drive type is set in Edit Drive → Drive Classification. If left on auto-detect it is inferred from RPM and model name.
+
+**Cumulative heat exposure**
+
+Rather than checking the current temperature at a single point in time, the heat factor analyses all available scan history to compute what percentage of readings exceeded the warn and danger thresholds:
+
+| History depth | Condition | Deduction |
+|---|---|---|
+| ≥ 3 readings | > 30% of readings above danger threshold | −20 |
+| ≥ 3 readings | > 15% of readings above danger threshold | −10 |
+| ≥ 3 readings | > 40% of readings above warn threshold | −8 |
+| ≥ 3 readings | > 20% of readings above warn threshold | −4 |
+| < 3 readings (spot check) | Current temp ≥ danger | −15 |
+| < 3 readings (spot check) | Current temp ≥ warn | −8 |
+
+**TBW endurance (SSD only)**
+
+If a rated TBW is set for the drive (in Edit Drive → Rated TBW), and cumulative write history is available:
+
+| Condition | Deduction |
+|---|---|
+| > 80% of rated TBW used | −25 |
+| > 60% of rated TBW used | −15 |
+| > 40% of rated TBW used | −8 |
 
 ### Score labels
 
@@ -269,8 +305,6 @@ The final score is floored at 0. Only the highest matching power-on hours tier a
 | 60–74 | Fair |
 | 40–59 | Poor |
 | 0–39 | Critical |
-
-**Example:** A drive with SMART `PASSED`, no sector errors, 30,000 power-on hours, and 48°C would score **95** (−5 for POH tier). The same drive at 56°C would score **87** (−5 POH −8 temp).
 
 ![Drive details panel showing health score, SMART attributes, and warranty info](screenshots/drive-details.png)
 
@@ -609,7 +643,7 @@ The hub polls each target's `/v1/` API at a configurable interval (5, 15, 30, or
 2. Enter a name, the target's URL (e.g. `http://192.168.1.51:8585`), the API key from step 1, and a sync interval
 3. Click **Add Target** — the hub will begin polling on the next scheduler tick
 
-The **Remote Instances** panel appears in the Dashboard automatically once at least one target has synced successfully. Each remote instance shows a compact drive list with SMART status, temperature, and ZFS pool assignments. Click **Sync Now** in Settings → Federation to trigger an immediate poll.
+The **Remote Instances** panel appears in the Dashboard automatically once at least one target has synced successfully. Each remote instance defaults to a **bay grid view** — a colour-coded layout matching the remote enclosure structure where green = SMART PASSED, red = FAILED, grey = unknown. Hover any bay cell to preview the drive details in the right sidebar. Click to open the full DriveCard with temperature history (fetched live from the remote instance). Use the grid/list toggle button in each instance header to switch to a flat drive list; preference persists per-instance. Click **Sync Now** in Settings → Federation to trigger an immediate poll.
 
 ![Settings: Federation tab for managing remote BayWatch instances](screenshots/settings-federation.png)
 

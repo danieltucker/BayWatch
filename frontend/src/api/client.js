@@ -92,5 +92,7 @@ export const updateFederationTarget = (id, data) => api.patch(`/federation/targe
 export const deleteFederationTarget = (id) => api.delete(`/federation/targets/${id}`)
 export const syncFederationTarget = (id) => api.post(`/federation/targets/${id}/sync`).then(r => r.data)
 export const getFederationData = () => api.get('/federation/data').then(r => r.data)
+export const getRemoteDriveHistory = (targetId, serial, days = 90) =>
+  api.get(`/federation/targets/${targetId}/drives/${serial}/history`, { params: { days } }).then(r => r.data)
 
 export default api

@@ -28,6 +28,8 @@ _MIGRATIONS = [
     "CREATE TABLE IF NOT EXISTS federated_targets (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(128) NOT NULL, url VARCHAR(512) NOT NULL, api_key VARCHAR(256) NOT NULL, enabled BOOLEAN DEFAULT 1, last_synced_at DATETIME, last_error TEXT, sync_interval_minutes INTEGER DEFAULT 15)",
     "CREATE TABLE IF NOT EXISTS app_config (key VARCHAR(64) PRIMARY KEY, value TEXT)",
     "ALTER TABLE drives ADD COLUMN is_connected BOOLEAN DEFAULT 1",
+    "ALTER TABLE drives ADD COLUMN drive_type VARCHAR(32)",
+    "ALTER TABLE drive_profiles ADD COLUMN rated_tbw INTEGER",
 ]
 
 
@@ -65,7 +67,7 @@ async def lifespan(app: FastAPI):
     scheduler.stop()
 
 
-app = FastAPI(title="BayWatch API", version="1.8.0", lifespan=lifespan)
+app = FastAPI(title="BayWatch API", version="1.9.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -89,4 +91,4 @@ app.include_router(external.router, prefix="", tags=["external-api"])
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "version": "1.8.0"}
+    return {"status": "ok", "version": "1.9.0"}

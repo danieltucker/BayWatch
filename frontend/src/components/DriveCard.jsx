@@ -7,6 +7,7 @@ import {
 } from 'recharts'
 import WarningBadge from './WarningBadge'
 import DriveHistoryModal from './DriveHistoryModal'
+import HealthBreakdownModal from './HealthBreakdownModal'
 import { getDriveIcon } from '../utils/driveIcon'
 import { useTempThresholds } from '../context/TempThresholdContext'
 import { getDriveHistory, getDrivePartitions } from '../api/client'
@@ -89,28 +90,109 @@ function iconStyle(state) {
   return { wrap: 'bg-slate-100 dark:bg-gray-800/80 border-slate-200 dark:border-gray-700/50', icon: 'text-blue-500 dark:text-blue-400' }
 }
 
-// Composite health score 0–100
-function computeHealthScore(drive) {
-  if (!drive.smart_status || drive.smart_status === 'UNKNOWN') return null
-  if (drive.smart_status === 'FAILED') return 0
-  let score = 100
-  const realloc = drive.reallocated_sectors ?? 0
-  const pending = drive.pending_sectors ?? 0
-  const uncorr  = drive.uncorrectable_errors ?? 0
-  if (realloc > 0) score -= Math.min(40, realloc * 4)
-  if (pending > 0) score -= Math.min(25, pending * 5)
-  if (uncorr  > 0) score -= Math.min(35, uncorr * 10)
-  const poh = drive.power_on_hours ?? 0
-  if (poh > 50000) score -= 20
-  else if (poh > 40000) score -= 12
-  else if (poh > 25000) score -= 5
-  const temp = drive.temperature_c
-  if (temp != null) {
-    if (temp >= 60) score -= 15
-    else if (temp >= 55) score -= 8
-    else if (temp >= 50) score -= 3
+// Drive-type-aware age curves { warn, max } in power-on hours
+const AGE_CURVES = {
+  consumer_hdd:    { warn: 30000, max: 50000, label: 'Consumer HDD' },
+  nas_hdd:         { warn: 40000, max: 60000, label: 'NAS HDD' },
+  enterprise_hdd:  { warn: 55000, max: 80000, label: 'Enterprise HDD' },
+  consumer_ssd:    { warn: 30000, max: 50000, label: 'Consumer SSD' },
+  enterprise_ssd:  { warn: 50000, max: 70000, label: 'Enterprise SSD' },
+  nvme_consumer:   { warn: 30000, max: 50000, label: 'NVMe consumer' },
+  nvme_enterprise: { warn: 50000, max: 70000, label: 'NVMe enterprise' },
+  optane:          { warn: 70000, max: 100000, label: 'Optane' },
+}
+
+function inferDriveType(drive) {
+  if (drive.rpm === 0) {
+    if (drive.form_factor === 'M.2' || drive.form_factor === 'U.2') return 'nvme_consumer'
+    return 'consumer_ssd'
   }
-  return Math.max(0, Math.round(score))
+  if (drive.rpm != null && drive.rpm > 0) {
+    if (/exos|ultrastar|gold|datacenter|enterprise|mc\d|mg\d|dc\s/i.test(drive.model || '') ||
+        (drive.rpm >= 7200 && (drive.capacity_bytes || 0) >= 8e12)) return 'enterprise_hdd'
+    if (/red|ironwolf|nas|surveillance/i.test(drive.model || '')) return 'nas_hdd'
+    return 'consumer_hdd'
+  }
+  return 'consumer_hdd'
+}
+
+// Composite health score 0–100 with per-factor breakdown
+// Returns { score: number|null, breakdown: Array<{factor, detail, delta, positive?}> }
+function computeHealthScore(drive, history = [], ratedTbw = null, warnC = 55, dangerC = 65) {
+  if (!drive.smart_status || drive.smart_status === 'UNKNOWN') return { score: null, breakdown: [] }
+  if (drive.smart_status === 'FAILED') return { score: 0, breakdown: [{ factor: 'SMART failure', detail: 'FAILED status', delta: -100 }] }
+
+  let score = 100
+  const breakdown = []
+
+  breakdown.push({ factor: 'SMART status', detail: 'PASSED', delta: 0, positive: true })
+
+  const realloc = drive.reallocated_sectors ?? 0
+  if (realloc > 0) {
+    const d = -Math.min(40, realloc * 4)
+    score += d; breakdown.push({ factor: 'Reallocated sectors', detail: String(realloc), delta: d })
+  }
+  const pending = drive.pending_sectors ?? 0
+  if (pending > 0) {
+    const d = -Math.min(25, pending * 5)
+    score += d; breakdown.push({ factor: 'Pending sectors', detail: String(pending), delta: d })
+  }
+  const uncorr = drive.uncorrectable_errors ?? 0
+  if (uncorr > 0) {
+    const d = -Math.min(35, uncorr * 10)
+    score += d; breakdown.push({ factor: 'Uncorrectable errors', detail: String(uncorr), delta: d })
+  }
+
+  // Drive-type-aware age penalty
+  const poh = drive.power_on_hours ?? 0
+  const driveType = drive.drive_type || inferDriveType(drive)
+  const ac = AGE_CURVES[driveType] || AGE_CURVES.consumer_hdd
+  if (poh >= ac.warn) {
+    const d = Math.max(-20, -Math.round(((poh - ac.warn) / Math.max(1, ac.max - ac.warn)) * 20))
+    score += d
+    breakdown.push({ factor: 'Drive age', detail: `${poh.toLocaleString()} hrs (${ac.label})`, delta: d })
+  } else {
+    breakdown.push({ factor: 'Drive age', detail: `${poh.toLocaleString()} hrs — within range`, delta: 0, positive: true })
+  }
+
+  // Heat exposure across all available history (not just current temp)
+  const tempReadings = history.filter(h => h.temperature_c != null)
+  if (tempReadings.length >= 3) {
+    const aboveDanger = tempReadings.filter(h => h.temperature_c >= dangerC).length
+    const aboveWarn   = tempReadings.filter(h => h.temperature_c >= warnC && h.temperature_c < dangerC).length
+    const pctDanger = aboveDanger / tempReadings.length
+    const pctWarn   = aboveWarn   / tempReadings.length
+    const d = Math.round(-(pctDanger * 20 + pctWarn * 10))
+    if (d < 0) {
+      score += d
+      breakdown.push({ factor: 'Heat exposure', detail: `${Math.round((pctDanger + pctWarn) * 100)}% of ${tempReadings.length} readings ≥${warnC}°C`, delta: d })
+    } else {
+      breakdown.push({ factor: 'Heat exposure', detail: `${tempReadings.length} readings all within range`, delta: 0, positive: true })
+    }
+  } else if (drive.temperature_c != null) {
+    const temp = drive.temperature_c
+    const d = temp >= dangerC ? -10 : temp >= warnC ? -5 : 0
+    if (d < 0) { score += d; breakdown.push({ factor: 'Temperature (current)', detail: `${temp}°C`, delta: d }) }
+  }
+
+  // TBW endurance (SSD types only, requires rated_tbw from profile)
+  const isSsd = ['consumer_ssd', 'enterprise_ssd', 'nvme_consumer', 'nvme_enterprise', 'optane'].includes(driveType)
+  if (isSsd && ratedTbw) {
+    const latest = [...history].reverse().find(h => h.write_bytes != null)
+    if (latest) {
+      const writtenTb = latest.write_bytes / 1e12
+      const pctUsed = writtenTb / ratedTbw
+      if (pctUsed > 0.5) {
+        const d = Math.max(-20, -Math.round((pctUsed - 0.5) * 40))
+        score += d
+        breakdown.push({ factor: 'TBW endurance', detail: `${writtenTb.toFixed(1)} TB written / ${ratedTbw} TB rated (${Math.round(pctUsed * 100)}%)`, delta: d })
+      } else {
+        breakdown.push({ factor: 'TBW endurance', detail: `${writtenTb.toFixed(1)} TB written / ${ratedTbw} TB rated`, delta: 0, positive: true })
+      }
+    }
+  }
+
+  return { score: Math.max(0, Math.round(score)), breakdown }
 }
 function scoreLabel(score) {
   if (score == null) return { label: 'Unknown', color: '#94a3b8' }
@@ -121,13 +203,17 @@ function scoreLabel(score) {
   return               { label: 'Critical',   color: '#ef4444' }
 }
 
-function HealthRing({ score }) {
+function HealthRing({ score, onClick }) {
   const r = 22
   const circ = 2 * Math.PI * r
   const fill = score == null ? 0 : (score / 100) * circ
   const { label, color } = scoreLabel(score)
   return (
-    <div className="flex items-center gap-3">
+    <div
+      className={`flex items-center gap-3 ${onClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+      onClick={onClick}
+      title={onClick ? 'Click to see score breakdown' : undefined}
+    >
       <div className="relative w-[52px] h-[52px] shrink-0">
         <svg width={52} height={52} className="-rotate-90">
           <circle cx={26} cy={26} r={r} fill="none" stroke="currentColor"
@@ -145,26 +231,33 @@ function HealthRing({ score }) {
       <div>
         <p className="text-sm font-semibold leading-tight" style={{ color }}>{label}</p>
         <p className="text-[10px] text-slate-400 dark:text-gray-500 leading-snug">Health Score</p>
-        <p className="text-[9px] text-slate-300 dark:text-gray-700 leading-snug mt-0.5">SMART · age · temp</p>
+        <p className="text-[9px] text-slate-300 dark:text-gray-700 leading-snug mt-0.5">
+          {onClick ? 'click for breakdown' : 'SMART · age · temp'}
+        </p>
       </div>
     </div>
   )
 }
 
-export default function DriveCard({ drive, profile, bay, poolStats = [], onClose, onEdit, onReassign, onDelete, remote = false, instanceName = null }) {
+export default function DriveCard({ drive, profile, bay, poolStats = [], onClose, onEdit, onReassign, onDelete, remote = false, instanceName = null, remoteHistory = null, remoteHistoryError = null }) {
   const { warnC, dangerC } = useTempThresholds()
   const [history, setHistory] = useState([])
   const [partitions, setPartitions] = useState([])
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [breakdownOpen, setBreakdownOpen] = useState(false)
 
   useEffect(() => {
-    if (!drive || remote) return
+    if (!drive) return
+    if (remote) {
+      if (remoteHistory !== null) setHistory(remoteHistory)
+      return
+    }
     setHistory([])
     setPartitions([])
-    getDriveHistory(drive.serial, 30).then(setHistory).catch(() => {})
+    getDriveHistory(drive.serial, 90).then(setHistory).catch(() => {})
     getDrivePartitions(drive.serial).then(setPartitions).catch(() => {})
-  }, [drive?.serial, remote])
+  }, [drive?.serial, remote, remoteHistory])
 
   if (!drive) return null
 
@@ -174,7 +267,8 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
   const bayStatusInfo = bay?.status ? BAY_STATUS_INFO[bay.status] : null
   const state = healthState(drive)
   const { wrap: iconWrap, icon: iconCls } = iconStyle(state)
-  const healthScore = computeHealthScore(drive)
+  const ratedTbw = profile?.rated_tbw ?? null
+  const { score: healthScore, breakdown: healthBreakdown } = computeHealthScore(drive, history, ratedTbw, warnC, dangerC)
 
   const tempHistory = history
     .filter(h => h.temperature_c != null)
@@ -225,6 +319,11 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
   const hasErrors = (drive.reallocated_sectors ?? 0) > 0
     || (drive.pending_sectors ?? 0) > 0
     || (drive.uncorrectable_errors ?? 0) > 0
+
+  // Lifetime I/O from latest history record (cumulative SMART/kernel counters)
+  const latestWithIO = [...history].reverse().find(h => h.read_bytes != null || h.write_bytes != null)
+  const lifetimeReadBytes  = latestWithIO?.read_bytes  ?? null
+  const lifetimeWriteBytes = latestWithIO?.write_bytes ?? null
 
   // Clamp temp chart domain to [25, 65] but expand if actual values are outside
   const tempMin = tempHistory.length ? Math.min(...tempHistory.map(h => h.temp)) : 25
@@ -329,7 +428,7 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
       {/* ── Health score ring ── */}
       {healthScore !== null && (
         <div className="mx-4 mb-3 rounded-xl border border-slate-200 dark:border-gray-700/50 bg-slate-50/80 dark:bg-gray-800/20 px-3 py-2.5">
-          <HealthRing score={healthScore} />
+          <HealthRing score={healthScore} onClick={() => setBreakdownOpen(true)} />
         </div>
       )}
 
@@ -365,6 +464,44 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
                   drive.power_on_hours >= 40000 ? 'bg-orange-400' :
                   drive.power_on_hours >= 25000 ? 'bg-amber-400' : 'bg-blue-400'
                 }`} style={{ width: `${Math.min(100, (drive.power_on_hours / 50000) * 100)}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Remote history error banner ── */}
+      {remote && remoteHistoryError && (
+        <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg px-3 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40">
+          <AlertTriangle size={12} className="text-amber-500 dark:text-amber-400 shrink-0" />
+          <p className="text-[10px] text-amber-700 dark:text-amber-400">History unavailable: {remoteHistoryError} — showing last cached data</p>
+        </div>
+      )}
+
+      {/* ── Lifetime I/O ── */}
+      {(lifetimeReadBytes != null || lifetimeWriteBytes != null) && (
+        <div className={`px-4 pb-3 grid gap-3 ${lifetimeReadBytes != null && lifetimeWriteBytes != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {lifetimeReadBytes != null && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Lifetime Read</span>
+                <span className="text-xs font-bold text-emerald-500 dark:text-emerald-400">{formatBytes(lifetimeReadBytes)}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
+                <div className="h-full rounded-full bg-emerald-400 transition-all"
+                  style={{ width: `${Math.min(100, (lifetimeReadBytes / Math.max(lifetimeReadBytes, lifetimeWriteBytes || 1)) * 100)}%` }} />
+              </div>
+            </div>
+          )}
+          {lifetimeWriteBytes != null && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Lifetime Written</span>
+                <span className="text-xs font-bold text-violet-500 dark:text-violet-400">{formatBytes(lifetimeWriteBytes)}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
+                <div className="h-full rounded-full bg-violet-400 transition-all"
+                  style={{ width: `${Math.min(100, (lifetimeWriteBytes / Math.max(lifetimeReadBytes || 1, lifetimeWriteBytes)) * 100)}%` }} />
               </div>
             </div>
           )}
@@ -621,6 +758,16 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
           make={drive.make}
           model={drive.model}
           onClose={() => setHistoryOpen(false)}
+        />
+      )}
+
+      {breakdownOpen && healthScore !== null && (
+        <HealthBreakdownModal
+          drive={drive}
+          score={healthScore}
+          breakdown={healthBreakdown}
+          history={history}
+          onClose={() => setBreakdownOpen(false)}
         />
       )}
     </div>

@@ -4,16 +4,34 @@ import { patchDrive, upsertProfile } from '../api/client'
 
 const FORM_FACTORS = ['', '3.5"', '2.5"', 'M.2', 'U.2', 'other']
 
+const DRIVE_TYPES = [
+  { value: '', label: '— Auto-detect —' },
+  { value: 'consumer_hdd', label: 'Consumer HDD' },
+  { value: 'nas_hdd',      label: 'NAS / Desktop HDD' },
+  { value: 'enterprise_hdd', label: 'Enterprise HDD' },
+  { value: 'consumer_ssd', label: 'Consumer SSD' },
+  { value: 'enterprise_ssd', label: 'Enterprise SSD' },
+  { value: 'nvme_consumer', label: 'NVMe (Consumer)' },
+  { value: 'nvme_enterprise', label: 'NVMe (Enterprise)' },
+  { value: 'optane',        label: 'Intel Optane' },
+]
+
+const SSD_TYPES = new Set(['consumer_ssd', 'enterprise_ssd', 'nvme_consumer', 'nvme_enterprise', 'optane'])
+
 export default function DriveEditModal({ drive, profile, onClose, onSaved }) {
   const [form, setForm] = useState({
     make: drive.make || '',
     model: drive.model || '',
     form_factor: drive.form_factor || '',
     rpm: drive.rpm != null ? String(drive.rpm) : '',
+    drive_type: drive.drive_type || '',
+    rated_tbw: profile?.rated_tbw != null ? String(profile.rated_tbw) : '',
     purchase_date: profile?.purchase_date || '',
     warranty_years: profile?.warranty_months != null ? String(profile.warranty_months / 12) : '',
     notes: profile?.notes || '',
   })
+
+  const isSSD = SSD_TYPES.has(form.drive_type)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
@@ -29,10 +47,13 @@ export default function DriveEditModal({ drive, profile, onClose, onSaved }) {
       if (form.form_factor !== (drive.form_factor || '')) drivePatch.form_factor = form.form_factor || null
       const rpmVal = form.rpm !== '' ? parseInt(form.rpm) : null
       if (rpmVal !== drive.rpm) drivePatch.rpm = rpmVal
+      if (form.drive_type !== (drive.drive_type || '')) drivePatch.drive_type = form.drive_type || null
 
+      const tbwVal = isSSD && form.rated_tbw !== '' ? parseInt(form.rated_tbw) : null
       const profilePayload = {
         purchase_date: form.purchase_date || null,
         warranty_months: form.warranty_years !== '' ? Math.round(parseFloat(form.warranty_years) * 12) : null,
+        rated_tbw: tbwVal,
         notes: form.notes.trim() || null,
       }
 
@@ -87,16 +108,35 @@ export default function DriveEditModal({ drive, profile, onClose, onSaved }) {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-slate-500 dark:text-gray-400">Type</label>
+                    <label className="text-xs text-slate-500 dark:text-gray-400">RPM</label>
                     <select value={form.rpm} onChange={e => set('rpm', e.target.value)}
                       className="rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-3 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500">
                       <option value="">Unknown</option>
-                      <option value="0">SSD</option>
-                      <option value="5400">HDD 5400 rpm</option>
-                      <option value="7200">HDD 7200 rpm</option>
+                      <option value="0">SSD / NVMe</option>
+                      <option value="5400">5400 rpm</option>
+                      <option value="7200">7200 rpm</option>
                     </select>
                   </div>
                 </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 dark:text-gray-400">Drive Classification</label>
+                  <select value={form.drive_type} onChange={e => set('drive_type', e.target.value)}
+                    className="rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-3 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    {DRIVE_TYPES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                  </select>
+                  <p className="text-[10px] text-slate-400 dark:text-gray-600 leading-snug">
+                    Controls age curve and heat thresholds used in the health score. Leave on auto-detect to infer from RPM and model.
+                  </p>
+                </div>
+                {isSSD && (
+                  <Field
+                    label="Rated TBW (TB)"
+                    type="number"
+                    value={form.rated_tbw}
+                    onChange={v => set('rated_tbw', v)}
+                    placeholder="e.g. 600"
+                  />
+                )}
               </div>
             </div>
 

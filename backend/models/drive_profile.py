@@ -24,6 +24,7 @@ class DriveProfile(Base):
     purchase_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     vendor: Mapped[str | None] = mapped_column(String(128), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rated_tbw: Mapped[int | None] = mapped_column(nullable=True)
 
     drive: Mapped[Drive] = relationship("Drive", back_populates="profile")
 

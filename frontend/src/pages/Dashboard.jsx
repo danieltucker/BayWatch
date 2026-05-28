@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { Server, HardDrive, ChevronDown, ChevronRight, ArrowUp, ArrowDown, Download, X } from 'lucide-react'
+import { Server, HardDrive, ChevronDown, ChevronRight, ArrowUp, ArrowDown, Download, X, LayoutGrid, List } from 'lucide-react'
 import clsx from 'clsx'
 import BayGrid from '../components/BayGrid'
 import DriveCard from '../components/DriveCard'
@@ -13,7 +13,7 @@ import PoolTopologyPanel from '../components/PoolTopologyPanel'
 import {
   getEnclosures, getDrives, getBays, getProfile, assignDrive,
   getPools, getPoolTopology, updateEnclosure, updateBayArray,
-  getFederationData, deleteDrive,
+  getFederationData, deleteDrive, getRemoteDriveHistory,
 } from '../api/client'
 
 function exportDrivesCSV(drives, profiles, enclosures, baysMap) {
@@ -104,6 +104,9 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
   const [collapsedFederation, setCollapsedFederation] = useState(false)
   const [collapsedRemotes, setCollapsedRemotes] = useState({})
   const [selectedRemoteDrive, setSelectedRemoteDrive] = useState(null)
+  const [remoteHistory, setRemoteHistory] = useState(null)
+  const [hoveredRemoteDrive, setHoveredRemoteDrive] = useState(null)
+  const [remoteViewModes, setRemoteViewModes] = useState({})
   const [toasts, setToasts] = useState([])
   const prevConnectedRef = useRef(null)
 
@@ -177,6 +180,26 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
     const tick = setInterval(() => setTick(n => n + 1), 60 * 1000)
     return () => { clearInterval(refresh); clearInterval(tick) }
   }, [loadAll])
+
+  useEffect(() => {
+    if (!selectedRemoteDrive) { setRemoteHistory(null); return }
+    getRemoteDriveHistory(selectedRemoteDrive.targetId, selectedRemoteDrive.drive.serial, 90)
+      .then(data => setRemoteHistory(data))
+      .catch(() => setRemoteHistory({ history: [], error: 'Failed to fetch history' }))
+  }, [selectedRemoteDrive])
+
+  function toggleRemoteView(targetId) {
+    setRemoteViewModes(prev => {
+      const current = prev[targetId] ?? localStorage.getItem(`fed-view-${targetId}`) ?? 'grid'
+      const next = current === 'list' ? 'grid' : 'list'
+      localStorage.setItem(`fed-view-${targetId}`, next)
+      return { ...prev, [targetId]: next }
+    })
+  }
+
+  function getRemoteView(targetId) {
+    return remoteViewModes[targetId] ?? localStorage.getItem(`fed-view-${targetId}`) ?? 'grid'
+  }
 
   function findArrayName(bayId) {
     if (!bayId) return null
@@ -465,62 +488,129 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                             <span className="text-xs text-slate-400 dark:text-gray-600 shrink-0">
                               {snapshot.drives.length} drives
                             </span>
+                            <button
+                              onClick={e => { e.stopPropagation(); toggleRemoteView(snapshot.target_id) }}
+                              className="p-1 rounded text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
+                              title={getRemoteView(snapshot.target_id) === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+                            >
+                              {getRemoteView(snapshot.target_id) === 'grid' ? <List size={13} /> : <LayoutGrid size={13} />}
+                            </button>
                           </div>
 
                           {!isCollapsed && (
-                            <div className="divide-y divide-slate-100 dark:divide-gray-800/60">
-                              {snapshot.drives.length === 0 && (
-                                <p className="px-4 py-3 text-xs text-slate-400 dark:text-gray-600 italic">No drives reported</p>
-                              )}
-                              {(() => {
-                                const bayBySerial = Object.fromEntries(
-                                  snapshot.bays.filter(b => b.drive_serial).map(b => [b.drive_serial, b])
-                                )
-                                return snapshot.drives.map(d => {
-                                  const smartOk = d.smart_status === 'PASSED'
-                                  const smartFail = d.smart_status === 'FAILED'
-                                  const bayInfo = bayBySerial[d.serial] || null
-                                  const bayLabel = bayInfo
-                                    ? [bayInfo.enclosure_name, bayInfo.array_name, bayInfo.label || `R${(bayInfo.row ?? 0) + 1}S${(bayInfo.col ?? 0) + 1}`].filter(Boolean).join(' › ')
-                                    : null
-                                  return (
-                                    <button
-                                      key={d.serial}
-                                      onClick={() => setSelectedRemoteDrive({ drive: d, bayInfo, instanceName: snapshot.target_name })}
-                                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-gray-900/40 transition-colors text-left"
-                                    >
-                                      <span className={clsx(
-                                        'w-2 h-2 rounded-full shrink-0',
-                                        smartOk ? 'bg-emerald-400' : smartFail ? 'bg-red-400' : 'bg-slate-300 dark:bg-gray-600'
-                                      )} />
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-mono text-slate-700 dark:text-gray-300 truncate">
-                                          {d.serial}
-                                        </p>
-                                        <p className="text-xs text-slate-400 dark:text-gray-600 truncate">
-                                          {[d.make, d.model].filter(Boolean).join(' ') || 'Unknown'}
-                                        </p>
-                                      </div>
-                                      <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-gray-500 shrink-0">
-                                        {bayLabel && (
-                                          <span className="text-slate-400 dark:text-gray-600 truncate max-w-[120px]">{bayLabel}</span>
-                                        )}
-                                        {d.temperature_c != null && (
+                            <div>
+                              {getRemoteView(snapshot.target_id) === 'grid' ? (
+                                (() => {
+                                  const snapDriveMap = Object.fromEntries(snapshot.drives.map(d => [d.serial, d]))
+                                  const encMap = {}
+                                  for (const bay of snapshot.bays) {
+                                    const ek = bay.enclosure_name || 'Unknown'
+                                    if (!encMap[ek]) encMap[ek] = {}
+                                    const ak = bay.array_name || 'Unknown'
+                                    if (!encMap[ek][ak]) encMap[ek][ak] = []
+                                    encMap[ek][ak].push(bay)
+                                  }
+                                  if (Object.keys(encMap).length === 0) {
+                                    return <p className="px-4 py-3 text-xs text-slate-400 dark:text-gray-600 italic">No bay data available</p>
+                                  }
+                                  return Object.entries(encMap).map(([encName, arrays]) => (
+                                    <div key={encName} className="px-4 py-3">
+                                      <p className="text-xs font-medium text-slate-500 dark:text-gray-500 mb-2">{encName}</p>
+                                      {Object.entries(arrays).map(([arrName, bays]) => {
+                                        const maxRow = Math.max(...bays.map(b => b.row))
+                                        const maxCol = Math.max(...bays.map(b => b.col))
+                                        const grid = Array.from({ length: maxRow + 1 }, () => Array(maxCol + 1).fill(null))
+                                        for (const bay of bays) grid[bay.row][bay.col] = bay
+                                        return (
+                                          <div key={arrName} className="mb-3">
+                                            <p className="text-[10px] text-slate-400 dark:text-gray-600 mb-1.5">{arrName}</p>
+                                            <div
+                                              className="grid gap-0.5"
+                                              style={{ gridTemplateColumns: `repeat(${maxCol + 1}, minmax(0, 1fr))` }}
+                                            >
+                                              {grid.flat().map((bay, i) => {
+                                                if (!bay) return <div key={i} className="aspect-square" />
+                                                const drive = bay.drive_serial ? snapDriveMap[bay.drive_serial] : null
+                                                const smartOk = drive?.smart_status === 'PASSED'
+                                                const smartFail = drive?.smart_status === 'FAILED'
+                                                return (
+                                                  <button
+                                                    key={i}
+                                                    title={drive
+                                                      ? [drive.serial, [drive.make, drive.model].filter(Boolean).join(' '), drive.temperature_c != null ? drive.temperature_c + '°C' : ''].filter(Boolean).join('\n')
+                                                      : (bay.label || 'Empty')}
+                                                    disabled={!drive}
+                                                    onClick={() => drive && setSelectedRemoteDrive({ drive, bayInfo: bay, instanceName: snapshot.target_name, targetId: snapshot.target_id })}
+                                                    onMouseEnter={() => drive && setHoveredRemoteDrive({ drive, instanceName: snapshot.target_name })}
+                                                    onMouseLeave={() => setHoveredRemoteDrive(null)}
+                                                    className={clsx(
+                                                      'aspect-square rounded-sm transition-opacity',
+                                                      !drive
+                                                        ? 'bg-slate-100 dark:bg-gray-800/60 border border-dashed border-slate-200 dark:border-gray-700 cursor-default'
+                                                        : smartOk
+                                                        ? 'bg-emerald-400/80 dark:bg-emerald-500/60 hover:opacity-80 cursor-pointer'
+                                                        : smartFail
+                                                        ? 'bg-red-400/80 dark:bg-red-500/60 hover:opacity-80 cursor-pointer'
+                                                        : 'bg-slate-300 dark:bg-gray-600 hover:opacity-80 cursor-pointer'
+                                                    )}
+                                                  />
+                                                )
+                                              })}
+                                            </div>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  ))
+                                })()
+                              ) : (
+                                <div className="divide-y divide-slate-100 dark:divide-gray-800/60">
+                                  {snapshot.drives.length === 0 && (
+                                    <p className="px-4 py-3 text-xs text-slate-400 dark:text-gray-600 italic">No drives reported</p>
+                                  )}
+                                  {(() => {
+                                    const bayBySerial = Object.fromEntries(
+                                      snapshot.bays.filter(b => b.drive_serial).map(b => [b.drive_serial, b])
+                                    )
+                                    return snapshot.drives.map(d => {
+                                      const smartOk = d.smart_status === 'PASSED'
+                                      const smartFail = d.smart_status === 'FAILED'
+                                      const bayInfo = bayBySerial[d.serial] || null
+                                      const bayLabel = bayInfo
+                                        ? [bayInfo.enclosure_name, bayInfo.array_name, bayInfo.label || `R${(bayInfo.row ?? 0) + 1}S${(bayInfo.col ?? 0) + 1}`].filter(Boolean).join(' › ')
+                                        : null
+                                      return (
+                                        <button
+                                          key={d.serial}
+                                          onClick={() => setSelectedRemoteDrive({ drive: d, bayInfo, instanceName: snapshot.target_name, targetId: snapshot.target_id })}
+                                          onMouseEnter={() => setHoveredRemoteDrive({ drive: d, instanceName: snapshot.target_name })}
+                                          onMouseLeave={() => setHoveredRemoteDrive(null)}
+                                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-gray-900/40 transition-colors text-left"
+                                        >
                                           <span className={clsx(
-                                            d.temperature_c >= 55 ? 'text-red-500' : d.temperature_c >= 45 ? 'text-amber-500' : ''
-                                          )}>
-                                            {d.temperature_c}°C
-                                          </span>
-                                        )}
-                                        {d.zfs_pool && (
-                                          <span className="font-mono text-blue-500 dark:text-blue-400">{d.zfs_pool}</span>
-                                        )}
-                                      </div>
-                                    </button>
-                                  )
-                                })
-                              })()}
-                              <p className="px-4 py-1.5 text-[10px] text-slate-300 dark:text-gray-700">
+                                            'w-2 h-2 rounded-full shrink-0',
+                                            smartOk ? 'bg-emerald-400' : smartFail ? 'bg-red-400' : 'bg-slate-300 dark:bg-gray-600'
+                                          )} />
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-mono text-slate-700 dark:text-gray-300 truncate">{d.serial}</p>
+                                            <p className="text-xs text-slate-400 dark:text-gray-600 truncate">{[d.make, d.model].filter(Boolean).join(' ') || 'Unknown'}</p>
+                                          </div>
+                                          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-gray-500 shrink-0">
+                                            {bayLabel && <span className="text-slate-400 dark:text-gray-600 truncate max-w-[120px]">{bayLabel}</span>}
+                                            {d.temperature_c != null && (
+                                              <span className={clsx(d.temperature_c >= 55 ? 'text-red-500' : d.temperature_c >= 45 ? 'text-amber-500' : '')}>
+                                                {d.temperature_c}°C
+                                              </span>
+                                            )}
+                                            {d.zfs_pool && <span className="font-mono text-blue-500 dark:text-blue-400">{d.zfs_pool}</span>}
+                                          </div>
+                                        </button>
+                                      )
+                                    })
+                                  })()}
+                                </div>
+                              )}
+                              <p className="px-4 py-1.5 text-[10px] text-slate-300 dark:text-gray-700 border-t border-slate-100 dark:border-gray-800/60">
                                 Synced {snapshot.fetched_at ? new Date(snapshot.fetched_at).toLocaleString() : '—'}
                               </p>
                             </div>
@@ -544,6 +634,8 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                   drive={selectedRemoteDrive.drive}
                   remote
                   instanceName={selectedRemoteDrive.instanceName}
+                  remoteHistory={remoteHistory?.history ?? null}
+                  remoteHistoryError={remoteHistory?.error ?? null}
                   onClose={() => setSelectedRemoteDrive(null)}
                 />
               </div>
@@ -577,11 +669,17 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
         <div className="w-full lg:w-[340px] shrink-0 flex flex-col bg-white dark:bg-gray-950 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-gray-800 lg:sticky lg:top-[49px] lg:h-[calc(100vh-49px)] lg:self-start">
           <div className="px-4 py-3 border-b border-slate-200 dark:border-gray-800/60">
             <p className="text-xs font-medium text-slate-500 dark:text-gray-500 uppercase tracking-widest">
-              {displayDrive ? 'Drive Details' : 'All Drives'}
+              {hoveredRemoteDrive ? 'Remote Drive' : displayDrive ? 'Drive Details' : 'All Drives'}
             </p>
           </div>
           <div className="flex-1 overflow-y-auto p-3">
-            {displayDrive ? (
+            {hoveredRemoteDrive ? (
+              <DriveCard
+                drive={hoveredRemoteDrive.drive}
+                remote
+                instanceName={hoveredRemoteDrive.instanceName}
+              />
+            ) : displayDrive ? (
               <DriveCard
                 drive={displayDrive}
                 profile={displayProfile}
