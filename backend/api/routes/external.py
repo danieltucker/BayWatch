@@ -78,10 +78,17 @@ def external_list_bays(array_id: int | None = None, db: Session = Depends(get_db
 
     results = []
     for bay, array_name, enclosure_name in q.all():
-        item = ExternalBayRead.model_validate(bay)
-        item.array_name = array_name
-        item.enclosure_name = enclosure_name
-        results.append(item)
+        results.append(ExternalBayRead.model_validate({
+            "id": bay.id,
+            "array_id": bay.array_id,
+            "row": bay.row,
+            "col": bay.col,
+            "label": bay.label,
+            "status": bay.status,
+            "drive_serial": bay.drive_serial,
+            "array_name": array_name,
+            "enclosure_name": enclosure_name,
+        }))
     return results
 
 
