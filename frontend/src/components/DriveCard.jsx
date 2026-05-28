@@ -151,7 +151,7 @@ function HealthRing({ score }) {
   )
 }
 
-export default function DriveCard({ drive, profile, bay, poolStats = [], onClose, onEdit, onReassign, onDelete }) {
+export default function DriveCard({ drive, profile, bay, poolStats = [], onClose, onEdit, onReassign, onDelete, remote = false, instanceName = null }) {
   const { warnC, dangerC } = useTempThresholds()
   const [history, setHistory] = useState([])
   const [partitions, setPartitions] = useState([])
@@ -159,12 +159,12 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
   const [historyOpen, setHistoryOpen] = useState(false)
 
   useEffect(() => {
-    if (!drive) return
+    if (!drive || remote) return
     setHistory([])
     setPartitions([])
     getDriveHistory(drive.serial, 30).then(setHistory).catch(() => {})
     getDrivePartitions(drive.serial).then(setPartitions).catch(() => {})
-  }, [drive?.serial])
+  }, [drive?.serial, remote])
 
   if (!drive) return null
 
@@ -256,6 +256,11 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
           </div>
         </div>
         <div className="flex items-center gap-1.5 pt-0.5 shrink-0">
+          {remote && instanceName && (
+            <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 shrink-0 uppercase tracking-wide">
+              {instanceName}
+            </span>
+          )}
           <WarningBadge status={drive.smart_status} days={warrantyDays} />
           {onReassign && (
             <button onClick={onReassign} className="text-slate-400 dark:text-gray-600 hover:text-amber-500 dark:hover:text-amber-400 transition-colors p-0.5 rounded" title="Reassign bay">
@@ -599,13 +604,15 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
             Scanned {new Date(drive.last_scanned).toLocaleString()}
           </span>
         ) : <span />}
-        <button
-          onClick={() => setHistoryOpen(true)}
-          className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-        >
-          <History size={10} />
-          History
-        </button>
+        {!remote && (
+          <button
+            onClick={() => setHistoryOpen(true)}
+            className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+          >
+            <History size={10} />
+            History
+          </button>
+        )}
       </div>
 
       {historyOpen && (

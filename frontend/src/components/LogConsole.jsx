@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import {
   getLogs, getDrives, getDrive, getProfile, patchDrive,
   getEnclosures, getBays, assignDrive, unassignDrive, triggerScan,
+  getFederationTargets, syncFederationTarget, getFederationData,
 } from '../api/client'
 import api from '../api/client'
 
@@ -39,6 +40,7 @@ const COMMANDS = {
   unassign: 'unassign <bay-label>             — remove drive assignment from a bay',
   logs:     'logs [level]                     — toggle a log level filter',
   clear:    'clear                            — clear console output',
+  fed:      'fed <list|sync|status|drives> [name] — interact with federated instances',
 }
 
 function stripHtml(str) {
@@ -132,6 +134,7 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
         case 'unassign': await execUnassign(args); break
         case 'logs':     execLogs(args); break
         case 'clear':    setEntries([]); break
+        case 'fed':      await execFed(args); break
         default:         addErr(`Unknown command: ${cmd}. Type 'help' for a list.`)
       }
     } catch (err) {
@@ -299,6 +302,64 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
     const next = new Set(activeLevels)
     if (next.has(level)) next.delete(level); else next.add(level)
     addOut(`${level} ${next.has(level) ? 'hidden' : 'visible'}`)
+  }
+
+  async function execFed(args) {
+    const sub = (args[0] || '').toLowerCase()
+    if (!sub || sub === 'list') {
+      const targets = await getFederationTargets()
+      if (!targets.length) { addOut('No federation targets configured.'); return }
+      addOut(`${targets.length} target(s):`)
+      targets.forEach(t => {
+        const status = t.last_error ? `⚠ ${t.last_error.slice(0, 60)}` : t.last_synced ? `✓ synced ${new Date(t.last_synced).toLocaleString()}` : 'never synced'
+        addOut(`  [${t.enabled ? 'on' : 'off'}] ${t.name.padEnd(20)} ${t.url}`)
+        addOut(`         ${status}`)
+      })
+      return
+    }
+    if (sub === 'status') {
+      const name = args.slice(1).join(' ')
+      if (!name) { addErr('Usage: fed status <name>'); return }
+      const targets = await getFederationTargets()
+      const t = targets.find(x => x.name.toLowerCase() === name.toLowerCase())
+      if (!t) { addErr(`No target named "${name}"`); return }
+      const rows = [
+        ['Name', t.name], ['URL', t.url], ['Enabled', t.enabled ? 'yes' : 'no'],
+        ['Interval', `${t.sync_interval_minutes}m`],
+        ['Last synced', t.last_synced ? new Date(t.last_synced).toLocaleString() : 'never'],
+        ['Error', t.last_error || 'none'],
+      ]
+      rows.forEach(([k, v]) => addOut(`  ${k.padEnd(14)} ${v}`))
+      return
+    }
+    if (sub === 'sync') {
+      const name = args.slice(1).join(' ')
+      if (!name) { addErr('Usage: fed sync <name>'); return }
+      const targets = await getFederationTargets()
+      const t = targets.find(x => x.name.toLowerCase() === name.toLowerCase())
+      if (!t) { addErr(`No target named "${name}"`); return }
+      addOut(`Syncing "${t.name}"…`)
+      await syncFederationTarget(t.id)
+      addOut('Sync triggered. Run "fed status ' + t.name + '" to check result.')
+      return
+    }
+    if (sub === 'drives') {
+      const name = args.slice(1).join(' ')
+      if (!name) { addErr('Usage: fed drives <name>'); return }
+      const data = await getFederationData()
+      const snap = data.find(s => s.target_name.toLowerCase() === name.toLowerCase())
+      if (!snap) { addErr(`No data for "${name}" — check "fed list" for names`); return }
+      if (!snap.drives.length) { addOut(`${snap.target_name}: no drives reported`); return }
+      addOut(`${snap.target_name} — ${snap.drives.length} drive(s):`)
+      snap.drives.forEach(d => {
+        const s = d.smart_status === 'PASSED' ? '✓' : d.smart_status === 'FAILED' ? '✗' : '?'
+        const cap = d.capacity_bytes ? (d.capacity_bytes >= 1e12 ? `${(d.capacity_bytes / 1e12).toFixed(1)}T` : `${(d.capacity_bytes / 1e9).toFixed(0)}G`) : '—'
+        const temp = d.temperature_c != null ? `${d.temperature_c}°C` : ''
+        addOut(`  [${s}] ${d.serial.padEnd(20)} ${cap.padEnd(6)} ${(d.model || '—').padEnd(20)} ${temp}`)
+      })
+      return
+    }
+    addErr(`Unknown fed subcommand: ${sub}. Valid: list, sync, status, drives`)
   }
 
   function handleKeyDown(e) {

@@ -6,7 +6,6 @@ import BayGrid from '../components/BayGrid'
 import DriveCard from '../components/DriveCard'
 import DriveList from '../components/DriveList'
 import BayModal from '../components/BayModal'
-import RemoteDriveModal from '../components/RemoteDriveModal'
 import SettingsModal from '../components/SettingsModal'
 import ScanButton from '../components/ScanButton'
 import WidgetBar from '../components/WidgetBar'
@@ -537,12 +536,19 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
         </div>
 
         {selectedRemoteDrive && (
-          <RemoteDriveModal
-            drive={selectedRemoteDrive.drive}
-            bayInfo={selectedRemoteDrive.bayInfo}
-            instanceName={selectedRemoteDrive.instanceName}
-            onClose={() => setSelectedRemoteDrive(null)}
-          />
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setSelectedRemoteDrive(null)} />
+            <div className="flex min-h-full items-start justify-center p-4 pt-16">
+              <div className="relative w-full max-w-md">
+                <DriveCard
+                  drive={selectedRemoteDrive.drive}
+                  remote
+                  instanceName={selectedRemoteDrive.instanceName}
+                  onClose={() => setSelectedRemoteDrive(null)}
+                />
+              </div>
+            </div>
+          </div>
         )}
 
         {bayModal && (

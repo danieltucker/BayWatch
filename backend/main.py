@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
     scheduler.stop()
 
 
-app = FastAPI(title="BayWatch API", version="1.7.0", lifespan=lifespan)
+app = FastAPI(title="BayWatch API", version="1.8.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -89,4 +89,4 @@ app.include_router(external.router, prefix="", tags=["external-api"])
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "version": "1.7.0"}
+    return {"status": "ok", "version": "1.8.0"}

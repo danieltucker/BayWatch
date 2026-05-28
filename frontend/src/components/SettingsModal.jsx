@@ -174,6 +174,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
       await createFederationTarget(newTarget)
       setNewTarget({ name: '', url: '', api_key: '', sync_interval_minutes: 15 })
       await loadFedTargets()
+      onUpdate?.()
     } finally {
       setAddingTarget(false)
     }
@@ -182,13 +183,14 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
   async function handleToggleTarget(target) {
     await updateFederationTarget(target.id, { enabled: !target.enabled })
     await loadFedTargets()
+    onUpdate?.()
   }
 
   async function handleSyncTarget(id) {
     setSyncingTargetId(id)
     try {
       await syncFederationTarget(id)
-      setTimeout(loadFedTargets, 1500)
+      setTimeout(() => { loadFedTargets(); onUpdate?.() }, 1500)
     } finally {
       setSyncingTargetId(null)
     }
@@ -198,6 +200,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
     await deleteFederationTarget(id)
     setConfirmDeleteTargetId(null)
     await loadFedTargets()
+    onUpdate?.()
   }
 
   async function handleRenameTarget(id) {
@@ -206,6 +209,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
     setRenamingTargetId(null)
     setRenameValue('')
     await loadFedTargets()
+    onUpdate?.()
   }
 
   function relTimeAgo(dateStr) {
@@ -361,7 +365,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
               })}
             </nav>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-gray-800">
-              <p className="text-[10px] text-slate-300 dark:text-gray-700">BayWatch v1.7.0</p>
+              <p className="text-[10px] text-slate-300 dark:text-gray-700">BayWatch v1.8.0</p>
             </div>
           </div>
 
