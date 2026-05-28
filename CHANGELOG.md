@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to DriveMap are documented here. Follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+All notable changes to BayWatch are documented here. Follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 

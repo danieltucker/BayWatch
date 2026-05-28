@@ -1,4 +1,4 @@
-# DriveMap
+# BayWatch
 
 A self-hosted Docker app that creates a visual bay map for your NAS or server — showing which drive is in which slot, with live SMART health, temperature, warranty tracking, ZFS pool integration, and more.
 
@@ -19,7 +19,7 @@ No more pulling drives to figure out which one is which.
 - **Telegram notifications** — SMART failures, overtemp, disconnect events, warranty warnings, scheduled status reports
 - **CSV bulk import** — import existing drive inventories from a spreadsheet
 - **REST API** — `/v1/` endpoints with API key auth for Grafana, Home Assistant, scripts, and integrations
-- **Federation** — aggregate drive data from multiple remote DriveMap instances into one dashboard
+- **Federation** — aggregate drive data from multiple remote BayWatch instances into one dashboard
 - Works on **TrueNAS Scale**, **Unraid**, or any Linux-based Docker host
 
 ![Dashboard overview with bay grid, widget bar, and drive sidebar](screenshots/hero.png)
@@ -34,7 +34,7 @@ No more pulling drives to figure out which one is which.
 
 ## Installing on TrueNAS Scale
 
-DriveMap ships as a single combined container (nginx + uvicorn under supervisord), so the entire app is one image with one exposed port.
+BayWatch ships as a single combined container (nginx + uvicorn under supervisord), so the entire app is one image with one exposed port.
 
 ### Option A — Custom App via iX Apps UI (recommended)
 
@@ -46,7 +46,7 @@ This is the preferred setup for auto-updates with Watchtower or management throu
 **Image Configuration**
 | Field | Value |
 |---|---|
-| Repository | `danielgt/drivemap` |
+| Repository | `danielgt/baywatch` |
 | Tag | `latest` |
 | Pull Policy | Always pull |
 
@@ -62,7 +62,7 @@ This is the preferred setup for auto-updates with Watchtower or management throu
 
 | Name | Value |
 |---|---|
-| `DATABASE_URL` | `sqlite:////app/data/drivemap.db` |
+| `DATABASE_URL` | `sqlite:////app/data/baywatch.db` |
 | `SCAN_INTERVAL_MINUTES` | `60` |
 
 > Temperature thresholds, log level, and Telegram credentials are configured inside the app under **Settings → Notifications**.
@@ -82,7 +82,7 @@ Persistent volume:
 |---|---|
 | ixVolume (or host path) | `/app/data` |
 
-> This is where the SQLite database lives — your bay map, drive profiles, and settings are all stored here. Use an ixVolume or a bind-mount to a path on your pool (e.g. `/mnt/tank/drivemap-data`).
+> This is where the SQLite database lives — your bay map, drive profiles, and settings are all stored here. Use an ixVolume or a bind-mount to a path on your pool (e.g. `/mnt/tank/baywatch-data`).
 
 **Security Context**
 
@@ -96,29 +96,29 @@ Paste [`docker-compose.truenas.yml`](docker-compose.truenas.yml) into the **Comp
 
 ```yaml
 services:
-  drivemap:
-    image: danielgt/drivemap:latest
+  baywatch:
+    image: danielgt/baywatch:latest
     restart: unless-stopped
     volumes:
       - /dev:/dev
       - /run/udev:/run/udev:ro
-      - drivemap_data:/app/data
+      - baywatch_data:/app/data
     privileged: true
     ports:
       - "8585:80"
     environment:
-      DATABASE_URL: sqlite:////app/data/drivemap.db
+      DATABASE_URL: sqlite:////app/data/baywatch.db
       SCAN_INTERVAL_MINUTES: "60"
 
 volumes:
-  drivemap_data:
+  baywatch_data:
 ```
 
 ---
 
 ## Auto-updates with Watchtower
 
-Watchtower will automatically update DriveMap whenever a new `latest` tag is pushed to Docker Hub.
+Watchtower will automatically update BayWatch whenever a new `latest` tag is pushed to Docker Hub.
 
 **Watchtower iX App setup:**
 
@@ -167,8 +167,8 @@ http://<host-ip>:8585
 ### Docker Compose (generic Linux)
 
 ```bash
-git clone https://github.com/danielgt/drivemap.git
-cd drivemap
+git clone https://github.com/danielgt/baywatch.git
+cd baywatch
 cp .env.example .env
 docker compose up -d
 ```
@@ -181,7 +181,7 @@ Then open `http://localhost:8585`.
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `sqlite:////app/data/drivemap.db` | SQLite path inside the container |
+| `DATABASE_URL` | `sqlite:////app/data/baywatch.db` | SQLite path inside the container |
 | `SCAN_INTERVAL_MINUTES` | `60` | Background scan frequency in minutes |
 
 Temperature thresholds, log level, Telegram credentials, and warranty warning days are all configured inside the app under **Settings → Notifications**.
@@ -278,7 +278,7 @@ The final score is floored at 0. Only the highest matching power-on hours tier a
 
 ## External API
 
-DriveMap exposes a versioned REST API at `/v1/` for external integrations — dashboards, monitoring tools, Home Assistant, scripts, and federation between instances.
+BayWatch exposes a versioned REST API at `/v1/` for external integrations — dashboards, monitoring tools, Home Assistant, scripts, and federation between instances.
 
 ### Authentication
 
@@ -593,7 +593,7 @@ for d in drives:
 
 ## Federation
 
-Federation lets you designate one DriveMap instance as a hub that pulls live data from one or more remote DriveMap instances ("targets") and displays them in the Dashboard under **Remote Instances**.
+Federation lets you designate one BayWatch instance as a hub that pulls live data from one or more remote BayWatch instances ("targets") and displays them in the Dashboard under **Remote Instances**.
 
 ### How it works
 
@@ -611,14 +611,14 @@ The hub polls each target's `/v1/` API at a configurable interval (5, 15, 30, or
 
 The **Remote Instances** panel appears in the Dashboard automatically once at least one target has synced successfully. Each remote instance shows a compact drive list with SMART status, temperature, and ZFS pool assignments. Click **Sync Now** in Settings → Federation to trigger an immediate poll.
 
-![Settings: Federation tab for managing remote DriveMap instances](screenshots/settings-federation.png)
+![Settings: Federation tab for managing remote BayWatch instances](screenshots/settings-federation.png)
 
 ### Notes
 
-- Targets must be running DriveMap v1.0.0 or later.
+- Targets must be running BayWatch v1.0.0 or later.
 - Federation target API keys are stored in plaintext in the local SQLite database — the same threat model as the Telegram bot token. This is appropriate for LAN-only deployments on a trusted host.
 - If a sync fails, the last error is shown in the Federation tab. The hub continues serving the last successful snapshot until the next successful poll.
-- Before exposing any DriveMap instance to the internet, restrict CORS origins and place the app behind a reverse proxy with TLS and authentication.
+- Before exposing any BayWatch instance to the internet, restrict CORS origins and place the app behind a reverse proxy with TLS and authentication.
 
 ---
 
@@ -627,6 +627,17 @@ The **Remote Instances** panel appears in the Dashboard automatically once at le
 - Docker & Docker Compose
 - Linux host (bare metal or VM) — required for `/dev` access and SMART data
 - Privileged container mode (required for `smartctl`)
+
+---
+
+## Related Projects
+
+BayWatch is part of the **\*Watch** suite of self-hosted monitoring apps.
+
+| App | Description |
+|---|---|
+| **BayWatch** *(this repo)* | Visual drive bay map for NAS/server — SMART health, ZFS integration, drive tracking |
+| [**NetWatch**](https://github.com/danieltucker/NetWatch) | Network monitoring companion app |
 
 ---
 

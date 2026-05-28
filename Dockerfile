@@ -40,11 +40,11 @@ COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 
 # Configuration
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-COPY docker/supervisord.conf /etc/supervisor/conf.d/drivemap.conf
+COPY docker/supervisord.conf /etc/supervisor/conf.d/baywatch.conf
 
 # Persistent data directory
 RUN mkdir -p /app/data
 
 EXPOSE 80
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/drivemap.conf"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/baywatch.conf"]

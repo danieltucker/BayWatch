@@ -1,5 +1,5 @@
 """
-Federation service — polls remote DriveMap instances and caches their data in memory.
+Federation service — polls remote BayWatch instances and caches their data in memory.
 
 Remote snapshots are stored in `_snapshots` (target_id → RemoteSnapshot).
 The scheduler calls `poll_due_targets()` on each tick.

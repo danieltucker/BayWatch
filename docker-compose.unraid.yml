@@ -1,11 +1,11 @@
 services:
   backend:
-    image: danielgt/drivemap-backend:latest
+    image: danielgt/baywatch-backend:latest
     restart: unless-stopped
     volumes:
       - /dev:/dev
       - /run/udev:/run/udev:ro
-      - /mnt/user/appdata/drivemap:/app/data
+      - /mnt/user/appdata/baywatch:/app/data
     cap_add:
       - SYS_RAWIO
       - SYS_ADMIN
@@ -22,7 +22,7 @@ services:
       start_period: 10s
 
   frontend:
-    image: danielgt/drivemap-frontend:latest
+    image: danielgt/baywatch-frontend:latest
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8585}:80"

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Drive Position are documented here.
+All notable changes to BayWatch are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
@@ -115,7 +115,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - **Settings modal — left-nav layout** — replaced the horizontal top tab bar with a fixed left sidebar navigation. Each tab shows an icon and label; the active tab is highlighted in blue. The right panel displays the section title and a one-line description in its header alongside the close button. On narrow screens the modal collapses to a single-column flow: the sidebar list fills the screen first, tapping a tab pushes to the content view with a "← Back" button at the top.
-- **Settings version footer** — the sidebar shows "DriveMap v1.1.0" at the bottom, matching the WatchTower-style pattern.
+- **Settings version footer** — the sidebar shows "BayWatch v1.1.0" at the bottom, matching the WatchTower-style pattern.
 
 ### Fixed
 - **API keys not appearing after generate** — `loadApiKeys()` was fire-and-forget; the list now refreshes immediately via an optimistic state update (new key appended) followed by an awaited server fetch. The key table updates without leaving the tab.
@@ -136,7 +136,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ### Added
 - **External API** — all key drive data (drives, bays, enclosures, pools, history) accessible via authenticated `/v1/` REST endpoints. Optional `?serial=X` and `?days=N` query parameters. Unauthenticated `/v1/health` for connectivity checks. Full documentation in README.
 - **API key management** — generate named API keys in Settings → API Keys. Each key is displayed once in plaintext at creation time; only the SHA-256 hash is stored. Keys show a display prefix (e.g. `dm_xK9p…`), creation date, and last-used timestamp. Keys can be deleted at any time.
-- **Federation** — configure remote DriveMap instances as federation targets (Settings → Federation). Each target requires a URL and the target's API key. The host polls enabled targets on each scheduler tick (configurable interval: 5/15/30/60 min) and caches their drive, bay, and pool snapshots in memory. The Dashboard shows a collapsible "Remote Instances" panel with a compact per-instance drive list when any snapshots are available.
+- **Federation** — configure remote BayWatch instances as federation targets (Settings → Federation). Each target requires a URL and the target's API key. The host polls enabled targets on each scheduler tick (configurable interval: 5/15/30/60 min) and caches their drive, bay, and pool snapshots in memory. The Dashboard shows a collapsible "Remote Instances" panel with a compact per-instance drive list when any snapshots are available.
 
 ### Security
 - API keys generated with `secrets.token_urlsafe(32)`, prefixed `dm_`, stored as SHA-256 hashes only.
@@ -203,7 +203,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **Power-on hours trend chart** — new AreaChart in DriveCard showing POH accumulation over 30 days, using indigo gradient fill. Complements the reallocated-sectors chart below it.
 - **Four new clickable widget modals** — `Healthy` (clean vs. degraded breakdown + full PASSED drive list), `Avg Temp` (temperature distribution histogram + 5 hottest drives), `Drive Health %` (donut chart + per-category progress bars), `Total Drives` (SSD/HDD split + by-form-factor bars).
 - **Widget modal redesign** — all detail modals now open with a rounded icon chip header, `StatPill` summary row at the top, and richer per-row content: `TempBar` and `PohBar` inline progress indicators, error-count grids for FAILED drives, bar chart for reallocated sectors distribution.
-- **CSV data export** — "Export" button next to the Scan button downloads a full drive inventory as `drivemap-export-YYYY-MM-DD.csv`. Columns: serial, make, model, capacity, form factor, RPM, firmware, device path, SMART status, temperature, power-on hours, error counts, ZFS pool/vdev, last scanned, purchase date, warranty months, vendor, notes. Client-side only — no backend changes required.
+- **CSV data export** — "Export" button next to the Scan button downloads a full drive inventory as `baywatch-export-YYYY-MM-DD.csv`. Columns: serial, make, model, capacity, form factor, RPM, firmware, device path, SMART status, temperature, power-on hours, error counts, ZFS pool/vdev, last scanned, purchase date, warranty months, vendor, notes. Client-side only — no backend changes required.
 - **Array health bar** — a 3 px segmented bar above each array's stats text shows the proportional split of healthy (green) / degraded (amber) / failed (red) / empty (slate) bays at a glance.
 - **Array reorder buttons integrated into header** — up/down arrows now live in the BayGrid header row (left of the SM/MD/LG toggle), eliminating the z-index conflict with the size buttons. Passed as `onMoveUp`/`onMoveDown` props; hidden when array has no siblings.
 
@@ -440,14 +440,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ## [0.9.0] — 2026-05-21
 
 ### Fixed
-- **CRITICAL: nginx welcome screen** — Debian nginx installs a default site at `/etc/nginx/sites-enabled/default` with `default_server` flag that took priority over `conf.d/default.conf`. Added `RUN rm -f /etc/nginx/sites-enabled/default` to the combined `Dockerfile`. All deployments using `danielgt/drivemap:0.8.x` were affected.
+- **CRITICAL: nginx welcome screen** — Debian nginx installs a default site at `/etc/nginx/sites-enabled/default` with `default_server` flag that took priority over `conf.d/default.conf`. Added `RUN rm -f /etc/nginx/sites-enabled/default` to the combined `Dockerfile`. All deployments using `danielgt/baywatch:0.8.x` were affected.
 
 ### Added
 - **Bay array group types** — When adding an array to an enclosure, users can now specify the group type: Drive Bays, ZFS Pool, ZFS Mirror, ZFS RAIDZ1, ZFS RAIDZ2, HW RAID, PCIe Slots, Standalone, or Other. An optional purpose/notes field is also available. Group type badge shown in the bay array header.
 - **Enclosure edit button** — Pencil icon on each enclosure row opens an inline edit form (name + type) with Save/Cancel.
 - **Bell notification icon** — Bell in the nav bar changes color based on unread alert severity (red = critical, amber = status). Clicking opens the log console.
 - **Pinned console notifications** — Undismissed alerts appear pinned at the top of the console (above log output). Each has a dismiss button; dismissed state stored in `localStorage`. Alerts are always written to the DB regardless of Telegram configuration.
-- **CSV import template download** — "Download Template" button in Settings → Import generates a blank `drivemap-import-template.csv` with all supported column headers.
+- **CSV import template download** — "Download Template" button in Settings → Import generates a blank `baywatch-import-template.csv` with all supported column headers.
 - **Bay grid fills enclosure width** — Bay arrays now use `repeat(cols, minmax(0, 1fr))` grid layout, spreading bays evenly across the available panel width.
 - **SM/MD/LG bay slot redesign**:
   - **SM** — Excel-style flat row (h-8): serial in SMART status color, temperature indicator, status dot. No icon.
@@ -477,11 +477,11 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **Customizable widget bar** — replaces the static stats row. 13 widget types: Total Drives, Healthy, Failed, Avg Temp, Hottest Drive, Oldest Drive, Total Capacity, Assigned Bays, Drive Health %, Reallocated Sectors, SSD Count, HDD Count, Warranty Warnings. Plus button opens a picker modal. Drag to reorder. Selection and order persisted to `localStorage`.
 - **Widget close button** — X button appears on hover for each widget card.
 - **Drive icons by form factor** — `getDriveIcon(formFactor, rpm)` utility maps 3.5"/2.5" → HardDrive, M.2 → MemoryStick, U.2 → Server, SSD (rpm=0) → Cpu. Applied in BaySlot, DriveCard, and DriveList.
-- **Single combined container** — new root-level `Dockerfile` bundles nginx + uvicorn under supervisord into a single image (`danielgt/drivemap`). Replaces the separate backend/frontend images for production deployments.
-- **iX Apps install guide** — README updated with a step-by-step guide for configuring DriveMap as a TrueNAS Scale Custom App, including Watchtower auto-update setup.
+- **Single combined container** — new root-level `Dockerfile` bundles nginx + uvicorn under supervisord into a single image (`danielgt/baywatch`). Replaces the separate backend/frontend images for production deployments.
+- **iX Apps install guide** — README updated with a step-by-step guide for configuring BayWatch as a TrueNAS Scale Custom App, including Watchtower auto-update setup.
 
 ### Changed
-- `docker-compose.truenas.yml` — migrated from two services (`backend` + `frontend`) to a single `drivemap` service using the combined image.
+- `docker-compose.truenas.yml` — migrated from two services (`backend` + `frontend`) to a single `baywatch` service using the combined image.
 - Widget bar uses `@dnd-kit/sortable` nested inside the existing bay DndContext; activation requires 6 px movement to preserve click behavior.
 
 ### Added (infrastructure)
@@ -529,7 +529,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - **TrueNAS healthcheck gate** — removed healthcheck from `docker-compose.truenas.yml`; TrueNAS was treating any defined healthcheck as `condition: service_healthy` on `depends_on`, causing the frontend to refuse to start if the backend healthcheck hadn't passed yet
-- **Frontend image tag** — `drivemap-frontend:0.5.1` pushed (same image as `0.5.0`; frontend had no changes in 0.5.1)
+- **Frontend image tag** — `baywatch-frontend:0.5.1` pushed (same image as `0.5.0`; frontend had no changes in 0.5.1)
 - **SMART device type fallback** — `smartctl` now retries with `-d sat`, `-d scsi`, and `-d auto` when the default invocation returns no serial number; fixes drives behind HBA/SAS controllers on TrueNAS Scale where passthrough requires an explicit device type hint
 
 ---

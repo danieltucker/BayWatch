@@ -1,17 +1,17 @@
 services:
-  drivemap:
-    image: danielgt/drivemap:1.5.0
+  baywatch:
+    image: danielgt/baywatch:1.5.0
     restart: unless-stopped
     volumes:
       - /dev:/dev
       - /run/udev:/run/udev:ro
-      - drivemap_data:/app/data
+      - baywatch_data:/app/data
     privileged: true
     ports:
       - "8585:80"
     environment:
-      DATABASE_URL: sqlite:////app/data/drivemap.db
+      DATABASE_URL: sqlite:////app/data/baywatch.db
       SCAN_INTERVAL_MINUTES: "60"
 
 volumes:
-  drivemap_data:
+  baywatch_data:

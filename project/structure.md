@@ -9,8 +9,8 @@
 drive-position/
 ├── README.md                       # Project overview, TrueNAS iX Apps guide, Watchtower setup
 ├── Dockerfile                      # Combined image: node builder → python builder → nginx+supervisord
-├── docker-compose.yml              # Production: single drivemap service
-├── docker-compose.truenas.yml      # TrueNAS Scale: single drivemap service (combined image)
+├── docker-compose.yml              # Production: single baywatch service
+├── docker-compose.truenas.yml      # TrueNAS Scale: single baywatch service (combined image)
 ├── docker-compose.dev.yml          # Dev overrides (hot reload, port exposure)
 ├── .env.example                    # Environment variable template
 ├── .gitignore

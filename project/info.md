@@ -1,12 +1,12 @@
-# Project: Drive Position — LLM Reference
+# Project: BayWatch — LLM Reference
 
 ## Purpose
 
-Drive Position is a self-hosted web application designed to run inside a Docker container on TrueNAS Scale (or any Linux-based NAS). It solves a practical problem: identifying which physical drive bay a specific disk occupies without manually pulling drives.
+BayWatch is a self-hosted web application designed to run inside a Docker container on TrueNAS Scale (or any Linux-based NAS). It solves a practical problem: identifying which physical drive bay a specific disk occupies without manually pulling drives.
 
 ## Problem Being Solved
 
-When managing a NAS with many drives, identifying which physical bay holds a specific drive (by serial, size, or label) requires either pulling drives or cross-referencing incomplete documentation. Drive Position provides a persistent, visual map that connects physical bay positions to drive identities and metadata.
+When managing a NAS with many drives, identifying which physical bay holds a specific drive (by serial, size, or label) requires either pulling drives or cross-referencing incomplete documentation. BayWatch provides a persistent, visual map that connects physical bay positions to drive identities and metadata.
 
 ## Core Concepts
 
@@ -162,7 +162,7 @@ Additional channels (email, Slack, etc.) are a future extension — architecture
 | 9 | Settings as modal dialog | Removes the /settings page route; modal is tab-based (Enclosures, Notifications, Import); triggered from nav bar |
 | 10 | In-memory log ring buffer | Backend captures all Python logs into a 500-entry deque; frontend polls at 1 Hz when console is open; no log persistence needed |
 | 11 | Scanner preserves manually-entered fields | Identity fields (make, model, etc.) only fill if null; SMART telemetry always overwrites; prevents scan from clobbering user data |
-| 12 | Single combined Docker image for distribution | `danielgt/drivemap` runs nginx + uvicorn under supervisord; one container, one port, simpler iX Apps and Watchtower setup. Separate `backend/` and `frontend/` Dockerfiles kept for dev. |
+| 12 | Single combined Docker image for distribution | `danielgt/baywatch` runs nginx + uvicorn under supervisord; one container, one port, simpler iX Apps and Watchtower setup. Separate `backend/` and `frontend/` Dockerfiles kept for dev. |
 | 13 | Widget bar configuration in localStorage | Widget selection and order stored client-side; no backend API needed. Key: `widget-config` (JSON array of widget IDs). |
 | 14 | Drive icons by form factor (client-side only) | `getDriveIcon(formFactor, rpm)` maps form_factor/rpm to a lucide icon; no schema or API change needed. |
 | 15 | BayArray group_type + purpose fields | Users can label bay arrays as ZFS pools, RAID sets, PCIe slots, standalone drives, etc. Provides context without needing separate inventory tracking. |
