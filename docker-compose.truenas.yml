@@ -1,6 +1,6 @@
 services:
   baywatch:
-    image: danielgt/baywatch:1.5.0
+    image: danielgt/baywatch:1.6.0
     restart: unless-stopped
     volumes:
       - /dev:/dev

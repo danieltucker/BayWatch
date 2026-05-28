@@ -473,8 +473,6 @@ export default function BayModal({ bay, drive, profile, drives = [], arrayName, 
               </p>
             )}
           </div>
-
-          </div>
           {drivePanel && (
             <div className="flex-1 overflow-y-auto max-h-[calc(90vh-130px)] p-3 bg-slate-50/50 dark:bg-gray-900/30">
               {drivePanel}
