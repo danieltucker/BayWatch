@@ -4,6 +4,29 @@ All notable changes to BayWatch are documented here. Follows [Keep a Changelog](
 
 ---
 
+## [1.10.0] — 2026-05-28
+
+### Added
+- **`temp [threshold]` console command** — lists all drives sorted by temperature descending; optional minimum °C filter (e.g. `temp 45` shows only drives ≥45°C)
+- **`health <serial>` console command** — prints a SMART health summary: status, reallocated/pending/uncorrectable sector counts, power-on hours, temperature, and a plain-English recommendation
+- **`pool` console command** — lists ZFS pool names with used/total capacity and percentage
+- **`disconnected` console command** — lists drives where `is_connected = false` with last-seen timestamps
+- **Disconnected widget** — shows count of drives not currently detected; available in the widget picker
+- **Uncorrectable widget** — total uncorrectable errors across all drives
+- **ZFS Pools widget** — count of distinct ZFS pools reported by connected drives
+
+### Changed
+- **BayModal responsive layout** — when the Drive Details panel is open alongside the edit form, the two panels now stack vertically on narrow screens (`< md`) rather than overflowing horizontally; each panel gets `max-h-[45vh]` on mobile so both are scrollable
+- **BaySlot LG content hiding** — large bay cards now use CSS container queries (`@container`); ZFS pool info and the capacity/device-path footer are hidden below 130 px card width, keeping make/model/serial and the temperature bar always visible
+- **Settings enclosures form** — "Add array" rows and "Add enclosure" form now use `flex-wrap` so inputs and buttons wrap to the next line on narrow viewports instead of overflowing
+- **Settings API keys form** — generate form wraps on narrow screens
+- **Settings federation form** — name/interval row wraps correctly; interval select gets `shrink-0` and name input gets `min-w-0` to prevent overflow
+- **Profile loading** — `loadAll()` now calls a single `GET /api/profiles` bulk endpoint instead of one request per drive; on a 26-drive system this reduces profile fetches from 26 parallel requests to 1
+- **Rate limiter memory bound** — `_rate_buckets` dict capped at 10,000 entries; oldest entry evicted when limit is reached, preventing unbounded memory growth under sustained attack traffic
+- **Federation URL validation** — `POST /api/federation/targets` and `PATCH /api/federation/targets/{id}` now return 422 if the URL does not start with `http://` or `https://`, blocking `file://` and other non-HTTP schemes
+
+---
+
 ## [1.9.3] — 2026-05-28
 
 ### Changed

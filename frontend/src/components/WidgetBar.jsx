@@ -8,6 +8,7 @@ import {
 import {
   HardDrive, CheckCircle2, XCircle, Thermometer, Flame, Clock,
   Database, LayoutGrid, Activity, AlertTriangle, Cpu, ShieldAlert, Plus, X,
+  WifiOff, Bug, Layers,
 } from 'lucide-react'
 import WidgetPickerModal from './WidgetPickerModal'
 import WidgetDetailModal, { WIDGET_HAS_DETAIL } from './WidgetDetailModal'
@@ -126,6 +127,30 @@ export const WIDGET_DEFS = {
       const n = profiles.filter(p => p.warranty_days_remaining != null && p.warranty_days_remaining <= 90).length
       return { value: n, sub: 'expiring soon' }
     },
+  },
+  disconnected: {
+    label: 'Disconnected',
+    icon: WifiOff,
+    color: 'text-amber-500 dark:text-amber-400',
+    getValue: (drives) => ({ value: drives.filter(d => d.is_connected === false).length, sub: 'not detected' }),
+  },
+  uncorrectable: {
+    label: 'Uncorrectable',
+    icon: Bug,
+    color: 'text-red-500 dark:text-red-400',
+    getValue: (drives) => ({
+      value: drives.reduce((s, d) => s + (d.uncorrectable_errors || 0), 0),
+      sub: 'errors total',
+    }),
+  },
+  zfs_pools: {
+    label: 'ZFS Pools',
+    icon: Layers,
+    color: 'text-blue-500 dark:text-blue-400',
+    getValue: (drives) => ({
+      value: new Set(drives.map(d => d.zfs_pool).filter(Boolean)).size,
+      sub: 'active pools',
+    }),
   },
 }
 

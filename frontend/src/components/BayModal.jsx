@@ -224,8 +224,8 @@ export default function BayModal({ bay, drive, profile, drives = [], arrayName, 
             </button>
           </div>
 
-          <div className={drivePanel ? 'flex' : undefined}>
-          <div className={`p-5 flex flex-col gap-5 overflow-y-auto max-h-[calc(90vh-130px)] ${drivePanel ? 'w-[420px] shrink-0 border-r border-slate-200 dark:border-gray-800' : ''}`}>
+          <div className={drivePanel ? 'flex flex-col md:flex-row' : undefined}>
+          <div className={`p-5 flex flex-col gap-5 overflow-y-auto ${drivePanel ? 'max-h-[45vh] md:max-h-[calc(90vh-130px)] md:w-[420px] shrink-0 border-b md:border-b-0 md:border-r border-slate-200 dark:border-gray-800' : 'max-h-[calc(90vh-130px)]'}`}>
 
             {/* Bay config section */}
             {bay && (
@@ -474,7 +474,7 @@ export default function BayModal({ bay, drive, profile, drives = [], arrayName, 
             )}
           </div>
           {drivePanel && (
-            <div className="flex-1 overflow-y-auto max-h-[calc(90vh-130px)] p-3 bg-slate-50/50 dark:bg-gray-900/30">
+            <div className="flex-1 overflow-y-auto max-h-[45vh] md:max-h-[calc(90vh-130px)] p-3 bg-slate-50/50 dark:bg-gray-900/30">
               {drivePanel}
             </div>
           )}

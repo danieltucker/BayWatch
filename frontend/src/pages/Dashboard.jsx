@@ -12,7 +12,7 @@ import ScanButton from '../components/ScanButton'
 import WidgetBar from '../components/WidgetBar'
 import PoolTopologyPanel from '../components/PoolTopologyPanel'
 import {
-  getEnclosures, getDrives, getBays, getProfile, assignDrive,
+  getEnclosures, getDrives, getBays, getProfile, getAllProfiles, assignDrive,
   getPools, getPoolTopology, updateEnclosure, updateBayArray,
   getFederationData, deleteDrive, getRemoteDriveHistory,
 } from '../api/client'
@@ -156,8 +156,8 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
       allArrayIds.forEach((id, i) => { newBaysMap[id] = bayResults[i] })
       setBaysMap(newBaysMap)
 
-      const profileResults = await Promise.allSettled(drvs.map(d => getProfile(d.serial)))
-      setProfiles(profileResults.filter(r => r.status === 'fulfilled').map(r => r.value))
+      const profileData = await getAllProfiles().catch(() => [])
+      setProfiles(profileData)
 
       // Initialize collapse state from localStorage on first load
       setCollapsedEncs(prev => {

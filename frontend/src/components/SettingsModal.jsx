@@ -365,7 +365,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
               })}
             </nav>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-gray-800">
-              <p className="text-[10px] text-slate-300 dark:text-gray-700">BayWatch v1.9.3</p>
+              <p className="text-[10px] text-slate-300 dark:text-gray-700">BayWatch v1.10.0</p>
             </div>
           </div>
 
@@ -546,7 +546,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                       ))}
 
                       <div className="flex flex-col gap-2 pt-1 border-t border-slate-200 dark:border-gray-700/60">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <input placeholder="Array name" value={arrayDefaults(enc.id).name}
                             onChange={e => setArrayField(enc.id, 'name', e.target.value)}
                             className="flex-1 rounded bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-2 py-1 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500" />
@@ -557,7 +557,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                             onChange={e => setArrayField(enc.id, 'cols', e.target.value)}
                             className="w-16 rounded bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-2 py-1 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <select value={arrayDefaults(enc.id).group_type}
                             onChange={e => setArrayField(enc.id, 'group_type', e.target.value)}
                             className="flex-1 rounded bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-2 py-1 text-sm text-slate-900 dark:text-gray-100 focus:outline-none">
@@ -575,7 +575,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                     </div>
                   ))}
 
-                  <form onSubmit={handleAddEnclosure} className="flex items-center gap-2">
+                  <form onSubmit={handleAddEnclosure} className="flex flex-wrap items-center gap-2">
                     <input placeholder="Enclosure name" value={newEnc.name}
                       onChange={e => setNewEnc(f => ({ ...f, name: e.target.value }))}
                       className="flex-1 rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-3 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500" />
@@ -668,7 +668,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                   </p>
 
                   {/* Generate form */}
-                  <form onSubmit={handleGenerateKey} className="flex items-center gap-2">
+                  <form onSubmit={handleGenerateKey} className="flex flex-wrap items-center gap-2">
                     <input
                       placeholder="Key name (e.g. Grafana, Home Assistant)"
                       value={newKeyName}
@@ -811,17 +811,17 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
 
                   <form onSubmit={handleAddTarget} className="rounded-xl border border-slate-200 dark:border-gray-800 p-4 flex flex-col gap-3 bg-slate-50 dark:bg-gray-900/40">
                     <p className="text-xs font-medium text-slate-600 dark:text-gray-400 uppercase tracking-wider">Add Target</p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <input
                         placeholder="Name (e.g. JBOD Shelf)"
                         value={newTarget.name}
                         onChange={e => setNewTarget(t => ({ ...t, name: e.target.value }))}
-                        className="flex-1 rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-3 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="flex-1 min-w-0 rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-3 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <select
                         value={newTarget.sync_interval_minutes}
                         onChange={e => setNewTarget(t => ({ ...t, sync_interval_minutes: Number(e.target.value) }))}
-                        className="rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-2 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none"
+                        className="shrink-0 rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-2 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none"
                       >
                         <option value={5}>5 min</option>
                         <option value={15}>15 min</option>

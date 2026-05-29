@@ -45,6 +45,7 @@ export const getLogs = (after = 0) =>
   api.get('/drives/logs', { params: { after } }).then(r => r.data)
 
 // ── Profiles ──────────────────────────────────────────────────────────────────
+export const getAllProfiles = () => api.get('/profiles').then(r => r.data)
 export const getProfile = (serial) => api.get(`/profiles/${serial}`).then(r => r.data)
 export const upsertProfile = (serial, data) =>
   api.put(`/profiles/${serial}`, data).then(r => r.data)

@@ -9,6 +9,11 @@ from models.drive_profile import DriveProfile
 router = APIRouter()
 
 
+@router.get("", response_model=list[DriveProfileRead])
+def get_all_profiles(db: Session = Depends(get_db)):
+    return db.query(DriveProfile).all()
+
+
 @router.get("/{serial}", response_model=DriveProfileRead)
 def get_profile(serial: str, db: Session = Depends(get_db)):
     profile = db.get(DriveProfile, serial)

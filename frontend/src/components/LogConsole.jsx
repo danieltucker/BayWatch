@@ -3,7 +3,7 @@ import { X } from 'lucide-react'
 import {
   getLogs, getDrives, getDrive, getProfile, patchDrive,
   getEnclosures, getBays, assignDrive, unassignDrive, triggerScan,
-  getFederationTargets, syncFederationTarget, getFederationData,
+  getFederationTargets, syncFederationTarget, getFederationData, getPools,
 } from '../api/client'
 import api from '../api/client'
 
@@ -40,7 +40,11 @@ const COMMANDS = {
   unassign: 'unassign <bay-label>             — remove drive assignment from a bay',
   logs:     'logs [level]                     — toggle a log level filter',
   clear:    'clear                            — clear console output',
-  fed:      'fed <list|sync|status|drives> [name] — interact with federated instances',
+  fed:          'fed <list|sync|status|drives> [name] — interact with federated instances',
+  temp:         'temp [threshold]               — list drives by temp; optional minimum °C filter',
+  health:       'health <serial>                — show health summary for a drive',
+  pool:         'pool                           — list ZFS pool status and capacity',
+  disconnected: 'disconnected                   — list drives no longer detected',
 }
 
 function stripHtml(str) {
@@ -134,8 +138,12 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
         case 'unassign': await execUnassign(args); break
         case 'logs':     execLogs(args); break
         case 'clear':    setEntries([]); break
-        case 'fed':      await execFed(args); break
-        default:         addErr(`Unknown command: ${cmd}. Type 'help' for a list.`)
+        case 'fed':          await execFed(args); break
+        case 'temp':         await execTemp(args); break
+        case 'health':       await execHealth(args); break
+        case 'pool':         await execPool(); break
+        case 'disconnected': await execDisconnected(); break
+        default:             addErr(`Unknown command: ${cmd}. Type 'help' for a list.`)
       }
     } catch (err) {
       addErr(`Error: ${err.response?.data?.detail || err.message}`)
@@ -360,6 +368,69 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
       return
     }
     addErr(`Unknown fed subcommand: ${sub}. Valid: list, sync, status, drives`)
+  }
+
+  async function execTemp(args) {
+    const threshold = args[0] ? parseInt(args[0]) : null
+    if (threshold != null && isNaN(threshold)) { addErr('Usage: temp [threshold°C]'); return }
+    const drives = await getDrives()
+    const withTemp = drives.filter(d => d.temperature_c != null)
+      .filter(d => threshold == null || d.temperature_c >= threshold)
+      .sort((a, b) => b.temperature_c - a.temperature_c)
+    if (!withTemp.length) {
+      addOut(threshold != null ? `No drives at or above ${threshold}°C` : 'No temperature data available')
+      return
+    }
+    addOut(`${withTemp.length} drive(s)${threshold != null ? ` ≥${threshold}°C` : ''} (hottest first):`)
+    withTemp.forEach(d => {
+      const warn = d.temperature_c >= 65 ? ' !' : d.temperature_c >= 55 ? ' ~' : ''
+      addOut(`  ${String(d.temperature_c).padStart(3)}°C${warn}  ${d.serial.padEnd(20)} ${d.model || '—'}`)
+    })
+  }
+
+  async function execHealth(args) {
+    if (!args[0]) { addErr('Usage: health <serial>'); return }
+    const d = await getDrive(args[0])
+    const s = d.smart_status === 'PASSED' ? '✓ PASSED' : d.smart_status === 'FAILED' ? '✗ FAILED' : '? UNKNOWN'
+    const realloc = d.reallocated_sectors ?? 0
+    const pending = d.pending_sectors ?? 0
+    const uncorr  = d.uncorrectable_errors ?? 0
+    const errors  = realloc + pending + uncorr
+    const connected = d.is_connected === false ? ' [DISCONNECTED]' : ''
+    addOut(`Health summary for ${d.serial}${connected}`)
+    addOut(`  SMART        ${s}`)
+    addOut(`  Reallocated  ${realloc}${realloc > 0 ? ' ⚠' : ''}`)
+    addOut(`  Pending      ${pending}${pending > 0 ? ' ⚠' : ''}`)
+    addOut(`  Uncorrect.   ${uncorr}${uncorr > 0 ? ' ⚠' : ''}`)
+    addOut(`  Power-on     ${d.power_on_hours != null ? `${d.power_on_hours.toLocaleString()}h` : '—'}`)
+    addOut(`  Temperature  ${d.temperature_c != null ? `${d.temperature_c}°C` : '—'}`)
+    if (errors === 0 && d.smart_status === 'PASSED') addOut('  → No issues detected')
+    else if (d.smart_status === 'FAILED') addOut('  → Drive is failing — replace immediately')
+    else if (errors > 0) addOut('  → SMART errors present — monitor closely')
+  }
+
+  async function execPool() {
+    const pools = await getPools()
+    if (!pools.length) { addOut('No ZFS pools detected.'); return }
+    addOut(`${pools.length} pool(s):`)
+    pools.forEach(p => {
+      const used = p.alloc_bytes ? `${(p.alloc_bytes / 1e12).toFixed(1)} TB` : '—'
+      const total = p.size_bytes ? `${(p.size_bytes / 1e12).toFixed(1)} TB` : '—'
+      const pct = p.capacity_pct != null ? `${p.capacity_pct}%` : '—'
+      addOut(`  ${p.name.padEnd(20)} ${used} / ${total} (${pct} used)`)
+    })
+  }
+
+  async function execDisconnected() {
+    const drives = await getDrives()
+    const offline = drives.filter(d => d.is_connected === false)
+    if (!offline.length) { addOut('All drives connected.'); return }
+    addOut(`${offline.length} disconnected drive(s):`)
+    offline.forEach(d => {
+      const last = d.last_scanned ? new Date(d.last_scanned).toLocaleString() : 'unknown'
+      addOut(`  ${d.serial.padEnd(20)} ${d.model || '—'}`)
+      addOut(`         last seen ${last}`)
+    })
   }
 
   function handleKeyDown(e) {

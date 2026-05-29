@@ -10,6 +10,11 @@ from services import federation as federation_svc
 router = APIRouter()
 
 
+def _require_http_url(url: str) -> None:
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=422, detail="Federation target URL must start with http:// or https://")
+
+
 @router.get("/targets", response_model=list[FederatedTargetRead])
 def list_targets(db: Session = Depends(get_db)):
     return db.query(FederatedTarget).order_by(FederatedTarget.id).all()
@@ -17,6 +22,7 @@ def list_targets(db: Session = Depends(get_db)):
 
 @router.post("/targets", response_model=FederatedTargetRead, status_code=201)
 def create_target(body: FederatedTargetCreate, db: Session = Depends(get_db)):
+    _require_http_url(body.url)
     target = FederatedTarget(**body.model_dump())
     db.add(target)
     db.commit()
@@ -29,6 +35,8 @@ def update_target(target_id: int, body: FederatedTargetUpdate, db: Session = Dep
     target = db.get(FederatedTarget, target_id)
     if not target:
         raise HTTPException(status_code=404, detail="Target not found")
+    if body.url is not None:
+        _require_http_url(body.url)
     for field, value in body.model_dump(exclude_none=True).items():
         setattr(target, field, value)
     db.commit()

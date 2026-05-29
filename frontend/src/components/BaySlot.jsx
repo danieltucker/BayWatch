@@ -240,7 +240,7 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
       onMouseEnter={() => onHover?.(bay)}
       onMouseLeave={onHoverEnd}
       className={clsx(
-        'relative min-h-[190px] flex flex-col rounded-xl border cursor-pointer select-none transition-all duration-150 overflow-hidden group',
+        '@container relative min-h-[190px] flex flex-col rounded-xl border cursor-pointer select-none transition-all duration-150 overflow-hidden group',
         lgBg,
         selectionHighlight,
         isPeer && !isSelected && 'ring-1 ring-blue-400/50',
@@ -280,9 +280,9 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
             {drive.serial}
           </span>
 
-          {/* Pool info */}
+          {/* Pool info — hidden on narrow cards */}
           {drive.zfs_pool && (
-            <div className="flex items-center gap-1.5">
+            <div className="hidden @[130px]:flex items-center gap-1.5">
               <span className="text-[10px] text-slate-400 dark:text-gray-500 font-mono truncate flex-1">
                 {drive.zfs_pool}
               </span>
@@ -325,8 +325,8 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
             </div>
           )}
 
-          {/* Capacity + device path */}
-          <div className="flex items-center justify-between gap-1 mt-auto">
+          {/* Capacity + device path — hidden on narrow cards */}
+          <div className="hidden @[130px]:flex items-center justify-between gap-1 mt-auto">
             {cap && <span className="text-[10px] text-slate-500 dark:text-gray-500">{cap}</span>}
             {drive.device_path && (
               <span className="text-[10px] font-mono text-slate-400 dark:text-gray-600 truncate">{drive.device_path}</span>

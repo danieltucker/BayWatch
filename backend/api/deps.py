@@ -25,10 +25,17 @@ def get_db() -> Generator[Session, None, None]:
 _rate_buckets: dict[str, deque] = defaultdict(deque)
 _RATE_LIMIT = 120        # requests
 _RATE_WINDOW = 60.0      # seconds
+_MAX_BUCKETS = 10_000    # cap dict size to prevent unbounded memory growth
 
 
 def _check_rate_limit(key_prefix: str) -> None:
     now = datetime.datetime.utcnow().timestamp()
+    # Evict oldest entry when the dict reaches capacity (new unknown prefix)
+    if len(_rate_buckets) >= _MAX_BUCKETS and key_prefix not in _rate_buckets:
+        try:
+            del _rate_buckets[next(iter(_rate_buckets))]
+        except StopIteration:
+            pass
     bucket = _rate_buckets[key_prefix]
     # Drop timestamps outside the window
     while bucket and bucket[0] < now - _RATE_WINDOW:
