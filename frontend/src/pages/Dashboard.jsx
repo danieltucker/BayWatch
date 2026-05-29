@@ -544,7 +544,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                                                     onMouseEnter={() => drive && setHoveredRemoteDrive({ drive, instanceName: snapshot.target_name })}
                                                     onMouseLeave={() => setHoveredRemoteDrive(null)}
                                                     className={clsx(
-                                                      'aspect-square rounded-sm transition-opacity',
+                                                      'aspect-square rounded-sm transition-opacity overflow-hidden flex flex-col items-center justify-center p-1 gap-0.5',
                                                       !drive
                                                         ? 'bg-slate-100 dark:bg-gray-800/60 border border-dashed border-slate-200 dark:border-gray-700 cursor-default'
                                                         : smartOk
@@ -553,7 +553,23 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                                                         ? 'bg-red-400/80 dark:bg-red-500/60 hover:opacity-80 cursor-pointer'
                                                         : 'bg-slate-300 dark:bg-gray-600 hover:opacity-80 cursor-pointer'
                                                     )}
-                                                  />
+                                                  >
+                                                    {drive && (
+                                                      <>
+                                                        <span className="text-[10px] font-semibold text-white/90 leading-tight truncate w-full text-center">
+                                                          {drive.make || drive.model || '—'}
+                                                        </span>
+                                                        <span className="text-[9px] font-mono text-white/70 leading-tight truncate w-full text-center">
+                                                          {drive.serial?.slice(-6)}
+                                                        </span>
+                                                        {drive.temperature_c != null && (
+                                                          <span className="text-[9px] font-mono text-white/80 leading-none mt-0.5">
+                                                            {drive.temperature_c}°C
+                                                          </span>
+                                                        )}
+                                                      </>
+                                                    )}
+                                                  </button>
                                                 )
                                               })}
                                             </div>

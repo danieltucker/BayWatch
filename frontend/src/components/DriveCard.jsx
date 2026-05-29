@@ -79,15 +79,27 @@ function healthState(drive) {
   return 'unknown'
 }
 function healthGradient(state) {
-  if (state === 'ok')     return 'from-emerald-50 dark:from-emerald-500/10 to-transparent border-emerald-200 dark:border-emerald-700/30'
-  if (state === 'warn')   return 'from-amber-50 dark:from-amber-500/10 to-transparent border-amber-300 dark:border-amber-600/50'
-  if (state === 'failed') return 'from-red-50 dark:from-red-500/15 to-transparent border-red-300 dark:border-red-600/60'
-  return 'from-slate-50 dark:from-gray-700/20 to-transparent border-slate-200 dark:border-gray-700/30'
+  if (state === 'ok')     return 'from-emerald-50 dark:from-emerald-500/10 to-white dark:to-gray-900 border-emerald-200 dark:border-emerald-700/30'
+  if (state === 'warn')   return 'from-amber-50 dark:from-amber-500/10 to-white dark:to-gray-900 border-amber-300 dark:border-amber-600/50'
+  if (state === 'failed') return 'from-red-50 dark:from-red-500/15 to-white dark:to-gray-900 border-red-300 dark:border-red-600/60'
+  return 'from-slate-50 dark:from-gray-700/20 to-white dark:to-gray-900 border-slate-200 dark:border-gray-700/30'
 }
 function iconStyle(state) {
   if (state === 'failed') return { wrap: 'bg-red-100 dark:bg-red-950/40 border-red-200 dark:border-red-800/50',   icon: 'text-red-500 dark:text-red-400' }
   if (state === 'warn')   return { wrap: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/40', icon: 'text-amber-500 dark:text-amber-400' }
   return { wrap: 'bg-slate-100 dark:bg-gray-800/80 border-slate-200 dark:border-gray-700/50', icon: 'text-blue-500 dark:text-blue-400' }
+}
+
+// Expected lifetime I/O in bytes by drive type
+const IO_CURVES = {
+  consumer_hdd:    { read: 150e12,  write: 75e12   },
+  nas_hdd:         { read: 500e12,  write: 200e12  },
+  enterprise_hdd:  { read: 2000e12, write: 1000e12 },
+  consumer_ssd:    { read: 150e12,  write: 60e12   },
+  enterprise_ssd:  { read: 1000e12, write: 500e12  },
+  nvme_consumer:   { read: 200e12,  write: 80e12   },
+  nvme_enterprise: { read: 1000e12, write: 500e12  },
+  optane:          { read: 5000e12, write: 5000e12 },
 }
 
 // Drive-type-aware age curves { warn, max } in power-on hours
@@ -325,6 +337,12 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
   const lifetimeReadBytes  = latestWithIO?.read_bytes  ?? null
   const lifetimeWriteBytes = latestWithIO?.write_bytes ?? null
 
+  // Drive-type-aware I/O scale for lifetime bars
+  const ioCurve = IO_CURVES[drive.drive_type || inferDriveType(drive)] || IO_CURVES.consumer_hdd
+  const isSsdForIO = ['consumer_ssd', 'enterprise_ssd', 'nvme_consumer', 'nvme_enterprise', 'optane'].includes(drive.drive_type || inferDriveType(drive))
+  const ioMaxRead  = ioCurve.read
+  const ioMaxWrite = (isSsdForIO && ratedTbw) ? ratedTbw * 1e12 : ioCurve.write
+
   // Clamp temp chart domain to [25, 65] but expand if actual values are outside
   const tempMin = tempHistory.length ? Math.min(...tempHistory.map(h => h.temp)) : 25
   const tempMax = tempHistory.length ? Math.max(...tempHistory.map(h => h.temp)) : 65
@@ -484,24 +502,24 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
           {lifetimeReadBytes != null && (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Lifetime Read</span>
+                <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Read</span>
                 <span className="text-xs font-bold text-emerald-500 dark:text-emerald-400">{formatBytes(lifetimeReadBytes)}</span>
               </div>
               <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
                 <div className="h-full rounded-full bg-emerald-400 transition-all"
-                  style={{ width: `${Math.min(100, (lifetimeReadBytes / Math.max(lifetimeReadBytes, lifetimeWriteBytes || 1)) * 100)}%` }} />
+                  style={{ width: `${Math.min(100, (lifetimeReadBytes / ioMaxRead) * 100)}%` }} />
               </div>
             </div>
           )}
           {lifetimeWriteBytes != null && (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Lifetime Written</span>
+                <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Write</span>
                 <span className="text-xs font-bold text-violet-500 dark:text-violet-400">{formatBytes(lifetimeWriteBytes)}</span>
               </div>
               <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
                 <div className="h-full rounded-full bg-violet-400 transition-all"
-                  style={{ width: `${Math.min(100, (lifetimeWriteBytes / Math.max(lifetimeReadBytes || 1, lifetimeWriteBytes)) * 100)}%` }} />
+                  style={{ width: `${Math.min(100, (lifetimeWriteBytes / ioMaxWrite) * 100)}%` }} />
               </div>
             </div>
           )}

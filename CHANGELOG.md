@@ -4,6 +4,15 @@ All notable changes to BayWatch are documented here. Follows [Keep a Changelog](
 
 ---
 
+## [1.9.1] — 2026-05-28
+
+### Fixed
+- **DriveCard background transparent** — health gradient used `to-transparent` leaving the card body with no solid background; changed to `to-white dark:to-gray-900`
+- **Remote bay grid cells empty** — federation grid cells were self-closing buttons with no children; now show make, serial suffix, and temperature inside each cell
+- **Lifetime I/O bars** — bars previously scaled read vs. write against each other; now scale against drive-type-aware expected lifetime totals (same pattern as the age/hours bar); labels renamed from "Lifetime Read / Lifetime Written" to "Read / Write"; SSDs with a rated TBW use that value as the write ceiling
+
+---
+
 ## [1.9.0] — 2026-05-28
 
 ### Added

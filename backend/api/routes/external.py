@@ -21,7 +21,7 @@ from services import zpool as zpool_svc
 
 router = APIRouter()
 
-_VERSION = "1.9.0"
+_VERSION = "1.9.1"
 
 
 @router.get("/v1/health")
