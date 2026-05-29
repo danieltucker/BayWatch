@@ -365,7 +365,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
               })}
             </nav>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-gray-800">
-              <p className="text-[10px] text-slate-300 dark:text-gray-700">BayWatch v1.9.1</p>
+              <p className="text-[10px] text-slate-300 dark:text-gray-700">BayWatch v1.9.2</p>
             </div>
           </div>
 

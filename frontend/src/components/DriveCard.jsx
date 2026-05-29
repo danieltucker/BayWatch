@@ -155,14 +155,27 @@ function computeHealthScore(drive, history = [], ratedTbw = null, warnC = 55, da
     score += d; breakdown.push({ factor: 'Uncorrectable errors', detail: String(uncorr), delta: d })
   }
 
-  // Drive-type-aware age penalty
+  // Drive-type-aware age penalty — two-phase curve
+  // Phase 1: 50% of warn → warn: 0 to -10 (light)
+  // Phase 2: warn → max: -10 to -40 (steep)
   const poh = drive.power_on_hours ?? 0
   const driveType = drive.drive_type || inferDriveType(drive)
   const ac = AGE_CURVES[driveType] || AGE_CURVES.consumer_hdd
-  if (poh >= ac.warn) {
-    const d = Math.max(-20, -Math.round(((poh - ac.warn) / Math.max(1, ac.max - ac.warn)) * 20))
-    score += d
-    breakdown.push({ factor: 'Drive age', detail: `${poh.toLocaleString()} hrs (${ac.label})`, delta: d })
+  const earlyWarn = ac.warn * 0.5
+  if (poh >= earlyWarn) {
+    let d
+    if (poh < ac.warn) {
+      d = -Math.round(((poh - earlyWarn) / Math.max(1, ac.warn - earlyWarn)) * 10)
+    } else {
+      const phase2 = -Math.round(((poh - ac.warn) / Math.max(1, ac.max - ac.warn)) * 30)
+      d = Math.max(-40, -10 + phase2)
+    }
+    if (d < 0) {
+      score += d
+      breakdown.push({ factor: 'Drive age', detail: `${poh.toLocaleString()} hrs (${ac.label})`, delta: d })
+    } else {
+      breakdown.push({ factor: 'Drive age', detail: `${poh.toLocaleString()} hrs — within range`, delta: 0, positive: true })
+    }
   } else {
     breakdown.push({ factor: 'Drive age', detail: `${poh.toLocaleString()} hrs — within range`, delta: 0, positive: true })
   }

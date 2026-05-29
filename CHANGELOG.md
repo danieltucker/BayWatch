@@ -4,6 +4,13 @@ All notable changes to BayWatch are documented here. Follows [Keep a Changelog](
 
 ---
 
+## [1.9.2] — 2026-05-28
+
+### Changed
+- **Health score age curve steepened** — age penalty now uses a two-phase curve: a light deduction (-0 to -10) starting at 50% of the drive-type warn threshold, then a steeper deduction (-10 to -40) from warn to max; previously the penalty was linear from warn to max with a ceiling of -20, meaning drives at exactly the warn threshold received no deduction at all
+
+---
+
 ## [1.9.1] — 2026-05-28
 
 ### Fixed
