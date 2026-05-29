@@ -4,6 +4,13 @@ All notable changes to BayWatch are documented here. Follows [Keep a Changelog](
 
 ---
 
+## [1.9.3] — 2026-05-28
+
+### Changed
+- **Remote bay grid cards** — federation grid cells now render full BaySlot LG-style cards: drive icon, make/model, full serial in status colour, ZFS pool + vdev, temperature bar, capacity and device path, bay label top-left, health dot bottom-right; gradient background matches SMART status (emerald/amber/red/slate); empty bays show a plain dashed placeholder
+
+---
+
 ## [1.9.2] — 2026-05-28
 
 ### Changed

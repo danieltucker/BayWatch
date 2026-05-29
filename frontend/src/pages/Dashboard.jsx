@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { Server, HardDrive, ChevronDown, ChevronRight, ArrowUp, ArrowDown, Download, X, LayoutGrid, List } from 'lucide-react'
+import { getDriveIcon } from '../utils/driveIcon'
 import clsx from 'clsx'
 import BayGrid from '../components/BayGrid'
 import DriveCard from '../components/DriveCard'
@@ -525,49 +526,112 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                                           <div key={arrName} className="mb-3">
                                             <p className="text-[10px] text-slate-400 dark:text-gray-600 mb-1.5">{arrName}</p>
                                             <div
-                                              className="grid gap-0.5"
+                                              className="grid gap-2"
                                               style={{ gridTemplateColumns: `repeat(${maxCol + 1}, minmax(0, 1fr))` }}
                                             >
                                               {grid.flat().map((bay, i) => {
-                                                if (!bay) return <div key={i} className="aspect-square" />
+                                                if (!bay) return <div key={i} className="min-h-[180px]" />
                                                 const drive = bay.drive_serial ? snapDriveMap[bay.drive_serial] : null
-                                                const smartOk = drive?.smart_status === 'PASSED'
+                                                const hasErrors = drive ? ((drive.reallocated_sectors ?? 0) > 0 || (drive.pending_sectors ?? 0) > 0 || (drive.uncorrectable_errors ?? 0) > 0) : false
+                                                const smartOk = drive?.smart_status === 'PASSED' && !hasErrors
+                                                const smartWarn = drive?.smart_status === 'PASSED' && hasErrors
                                                 const smartFail = drive?.smart_status === 'FAILED'
+                                                const BayIcon = drive ? getDriveIcon(drive.form_factor, drive.rpm) : null
+                                                const iconColor = smartFail ? 'text-red-500 dark:text-red-400' : smartWarn ? 'text-amber-500 dark:text-amber-400' : smartOk ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-gray-500'
+                                                const serialColor = smartFail ? 'text-red-600 dark:text-red-400' : smartWarn ? 'text-amber-600 dark:text-amber-400' : smartOk ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-gray-400'
+                                                const dotColor = smartFail ? 'bg-red-400 dark:bg-red-500' : smartWarn ? 'bg-amber-400' : smartOk ? 'bg-emerald-400 dark:bg-emerald-500' : 'bg-slate-300 dark:bg-gray-600'
+                                                const cardBg = !drive
+                                                  ? 'border-dashed border-slate-200 dark:border-gray-700/50 bg-slate-50/50 dark:bg-gray-900/10 cursor-default'
+                                                  : smartFail
+                                                  ? 'bg-gradient-to-b from-red-50 dark:from-red-950/30 to-white dark:to-gray-900/60 border-red-200 dark:border-red-800/60 hover:from-red-100/70 cursor-pointer'
+                                                  : smartWarn
+                                                  ? 'bg-gradient-to-b from-amber-50 dark:from-amber-950/30 to-white dark:to-gray-900/60 border-amber-200 dark:border-amber-700/60 hover:from-amber-100/70 cursor-pointer'
+                                                  : smartOk
+                                                  ? 'bg-gradient-to-b from-emerald-50 dark:from-emerald-950/30 to-white dark:to-gray-900/60 border-emerald-200 dark:border-emerald-800/60 hover:from-emerald-100/70 dark:hover:from-emerald-950/50 cursor-pointer'
+                                                  : 'bg-gradient-to-b from-slate-50 dark:from-gray-800/20 to-white dark:to-gray-900/60 border-slate-200 dark:border-gray-700/50 hover:from-slate-100/70 cursor-pointer'
                                                 return (
                                                   <button
                                                     key={i}
-                                                    title={drive
-                                                      ? [drive.serial, [drive.make, drive.model].filter(Boolean).join(' '), drive.temperature_c != null ? drive.temperature_c + '°C' : ''].filter(Boolean).join('\n')
-                                                      : (bay.label || 'Empty')}
                                                     disabled={!drive}
                                                     onClick={() => drive && setSelectedRemoteDrive({ drive, bayInfo: bay, instanceName: snapshot.target_name, targetId: snapshot.target_id })}
                                                     onMouseEnter={() => drive && setHoveredRemoteDrive({ drive, instanceName: snapshot.target_name })}
                                                     onMouseLeave={() => setHoveredRemoteDrive(null)}
                                                     className={clsx(
-                                                      'aspect-square rounded-sm transition-opacity overflow-hidden flex flex-col items-center justify-center p-1 gap-0.5',
-                                                      !drive
-                                                        ? 'bg-slate-100 dark:bg-gray-800/60 border border-dashed border-slate-200 dark:border-gray-700 cursor-default'
-                                                        : smartOk
-                                                        ? 'bg-emerald-400/80 dark:bg-emerald-500/60 hover:opacity-80 cursor-pointer'
-                                                        : smartFail
-                                                        ? 'bg-red-400/80 dark:bg-red-500/60 hover:opacity-80 cursor-pointer'
-                                                        : 'bg-slate-300 dark:bg-gray-600 hover:opacity-80 cursor-pointer'
+                                                      'relative min-h-[180px] flex flex-col rounded-xl border select-none transition-all duration-150 overflow-hidden group text-left',
+                                                      cardBg
                                                     )}
                                                   >
+                                                    <span className="absolute top-1.5 left-2 text-[9px] text-slate-400 dark:text-gray-600 font-mono leading-none z-10">
+                                                      {bay.label || `${bay.row + 1}-${bay.col + 1}`}
+                                                    </span>
                                                     {drive && (
-                                                      <>
-                                                        <span className="text-[10px] font-semibold text-white/90 leading-tight truncate w-full text-center">
-                                                          {drive.make || drive.model || '—'}
+                                                      <span className={clsx('absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full shadow-sm z-10', dotColor)} />
+                                                    )}
+                                                    {!drive ? (
+                                                      <div className="flex-1 flex items-center justify-center">
+                                                        <span className="text-slate-200 dark:text-gray-800 text-3xl">·</span>
+                                                      </div>
+                                                    ) : (
+                                                      <div className="flex-1 flex flex-col gap-2 px-2.5 pt-7 pb-3">
+                                                        <div className="flex items-center gap-2">
+                                                          <div className="w-8 h-8 rounded-lg bg-white/70 dark:bg-gray-800/60 border border-slate-200/80 dark:border-gray-700/40 flex items-center justify-center shrink-0">
+                                                            <BayIcon size={15} className={iconColor} />
+                                                          </div>
+                                                          <div className="min-w-0">
+                                                            <p className="text-[12px] font-semibold text-slate-800 dark:text-gray-200 leading-tight truncate">
+                                                              {drive.make || 'Unknown'}
+                                                            </p>
+                                                            {drive.model && (
+                                                              <p className="text-[11px] text-slate-400 dark:text-gray-500 leading-none truncate">{drive.model}</p>
+                                                            )}
+                                                          </div>
+                                                        </div>
+                                                        <span className={clsx('text-[10px] font-mono leading-none truncate', serialColor)}>
+                                                          {drive.serial}
                                                         </span>
-                                                        <span className="text-[9px] font-mono text-white/70 leading-tight truncate w-full text-center">
-                                                          {drive.serial?.slice(-6)}
-                                                        </span>
-                                                        {drive.temperature_c != null && (
-                                                          <span className="text-[9px] font-mono text-white/80 leading-none mt-0.5">
-                                                            {drive.temperature_c}°C
-                                                          </span>
+                                                        {drive.zfs_pool && (
+                                                          <div className="flex items-center gap-1.5">
+                                                            <span className="text-[10px] text-slate-400 dark:text-gray-500 font-mono truncate flex-1">{drive.zfs_pool}</span>
+                                                            {drive.vdev_name && (
+                                                              <span className="text-[10px] font-mono text-slate-400 dark:text-gray-600 shrink-0">{drive.vdev_name}</span>
+                                                            )}
+                                                          </div>
                                                         )}
-                                                      </>
+                                                        {drive.temperature_c != null && (
+                                                          <div>
+                                                            <div className="flex items-center justify-between mb-0.5">
+                                                              <span className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wide">Temp</span>
+                                                              <span className={clsx(
+                                                                'text-[10px] font-mono font-bold',
+                                                                drive.temperature_c >= 65 ? 'text-red-500 dark:text-red-400' :
+                                                                drive.temperature_c >= 55 ? 'text-amber-500 dark:text-amber-400' :
+                                                                'text-sky-500 dark:text-sky-400'
+                                                              )}>
+                                                                {drive.temperature_c}°C
+                                                              </span>
+                                                            </div>
+                                                            <div className="h-1 rounded-full bg-slate-200/80 dark:bg-gray-800">
+                                                              <div
+                                                                className={clsx('h-full rounded-full transition-all',
+                                                                  drive.temperature_c >= 65 ? 'bg-red-400' :
+                                                                  drive.temperature_c >= 55 ? 'bg-amber-400' : 'bg-sky-400'
+                                                                )}
+                                                                style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }}
+                                                              />
+                                                            </div>
+                                                          </div>
+                                                        )}
+                                                        <div className="flex items-center justify-between gap-1 mt-auto">
+                                                          {drive.capacity_bytes && (
+                                                            <span className="text-[10px] text-slate-500 dark:text-gray-500">
+                                                              {drive.capacity_bytes >= 1e12 ? `${(drive.capacity_bytes / 1e12).toFixed(1)} TB` : `${(drive.capacity_bytes / 1e9).toFixed(0)} GB`}
+                                                            </span>
+                                                          )}
+                                                          {drive.device_path && (
+                                                            <span className="text-[10px] font-mono text-slate-400 dark:text-gray-600 truncate">{drive.device_path}</span>
+                                                          )}
+                                                        </div>
+                                                      </div>
                                                     )}
                                                   </button>
                                                 )
