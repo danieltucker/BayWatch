@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
+import clsx from 'clsx'
 import {
   getLogs, getDrives, getDrive, getProfile, patchDrive,
   getEnclosures, getBays, assignDrive, unassignDrive, triggerScan,
@@ -10,22 +11,19 @@ import api from '../api/client'
 const ALL_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 const DEFAULT_LEVELS = new Set(['INFO', 'WARNING', 'ERROR', 'CRITICAL'])
 
-const LEVEL_COLOR = {
-  DEBUG: 'text-gray-600',
-  INFO: 'text-green-400',
-  WARNING: 'text-amber-400',
-  ERROR: 'text-red-400',
-  CRITICAL: 'text-red-500',
+// Map log levels to wt-console token class + fallback inline color
+const LEVEL_CLASS = {
+  DEBUG:    'c-muted',
+  INFO:     'c-up',
+  WARNING:  null,   // amber — use inline style
+  ERROR:    null,   // red — use inline style
+  CRITICAL: null,
 }
-
-const LEVEL_BTN_ON = {
-  DEBUG: 'bg-gray-800 text-gray-300 border-gray-600',
-  INFO: 'bg-green-950 text-green-400 border-green-700',
-  WARNING: 'bg-amber-950 text-amber-400 border-amber-700',
-  ERROR: 'bg-red-950 text-red-400 border-red-700',
+const LEVEL_INLINE_COLOR = {
+  WARNING:  'var(--wt-warn-500)',
+  ERROR:    'var(--wt-down-500)',
+  CRITICAL: 'var(--wt-down-600)',
 }
-
-const LEVEL_BTN_OFF = 'text-gray-700 border-gray-800 hover:text-gray-500'
 
 const COMMANDS = {
   help:     'help [cmd]                       — list commands or show usage',
@@ -459,12 +457,12 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
       }`}
       style={{ height: '50vh' }}
     >
-      <div className="h-full flex flex-col bg-[#0a0f0a] border-b-2 border-green-900/50 shadow-2xl">
+      <div className="wt-console h-full flex flex-col rounded-none" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', boxShadow: 'var(--wt-shadow-lg)' }}>
         {/* Title bar */}
-        <div className="flex items-center justify-between px-4 py-1.5 bg-gray-900/60 border-b border-gray-800/60 shrink-0 gap-3">
+        <div className="wt-console__bar shrink-0 gap-3">
           <div className="flex items-center gap-2 shrink-0">
-            <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_6px_#22c55e]" />
-            <span className="text-xs font-mono text-green-500 font-bold tracking-widest uppercase">
+            <span className="w-2 h-2 rounded-full c-prompt" style={{ background: 'var(--wt-console-prompt)', boxShadow: '0 0 6px var(--wt-console-prompt)' }} />
+            <span className="c-prompt" style={{ fontWeight: 700, letterSpacing: '0.12em' }}>
               BayWatch Console
             </span>
           </div>
@@ -473,13 +471,16 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
           <div className="flex items-center gap-1">
             {['DEBUG', 'INFO', 'WARNING', 'ERROR'].map(level => {
               const on = activeLevels.has(level)
+              const inlineColor = LEVEL_INLINE_COLOR[level]
               return (
                 <button
                   key={level}
                   onClick={() => toggleLevel(level)}
-                  className={`px-1.5 py-0.5 rounded border text-[9px] font-mono font-medium transition-colors ${
-                    on ? LEVEL_BTN_ON[level] : LEVEL_BTN_OFF
-                  }`}
+                  className="px-1.5 py-0.5 rounded border text-[9px] font-bold transition-colors"
+                  style={on
+                    ? { borderColor: inlineColor ?? 'var(--wt-console-prompt)', color: inlineColor ?? 'var(--wt-console-prompt)', background: 'var(--wt-console-bg)' }
+                    : { borderColor: 'var(--wt-console-border)', color: 'var(--wt-console-muted)', background: 'transparent' }
+                  }
                 >
                   {level === 'WARNING' ? 'WARN' : level}
                 </button>
@@ -488,7 +489,7 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
           </div>
 
           {appVersion && (
-            <span className="bg-gray-800 text-gray-300 border border-gray-700 rounded px-1.5 py-0.5 text-[10px] font-mono shrink-0">
+            <span className="rounded px-1.5 py-0.5 text-[10px] shrink-0" style={{ background: 'var(--wt-console-bg)', border: '1px solid var(--wt-console-border)', color: 'var(--wt-console-muted)' }}>
               v{appVersion}
             </span>
           )}
@@ -496,12 +497,13 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
 
         {/* Pinned notifications */}
         {alerts.length > 0 && (
-          <div className="shrink-0 border-b border-gray-800/60 px-3 py-2 flex flex-col gap-1 max-h-[30%] overflow-y-auto">
+          <div className="shrink-0 px-3 py-2 flex flex-col gap-1 max-h-[30%] overflow-y-auto" style={{ borderBottom: '1px solid var(--wt-console-border)' }}>
             <div className="flex items-center justify-between mb-0.5">
-              <span className="text-[9px] text-gray-600 font-mono uppercase tracking-widest">Notifications</span>
+              <span className="wt-eyebrow" style={{ color: 'var(--wt-console-muted)' }}>Notifications</span>
               <button
                 onClick={() => alerts.forEach(a => onDismissAlert?.(a.id))}
-                className="text-[9px] text-gray-600 hover:text-gray-400 font-mono uppercase tracking-widest transition-colors"
+                className="text-[9px] font-mono uppercase tracking-widest transition-colors"
+                style={{ color: 'var(--wt-console-muted)' }}
               >
                 Clear all
               </button>
@@ -509,25 +511,22 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
             {alerts.map(alert => (
               <div
                 key={alert.id}
-                className={`flex items-start gap-2 rounded px-2 py-1 ${
-                  alert.type === 'critical'
-                    ? 'bg-red-950/50 border border-red-900/50'
-                    : 'bg-amber-950/40 border border-amber-900/40'
-                }`}
+                className="flex items-start gap-2 rounded px-2 py-1"
+                style={alert.type === 'critical'
+                  ? { background: 'oklch(0.25 0.06 25 / 0.5)', border: '1px solid oklch(0.35 0.08 25 / 0.5)' }
+                  : { background: 'oklch(0.26 0.05 75 / 0.4)', border: '1px solid oklch(0.36 0.07 75 / 0.4)' }
+                }
               >
-                <span className={`text-[9px] font-mono font-bold shrink-0 mt-0.5 ${
-                  alert.type === 'critical' ? 'text-red-400' : 'text-amber-400'
-                }`}>
+                <span className="text-[9px] font-bold shrink-0 mt-0.5" style={{ color: alert.type === 'critical' ? 'var(--wt-down-500)' : 'var(--wt-warn-500)' }}>
                   {alert.type.toUpperCase()}
                 </span>
-                <span className={`text-[10px] font-mono flex-1 leading-relaxed ${
-                  alert.type === 'critical' ? 'text-red-300' : 'text-amber-300'
-                }`}>
+                <span className="text-[10px] flex-1 leading-relaxed" style={{ color: alert.type === 'critical' ? 'var(--wt-down-700)' : 'var(--wt-warn-700)' }}>
                   {stripHtml(alert.message)}
                 </span>
                 <button
                   onClick={() => onDismissAlert?.(alert.id)}
-                  className="text-gray-400 hover:text-gray-100 shrink-0 transition-colors mt-0.5"
+                  className="shrink-0 transition-colors mt-0.5"
+                  style={{ color: 'var(--wt-console-muted)' }}
                   title="Dismiss"
                 >
                   <X size={10} />
@@ -538,33 +537,35 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
         )}
 
         {/* Log output */}
-        <div className="flex-1 overflow-y-auto px-4 py-2 font-mono text-xs">
+        <div className="wt-console__body flex-1 overflow-y-auto">
           {visible.length === 0 ? (
-            <span className="text-gray-700">— no output. trigger a scan or type a command below —</span>
+            <span className="c-muted">— no output. trigger a scan or type a command below —</span>
           ) : (
             visible.map(e => {
               if (e.type === 'cmd') return (
-                <div key={e.id} className="flex gap-2 leading-5 mt-1">
-                  <span className="text-cyan-500 shrink-0">$</span>
-                  <span className="text-cyan-300">{e.text}</span>
+                <div key={e.id} className="wt-console__row mt-1">
+                  <span className="c-prompt shrink-0">$</span>
+                  <span className="c-accent">{e.text}</span>
                 </div>
               )
               if (e.type === 'out') return (
-                <div key={e.id} className="leading-5 text-gray-400 pl-3">{e.text}</div>
+                <div key={e.id} className="leading-5 pl-3" style={{ color: 'var(--wt-console-text)' }}>{e.text}</div>
               )
               if (e.type === 'err') return (
-                <div key={e.id} className="leading-5 text-red-400 pl-3">{e.text}</div>
+                <div key={e.id} className="leading-5 pl-3" style={{ color: 'var(--wt-down-500)' }}>{e.text}</div>
               )
+              const cls = LEVEL_CLASS[e.level]
+              const inlineC = LEVEL_INLINE_COLOR[e.level]
               return (
-                <div key={e.id} className="flex gap-3 leading-5 hover:bg-white/[0.02] px-1 rounded">
-                  <span className="text-gray-700 shrink-0 tabular-nums">
+                <div key={e.id} className="wt-console__row hover:bg-white/[0.02] px-1 rounded">
+                  <span className="c-muted shrink-0 tabular-nums">
                     {new Date(e.ts * 1000).toLocaleTimeString()}
                   </span>
-                  <span className={`shrink-0 w-14 ${LEVEL_COLOR[e.level] ?? 'text-gray-400'}`}>
+                  <span className={clsx('shrink-0 w-14', cls)} style={!cls && inlineC ? { color: inlineC } : undefined}>
                     {e.level}
                   </span>
-                  <span className="text-gray-600 shrink-0 max-w-[140px] truncate">{e.logger}</span>
-                  <span className={LEVEL_COLOR[e.level] ?? 'text-gray-300'}>{e.message}</span>
+                  <span className="c-muted shrink-0 max-w-[140px] truncate">{e.logger}</span>
+                  <span className={cls} style={!cls && inlineC ? { color: inlineC } : undefined}>{e.message}</span>
                 </div>
               )
             })
@@ -573,8 +574,8 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
         </div>
 
         {/* Command input */}
-        <div className="flex items-center gap-2 px-4 py-2 border-t border-gray-800/60 bg-gray-950/40 shrink-0">
-          <span className="text-green-500 font-mono text-xs shrink-0">$</span>
+        <div className="flex items-center gap-2 px-4 py-2 shrink-0" style={{ borderTop: '1px solid var(--wt-console-border)', background: 'var(--wt-console-bg-2)' }}>
+          <span className="c-prompt text-xs shrink-0">$</span>
           <input
             ref={inputRef}
             value={cmdInput}
@@ -583,7 +584,8 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
             placeholder="type a command — 'help' to list all"
             autoComplete="off"
             spellCheck={false}
-            className="flex-1 bg-transparent font-mono text-xs text-green-300 outline-none placeholder-gray-700 caret-green-400"
+            className="flex-1 bg-transparent text-xs outline-none"
+            style={{ fontFamily: 'var(--wt-font-mono)', color: 'var(--wt-console-prompt)', caretColor: 'var(--wt-console-prompt)' }}
           />
         </div>
       </div>

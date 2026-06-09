@@ -1,3 +1,22 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── BayWatch signature ink (cyan-teal arc, distinct from NetWatch azure and LogWatch blue-teal) ── */
+:root {
+  --bw-from: oklch(0.640 0.170 210);
+  --bw-to:   oklch(0.520 0.150 185);
+  --bw-ink:  oklch(0.500 0.150 195);
+}
+[data-theme="dark"] {
+  --bw-ink:  oklch(0.750 0.130 195);
+}
+
+/* ── Base body styles using Watchtower tokens ── */
+body {
+  font-family: var(--wt-font-sans);
+  color: var(--wt-text);
+  background: var(--wt-bg);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}

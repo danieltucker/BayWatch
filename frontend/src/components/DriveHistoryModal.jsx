@@ -11,7 +11,7 @@ const tooltipStyle = {
   fontSize: 10, padding: '4px 8px', borderRadius: 6,
   border: 'none', background: 'rgba(15,23,42,0.85)', color: '#e2e8f0',
 }
-const axisStyle = { fontSize: 8, fill: 'currentColor' }
+const axisStyle = { fontSize: 8, fill: 'var(--wt-text-faint)' }
 
 export default function DriveHistoryModal({ serial, make, model, onClose }) {
   const { warnC, dangerC } = useTempThresholds()
@@ -80,26 +80,29 @@ export default function DriveHistoryModal({ serial, make, model, onClose }) {
     <div className="fixed inset-0 z-[60] overflow-y-auto">
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="flex min-h-full items-start justify-center p-4 pt-16">
-        <div className="relative w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 shadow-2xl overflow-hidden">
+        <div className="relative w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden"
+          style={{ background: 'var(--wt-surface)', borderColor: 'var(--wt-border)' }}>
 
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-gray-800">
+          <div className="flex items-center justify-between px-5 py-4"
+            style={{ borderBottom: '1px solid var(--wt-border)' }}>
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
-              <p className="text-xs text-slate-400 dark:text-gray-500 font-mono">{serial} · 90-day history</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--wt-text)' }}>{title}</p>
+              <p className="wt-mono text-xs" style={{ color: 'var(--wt-text-muted)' }}>{serial} · 90-day history</p>
             </div>
-            <button onClick={onClose} className="text-slate-400 dark:text-gray-500 hover:text-slate-700 dark:hover:text-gray-200 transition-colors p-1 rounded">
+            <button onClick={onClose}
+              className="transition-colors p-1 rounded text-[var(--wt-text-faint)] hover:text-[var(--wt-text-subtle)]">
               <X size={18} />
             </button>
           </div>
 
           <div className="p-5 flex flex-col gap-6 overflow-y-auto max-h-[calc(90vh-80px)]">
             {loading && (
-              <p className="text-sm text-slate-400 dark:text-gray-600 text-center py-8">Loading…</p>
+              <p className="text-sm text-center py-8" style={{ color: 'var(--wt-text-faint)' }}>Loading…</p>
             )}
 
             {!loading && tempHistory.length > 1 && (
               <div>
-                <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-2">Temperature (90d)</p>
+                <p className="wt-eyebrow mb-2">Temperature (90d)</p>
                 <ResponsiveContainer width="100%" height={120}>
                   <AreaChart data={tempHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
                     <defs>
@@ -108,8 +111,8 @@ export default function DriveHistoryModal({ serial, make, model, onClose }) {
                         <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} domain={[tempDomainLow, tempDomainHigh]} />
+                    <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={axisStyle} tickLine={false} axisLine={false} domain={[tempDomainLow, tempDomainHigh]} />
                     <Tooltip contentStyle={tooltipStyle} formatter={v => [`${v}°C`, 'Temp']} labelStyle={{ color: '#94a3b8' }} />
                     <ReferenceLine y={warnC}   stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} label={{ value: `${warnC}°`, position: 'right', fontSize: 7, fill: '#f59e0b' }} />
                     <ReferenceLine y={dangerC} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} label={{ value: `${dangerC}°`, position: 'right', fontSize: 7, fill: '#ef4444' }} />
@@ -121,7 +124,7 @@ export default function DriveHistoryModal({ serial, make, model, onClose }) {
 
             {!loading && spaceHistory.length > 1 && (
               <div>
-                <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-2">Used Space (90d)</p>
+                <p className="wt-eyebrow mb-2">Used Space (90d)</p>
                 <ResponsiveContainer width="100%" height={120}>
                   <AreaChart data={spaceHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
                     <defs>
@@ -130,8 +133,8 @@ export default function DriveHistoryModal({ serial, make, model, onClose }) {
                         <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} unit=" GB" />
+                    <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={axisStyle} tickLine={false} axisLine={false} unit=" GB" />
                     <Tooltip contentStyle={tooltipStyle} formatter={v => [`${v} GB`, 'Used']} labelStyle={{ color: '#94a3b8' }} />
                     <Area type="monotone" dataKey="usedGB" stroke="#2dd4bf" fill="url(#hSpaceGrad)" strokeWidth={1.5} dot={false} />
                   </AreaChart>
@@ -141,7 +144,7 @@ export default function DriveHistoryModal({ serial, make, model, onClose }) {
 
             {!loading && hasReallocHistory && (
               <div>
-                <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-2">Reallocated Sectors (90d)</p>
+                <p className="wt-eyebrow mb-2">Reallocated Sectors (90d)</p>
                 <ResponsiveContainer width="100%" height={120}>
                   <AreaChart data={reallocHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
                     <defs>
@@ -150,8 +153,8 @@ export default function DriveHistoryModal({ serial, make, model, onClose }) {
                         <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} allowDecimals={false} />
+                    <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={axisStyle} tickLine={false} axisLine={false} allowDecimals={false} />
                     <Tooltip contentStyle={tooltipStyle} formatter={v => [v, 'Sectors']} labelStyle={{ color: '#94a3b8' }} />
                     <Area type="monotone" dataKey="sectors" stroke="#f59e0b" fill="url(#hReallocGrad)" strokeWidth={1.5} dot={false} />
                   </AreaChart>
@@ -161,11 +164,15 @@ export default function DriveHistoryModal({ serial, make, model, onClose }) {
 
             {!loading && ioHistory.length > 0 && (
               <div>
-                <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-0.5">I/O Activity (90d)</p>
-                <p className="text-[9px] text-slate-300 dark:text-gray-700 mb-2">{ioUnit} per scan interval</p>
+                <p className="wt-eyebrow mb-0.5">I/O Activity (90d)</p>
+                <p className="text-[9px] mb-2" style={{ color: 'var(--wt-text-faint)' }}>{ioUnit} per scan interval</p>
                 <div className="flex items-center gap-3 mb-1.5">
-                  <span className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-gray-600"><span className="w-2 h-0.5 rounded bg-emerald-400 inline-block" />Read</span>
-                  <span className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-gray-600"><span className="w-2 h-0.5 rounded bg-violet-400 inline-block" />Write</span>
+                  <span className="flex items-center gap-1 text-[9px]" style={{ color: 'var(--wt-text-faint)' }}>
+                    <span className="w-2 h-0.5 rounded inline-block" style={{ background: '#34d399' }} />Read
+                  </span>
+                  <span className="flex items-center gap-1 text-[9px]" style={{ color: 'var(--wt-text-faint)' }}>
+                    <span className="w-2 h-0.5 rounded inline-block" style={{ background: '#a78bfa' }} />Write
+                  </span>
                 </div>
                 <ResponsiveContainer width="100%" height={120}>
                   <AreaChart data={ioData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
@@ -179,8 +186,8 @@ export default function DriveHistoryModal({ serial, make, model, onClose }) {
                         <stop offset="95%" stopColor="#a78bfa" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} unit={` ${ioUnit}`} />
+                    <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={axisStyle} tickLine={false} axisLine={false} unit={` ${ioUnit}`} />
                     <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [`${v.toLocaleString()} ${ioUnit}`, n === 'readMB' ? 'Read' : 'Write']} labelStyle={{ color: '#94a3b8' }} />
                     <Area type="monotone" dataKey="readMB"  stroke="#34d399" fill="url(#hReadGrad)"  strokeWidth={1.5} dot={false} />
                     <Area type="monotone" dataKey="writeMB" stroke="#a78bfa" fill="url(#hWriteGrad)" strokeWidth={1.5} dot={false} />
@@ -190,7 +197,7 @@ export default function DriveHistoryModal({ serial, make, model, onClose }) {
             )}
 
             {!loading && tempHistory.length <= 1 && spaceHistory.length <= 1 && !hasReallocHistory && ioHistory.length === 0 && (
-              <p className="text-sm text-slate-400 dark:text-gray-600 text-center py-8">No history data available yet.</p>
+              <p className="text-sm text-center py-8" style={{ color: 'var(--wt-text-faint)' }}>No history data available yet.</p>
             )}
           </div>
         </div>

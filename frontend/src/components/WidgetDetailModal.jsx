@@ -14,52 +14,55 @@ const tooltipStyle = {
   border: 'none', background: 'rgba(15,23,42,0.90)', color: '#e2e8f0',
 }
 
-function StatPill({ label, value, color = 'text-slate-600 dark:text-gray-300' }) {
+const axisStyle = { fontSize: 8, fill: 'var(--wt-text-faint)' }
+
+function StatPill({ label, value, color = 'var(--wt-text-muted)' }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl bg-slate-50 dark:bg-gray-900/60 border border-slate-200 dark:border-gray-800 px-4 py-3 flex-1">
-      <span className={`text-xl font-bold leading-none ${color}`}>{value}</span>
-      <span className="text-[10px] text-slate-400 dark:text-gray-600 mt-1 text-center">{label}</span>
+    <div className="flex flex-col items-center justify-center rounded-xl border px-4 py-3 flex-1"
+      style={{ background: 'var(--wt-surface-2)', borderColor: 'var(--wt-border)' }}>
+      <span className="wt-mono text-xl font-bold leading-none" style={{ color }}>{value}</span>
+      <span className="text-[10px] mt-1 text-center" style={{ color: 'var(--wt-text-faint)' }}>{label}</span>
     </div>
   )
 }
 
 function TempBar({ temp, max = 70, warnC = 55, dangerC = 60 }) {
   const pct = Math.min(100, (temp / max) * 100)
-  const color = temp >= dangerC ? 'bg-red-400' : temp >= warnC ? 'bg-amber-400' : 'bg-sky-400'
-  const textColor = temp >= dangerC ? 'text-red-500' : temp >= warnC ? 'text-amber-500' : 'text-sky-500'
+  const fillColor = temp >= dangerC ? 'var(--wt-down-500)' : temp >= warnC ? 'var(--wt-warn-500)' : 'var(--bw-ink)'
+  const textColor = temp >= dangerC ? 'var(--wt-down-500)' : temp >= warnC ? 'var(--wt-warn-600)' : 'var(--bw-ink)'
   return (
     <div className="flex items-center gap-2 w-full">
-      <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--wt-n-200)' }}>
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: fillColor }} />
       </div>
-      <span className={`text-xs font-bold w-10 text-right shrink-0 ${textColor}`}>{temp}°C</span>
+      <span className="wt-mono text-xs font-bold w-10 text-right shrink-0" style={{ color: textColor }}>{temp}°C</span>
     </div>
   )
 }
 
 function PohBar({ hours }) {
   const pct = Math.min(100, (hours / 50000) * 100)
-  const color = hours >= 40000 ? 'bg-orange-400' : hours >= 25000 ? 'bg-amber-400' : 'bg-indigo-400'
+  const fillColor = hours >= 40000 ? 'var(--wt-warn-600)' : hours >= 25000 ? 'var(--wt-warn-500)' : 'var(--wt-viz-5)'
   const years = (hours / 24 / 365).toFixed(1)
   return (
     <div className="flex items-center gap-2 w-full">
-      <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--wt-n-200)' }}>
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: fillColor }} />
       </div>
-      <span className="text-xs font-bold w-10 text-right shrink-0 text-slate-500 dark:text-gray-400">{years}y</span>
+      <span className="wt-mono text-xs font-bold w-10 text-right shrink-0" style={{ color: 'var(--wt-text-muted)' }}>{years}y</span>
     </div>
   )
 }
 
 function DriveRow({ drive, children }) {
   return (
-    <div className="py-2.5 border-b border-slate-100 dark:border-gray-800/60 last:border-0">
+    <div className="py-2.5 last:border-0" style={{ borderBottom: '1px solid var(--wt-border)' }}>
       <div className="flex items-center justify-between mb-1.5">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-slate-800 dark:text-gray-200 truncate">
+          <p className="text-xs font-semibold truncate" style={{ color: 'var(--wt-text)' }}>
             {drive.make ? `${drive.make} ${drive.model || ''}`.trim() : drive.model || drive.serial}
           </p>
-          <p className="text-[10px] font-mono text-slate-400 dark:text-gray-600">{drive.serial}</p>
+          <p className="wt-mono text-[10px]" style={{ color: 'var(--wt-text-faint)' }}>{drive.serial}</p>
         </div>
       </div>
       {children}
@@ -68,21 +71,24 @@ function DriveRow({ drive, children }) {
 }
 
 function SectionLabel({ children }) {
+  return <p className="wt-eyebrow mb-2 mt-3 first:mt-0">{children}</p>
+}
+
+function EmptyState({ message, icon = '—', color = 'var(--wt-text-faint)' }) {
   return (
-    <p className="text-[10px] font-semibold text-slate-400 dark:text-gray-600 uppercase tracking-widest mb-2 mt-3 first:mt-0">
-      {children}
-    </p>
+    <div className="flex flex-col items-center justify-center py-8 gap-2">
+      <span className="text-2xl" style={{ color }}>{icon}</span>
+      <p className="text-sm text-center" style={{ color: 'var(--wt-text-muted)' }}>{message}</p>
+    </div>
   )
 }
 
 function DetailContent({ widgetId, drives, profiles }) {
-  const profileMap = Object.fromEntries(profiles.map(p => [p.serial, p]))
-
   // ── Failed ──────────────────────────────────────────────────────────────────
   if (widgetId === 'failed') {
     const failed = drives.filter(d => d.smart_status === 'FAILED')
     if (!failed.length) {
-      return <EmptyState message="No failed drives — all clear." icon="✓" color="text-emerald-500" />
+      return <EmptyState message="No failed drives — all clear." icon="✓" color="var(--wt-up-600)" />
     }
     return (
       <>
@@ -95,15 +101,16 @@ function DetailContent({ widgetId, drives, profiles }) {
                 { label: 'Pending', value: d.pending_sectors },
                 { label: 'Uncorr.', value: d.uncorrectable_errors },
               ].map(({ label, value }) => (
-                <div key={label} className={`rounded-lg px-2 py-1.5 text-center border ${
-                  (value ?? 0) > 0
-                    ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/40'
-                    : 'bg-slate-50 dark:bg-gray-800/30 border-slate-200 dark:border-gray-700/40'
-                }`}>
-                  <p className={`text-sm font-bold ${(value ?? 0) > 0 ? 'text-red-500' : 'text-slate-300 dark:text-gray-700'}`}>
+                <div key={label} className="rounded-lg px-2 py-1.5 text-center border"
+                  style={(value ?? 0) > 0
+                    ? { background: 'var(--wt-down-50)', borderColor: 'var(--wt-down-100)' }
+                    : { background: 'var(--wt-surface-2)', borderColor: 'var(--wt-border)' }
+                  }>
+                  <p className="wt-mono text-sm font-bold"
+                    style={{ color: (value ?? 0) > 0 ? 'var(--wt-down-500)' : 'var(--wt-text-faint)' }}>
                     {value ?? '—'}
                   </p>
-                  <p className="text-[9px] text-slate-400 dark:text-gray-600">{label}</p>
+                  <p className="text-[9px]" style={{ color: 'var(--wt-text-faint)' }}>{label}</p>
                 </div>
               ))}
             </div>
@@ -124,9 +131,9 @@ function DetailContent({ widgetId, drives, profiles }) {
     return (
       <>
         <div className="flex gap-2 mb-4">
-          <StatPill label="Hottest" value={`${hottest}°C`} color="text-orange-500" />
-          <StatPill label="Average" value={`${avg}°C`} color="text-sky-500" />
-          <StatPill label="Coolest" value={`${coolest}°C`} color="text-emerald-500" />
+          <StatPill label="Hottest" value={`${hottest}°C`} color="var(--wt-warn-500)" />
+          <StatPill label="Average" value={`${avg}°C`} color="var(--bw-ink)" />
+          <StatPill label="Coolest" value={`${coolest}°C`} color="var(--wt-up-600)" />
         </div>
         <SectionLabel>Top 10 by temperature</SectionLabel>
         {sorted.map(d => (
@@ -148,8 +155,8 @@ function DetailContent({ widgetId, drives, profiles }) {
     return (
       <>
         <div className="flex gap-2 mb-4">
-          <StatPill label="Most hours" value={`${(oldest / 24 / 365).toFixed(1)}y`} color="text-purple-500" />
-          <StatPill label="Fleet total" value={`${Math.round(total / 1000)}k h`} color="text-slate-600 dark:text-gray-300" />
+          <StatPill label="Most hours" value={`${(oldest / 24 / 365).toFixed(1)}y`} color="var(--wt-viz-6)" />
+          <StatPill label="Fleet total" value={`${Math.round(total / 1000)}k h`} />
         </div>
         <SectionLabel>Top 10 by age</SectionLabel>
         {sorted.map(d => (
@@ -166,7 +173,7 @@ function DetailContent({ widgetId, drives, profiles }) {
     const expiring = profiles
       .filter(p => p.warranty_days_remaining != null && p.warranty_days_remaining <= 90)
       .sort((a, b) => a.warranty_days_remaining - b.warranty_days_remaining)
-    if (!expiring.length) return <EmptyState message="No warranties expiring within 90 days." icon="✓" color="text-emerald-500" />
+    if (!expiring.length) return <EmptyState message="No warranties expiring within 90 days." icon="✓" color="var(--wt-up-600)" />
     return (
       <>
         <SectionLabel>{expiring.length} warranty {expiring.length === 1 ? 'expiry' : 'expiries'} within 90 days</SectionLabel>
@@ -177,15 +184,15 @@ function DetailContent({ widgetId, drives, profiles }) {
           const isExpired = days < 0
           return (
             <DriveRow key={p.serial} drive={d}>
-              <div className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${
-                isExpired
-                  ? 'bg-red-100 dark:bg-red-950/40 text-red-500'
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold"
+                style={isExpired
+                  ? { background: 'var(--wt-down-50)', color: 'var(--wt-down-500)' }
                   : days <= 30
-                  ? 'bg-orange-100 dark:bg-orange-950/30 text-orange-500'
-                  : 'bg-amber-100 dark:bg-amber-950/30 text-amber-600'
-              }`}>
+                  ? { background: 'var(--wt-warn-50)', color: 'var(--wt-warn-600)' }
+                  : { background: 'var(--wt-warn-50)', color: 'var(--wt-warn-500)' }
+                }>
                 {isExpired ? `Expired ${Math.abs(Math.round(days / 30))}mo ago` : `${Math.round(days / 30)}mo remaining`}
-              </div>
+              </span>
             </DriveRow>
           )
         })}
@@ -198,19 +205,20 @@ function DetailContent({ widgetId, drives, profiles }) {
     const withSectors = drives
       .filter(d => (d.reallocated_sectors ?? 0) > 0)
       .sort((a, b) => b.reallocated_sectors - a.reallocated_sectors)
-    if (!withSectors.length) return <EmptyState message="No reallocated sectors detected." icon="✓" color="text-emerald-500" />
+    if (!withSectors.length) return <EmptyState message="No reallocated sectors detected." icon="✓" color="var(--wt-up-600)" />
     const chartData = withSectors.slice(0, 8).map(d => ({
       name: d.serial.slice(-6),
       sectors: d.reallocated_sectors,
     }))
+    const maxSectors = Math.max(...withSectors.map(x => x.reallocated_sectors))
     return (
       <>
         <SectionLabel>{withSectors.length} {withSectors.length === 1 ? 'drive' : 'drives'} with reallocated sectors</SectionLabel>
         <div className="mb-4">
           <ResponsiveContainer width="100%" height={80}>
             <BarChart data={chartData} margin={{ top: 2, right: 4, bottom: 0, left: -20 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400" tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400" tickLine={false} axisLine={false} allowDecimals={false} />
+              <XAxis dataKey="name" tick={axisStyle} tickLine={false} axisLine={false} />
+              <YAxis tick={axisStyle} tickLine={false} axisLine={false} allowDecimals={false} />
               <Tooltip contentStyle={tooltipStyle} formatter={v => [v, 'Sectors']} labelStyle={{ color: '#94a3b8' }} />
               <Bar dataKey="sectors" fill="#f59e0b" radius={[3, 3, 0, 0]} />
             </BarChart>
@@ -219,11 +227,12 @@ function DetailContent({ widgetId, drives, profiles }) {
         {withSectors.map(d => (
           <DriveRow key={d.serial} drive={d}>
             <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden">
-                <div className="h-full rounded-full bg-amber-400"
-                  style={{ width: `${Math.min(100, (d.reallocated_sectors / Math.max(...withSectors.map(x => x.reallocated_sectors))) * 100)}%` }} />
+              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--wt-n-200)' }}>
+                <div className="h-full rounded-full"
+                  style={{ width: `${Math.min(100, (d.reallocated_sectors / maxSectors) * 100)}%`, background: 'var(--wt-warn-500)' }} />
               </div>
-              <span className="text-xs font-bold text-amber-500 w-12 text-right shrink-0">{d.reallocated_sectors} sec</span>
+              <span className="wt-mono text-xs font-bold w-12 text-right shrink-0"
+                style={{ color: 'var(--wt-warn-600)' }}>{d.reallocated_sectors} sec</span>
             </div>
           </DriveRow>
         ))}
@@ -244,8 +253,8 @@ function DetailContent({ widgetId, drives, profiles }) {
     return (
       <>
         <div className="flex gap-2 mb-4">
-          <StatPill label="Clean" value={clean.length} color="text-emerald-500" />
-          <StatPill label="Passed w/ errors" value={withErrors.length} color="text-amber-500" />
+          <StatPill label="Clean" value={clean.length} color="var(--wt-up-600)" />
+          <StatPill label="Passed w/ errors" value={withErrors.length} color="var(--wt-warn-500)" />
         </div>
         {withErrors.length > 0 && (
           <>
@@ -254,17 +263,20 @@ function DetailContent({ widgetId, drives, profiles }) {
               <DriveRow key={d.serial} drive={d}>
                 <div className="flex gap-2">
                   {(d.reallocated_sectors ?? 0) > 0 && (
-                    <span className="text-[10px] bg-amber-100 dark:bg-amber-950/30 text-amber-600 rounded px-1.5 py-0.5">
+                    <span className="text-[10px] rounded px-1.5 py-0.5"
+                      style={{ background: 'var(--wt-warn-50)', color: 'var(--wt-warn-600)' }}>
                       {d.reallocated_sectors} realloc
                     </span>
                   )}
                   {(d.pending_sectors ?? 0) > 0 && (
-                    <span className="text-[10px] bg-amber-100 dark:bg-amber-950/30 text-amber-600 rounded px-1.5 py-0.5">
+                    <span className="text-[10px] rounded px-1.5 py-0.5"
+                      style={{ background: 'var(--wt-warn-50)', color: 'var(--wt-warn-600)' }}>
                       {d.pending_sectors} pending
                     </span>
                   )}
                   {(d.uncorrectable_errors ?? 0) > 0 && (
-                    <span className="text-[10px] bg-orange-100 dark:bg-orange-950/30 text-orange-600 rounded px-1.5 py-0.5">
+                    <span className="text-[10px] rounded px-1.5 py-0.5"
+                      style={{ background: 'var(--wt-warn-50)', color: 'var(--wt-warn-600)' }}>
                       {d.uncorrectable_errors} uncorr
                     </span>
                   )}
@@ -275,9 +287,10 @@ function DetailContent({ widgetId, drives, profiles }) {
         )}
         <SectionLabel>All {healthy.length} passing drives</SectionLabel>
         {healthy.slice(0, 20).map(d => (
-          <div key={d.serial} className="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-gray-800/50 last:border-0">
-            <span className="text-xs text-slate-700 dark:text-gray-300 font-mono truncate">{d.serial}</span>
-            <span className="text-[10px] text-emerald-500 ml-2 shrink-0">PASSED</span>
+          <div key={d.serial} className="flex items-center justify-between py-1.5 last:border-0"
+            style={{ borderBottom: '1px solid var(--wt-border)' }}>
+            <span className="wt-mono text-xs truncate" style={{ color: 'var(--wt-text)' }}>{d.serial}</span>
+            <span className="text-[10px] ml-2 shrink-0" style={{ color: 'var(--wt-up-600)' }}>PASSED</span>
           </div>
         ))}
       </>
@@ -289,7 +302,6 @@ function DetailContent({ widgetId, drives, profiles }) {
     const withTemp = drives.filter(d => d.temperature_c != null)
     if (!withTemp.length) return <EmptyState message="No temperature data available." />
 
-    // Build histogram buckets in 5°C steps
     const buckets = {}
     withTemp.forEach(d => {
       const bucket = Math.floor(d.temperature_c / 5) * 5
@@ -305,15 +317,15 @@ function DetailContent({ widgetId, drives, profiles }) {
     return (
       <>
         <div className="flex gap-2 mb-4">
-          <StatPill label="Average" value={`${avg}°C`} color="text-sky-500" />
-          <StatPill label="Monitored" value={withTemp.length} color="text-slate-600 dark:text-gray-300" />
+          <StatPill label="Average" value={`${avg}°C`} color="var(--bw-ink)" />
+          <StatPill label="Monitored" value={withTemp.length} />
         </div>
         <SectionLabel>Temperature distribution</SectionLabel>
         <div className="mb-4">
           <ResponsiveContainer width="100%" height={80}>
             <BarChart data={chartData} margin={{ top: 2, right: 4, bottom: 0, left: -20 }}>
-              <XAxis dataKey="temp" tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400" tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 8, fill: 'currentColor' }} className="text-slate-400" tickLine={false} axisLine={false} allowDecimals={false} />
+              <XAxis dataKey="temp" tick={axisStyle} tickLine={false} axisLine={false} />
+              <YAxis tick={axisStyle} tickLine={false} axisLine={false} allowDecimals={false} />
               <Tooltip contentStyle={tooltipStyle} formatter={v => [v, 'Drives']} labelStyle={{ color: '#94a3b8' }} />
               <Bar dataKey="count" fill="#38bdf8" radius={[3, 3, 0, 0]} />
             </BarChart>
@@ -343,10 +355,10 @@ function DetailContent({ widgetId, drives, profiles }) {
     }
 
     const TIERS = [
-      { key: 'replace_now',  label: 'Replace Immediately',   dotColor: '#ef4444', badgeClass: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/40 text-red-500' },
-      { key: 'replace_soon', label: 'Replace When Possible', dotColor: '#f97316', badgeClass: 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800/40 text-orange-500' },
-      { key: 'monitor',      label: 'Monitor Closely',       dotColor: '#f59e0b', badgeClass: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/40 text-amber-600' },
-      { key: 'healthy',      label: 'Healthy',               dotColor: '#22c55e', badgeClass: 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40 text-emerald-600' },
+      { key: 'replace_now',  label: 'Replace Immediately',   dotColor: 'var(--wt-down-500)',  badgeStyle: { background: 'var(--wt-down-50)',  borderColor: 'var(--wt-down-100)',  color: 'var(--wt-down-500)' } },
+      { key: 'replace_soon', label: 'Replace When Possible', dotColor: 'var(--wt-warn-600)',  badgeStyle: { background: 'var(--wt-warn-50)',  borderColor: 'var(--wt-warn-200)',  color: 'var(--wt-warn-600)' } },
+      { key: 'monitor',      label: 'Monitor Closely',       dotColor: 'var(--wt-warn-500)',  badgeStyle: { background: 'var(--wt-warn-50)',  borderColor: 'var(--wt-warn-100)',  color: 'var(--wt-warn-500)' } },
+      { key: 'healthy',      label: 'Healthy',               dotColor: 'var(--wt-up-500)',    badgeStyle: { background: 'var(--wt-up-50)',    borderColor: 'var(--wt-up-100)',    color: 'var(--wt-up-600)' } },
     ]
 
     const grouped = {}
@@ -357,8 +369,9 @@ function DetailContent({ widgetId, drives, profiles }) {
       <>
         <div className="flex gap-2 mb-5">
           {TIERS.map(t => (
-            <div key={t.key} className={`flex-1 rounded-xl border px-2 py-2.5 text-center ${t.badgeClass}`}>
-              <p className="text-xl font-bold leading-none">{grouped[t.key].length}</p>
+            <div key={t.key} className="flex-1 rounded-xl border px-2 py-2.5 text-center"
+              style={t.badgeStyle}>
+              <p className="wt-mono text-xl font-bold leading-none">{grouped[t.key].length}</p>
               <p className="text-[8px] mt-1 leading-tight opacity-80">{t.label}</p>
             </div>
           ))}
@@ -368,34 +381,38 @@ function DetailContent({ widgetId, drives, profiles }) {
           <div key={tier.key} className="mb-3">
             <div className="flex items-center gap-1.5 mb-1.5 mt-2 first:mt-0">
               <span className="w-2 h-2 rounded-full shrink-0" style={{ background: tier.dotColor }} />
-              <p className="text-[10px] font-semibold text-slate-500 dark:text-gray-500 uppercase tracking-widest">
-                {tier.label} — {grouped[tier.key].length}
-              </p>
+              <p className="wt-eyebrow">{tier.label} — {grouped[tier.key].length}</p>
             </div>
             {grouped[tier.key].map(d => (
               <DriveRow key={d.serial} drive={d}>
                 <div className="flex flex-wrap gap-1.5">
                   {d.smart_status === 'FAILED' && (
-                    <span className="text-[10px] bg-red-100 dark:bg-red-950/40 text-red-500 rounded px-1.5 py-0.5">SMART FAILED</span>
+                    <span className="text-[10px] rounded px-1.5 py-0.5"
+                      style={{ background: 'var(--wt-down-50)', color: 'var(--wt-down-500)' }}>SMART FAILED</span>
                   )}
                   {(d.reallocated_sectors ?? 0) > 0 && (
-                    <span className="text-[10px] bg-amber-100 dark:bg-amber-950/30 text-amber-600 rounded px-1.5 py-0.5">{d.reallocated_sectors} realloc</span>
+                    <span className="text-[10px] rounded px-1.5 py-0.5"
+                      style={{ background: 'var(--wt-warn-50)', color: 'var(--wt-warn-600)' }}>{d.reallocated_sectors} realloc</span>
                   )}
                   {(d.pending_sectors ?? 0) > 0 && (
-                    <span className="text-[10px] bg-amber-100 dark:bg-amber-950/30 text-amber-600 rounded px-1.5 py-0.5">{d.pending_sectors} pending</span>
+                    <span className="text-[10px] rounded px-1.5 py-0.5"
+                      style={{ background: 'var(--wt-warn-50)', color: 'var(--wt-warn-600)' }}>{d.pending_sectors} pending</span>
                   )}
                   {(d.uncorrectable_errors ?? 0) > 0 && (
-                    <span className="text-[10px] bg-orange-100 dark:bg-orange-950/30 text-orange-600 rounded px-1.5 py-0.5">{d.uncorrectable_errors} uncorr</span>
+                    <span className="text-[10px] rounded px-1.5 py-0.5"
+                      style={{ background: 'var(--wt-warn-50)', color: 'var(--wt-warn-600)' }}>{d.uncorrectable_errors} uncorr</span>
                   )}
                   {tier.key === 'monitor' && (d.reallocated_sectors ?? 0) === 0 && (d.pending_sectors ?? 0) === 0 && (d.uncorrectable_errors ?? 0) === 0 && (
-                    <span className="text-[10px] bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 rounded px-1.5 py-0.5">
+                    <span className="text-[10px] rounded px-1.5 py-0.5"
+                      style={{ background: 'var(--wt-surface-2)', color: 'var(--wt-text-muted)' }}>
                       {d.smart_status === 'PASSED'
                         ? `${((d.power_on_hours ?? 0) / 24 / 365).toFixed(1)}y old`
                         : 'No SMART data'}
                     </span>
                   )}
                   {tier.key === 'healthy' && (
-                    <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 rounded px-1.5 py-0.5">PASSED</span>
+                    <span className="text-[10px] rounded px-1.5 py-0.5"
+                      style={{ background: 'var(--wt-up-50)', color: 'var(--wt-up-600)' }}>PASSED</span>
                   )}
                 </div>
               </DriveRow>
@@ -427,19 +444,20 @@ function DetailContent({ widgetId, drives, profiles }) {
     return (
       <>
         <div className="flex gap-2 mb-4">
-          <StatPill label="SSDs" value={ssds.length} color="text-violet-500" />
-          <StatPill label="HDDs" value={hdds.length} color="text-slate-600 dark:text-gray-300" />
-          <StatPill label="Total" value={tb >= 1 ? `${tb.toFixed(1)} TB` : `${(totalCap / 1e9).toFixed(0)} GB`} color="text-blue-500" />
+          <StatPill label="SSDs" value={ssds.length} color="var(--wt-viz-5)" />
+          <StatPill label="HDDs" value={hdds.length} />
+          <StatPill label="Total" value={tb >= 1 ? `${tb.toFixed(1)} TB` : `${(totalCap / 1e9).toFixed(0)} GB`} color="var(--wt-brand-500)" />
         </div>
         <SectionLabel>By form factor</SectionLabel>
         <div className="flex flex-col gap-1.5 mb-4">
           {ffData.map(({ name, value }) => (
             <div key={name} className="flex items-center gap-2">
-              <span className="text-xs text-slate-600 dark:text-gray-400 w-20 shrink-0">{name}</span>
-              <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden">
-                <div className="h-full rounded-full bg-blue-400" style={{ width: `${(value / drives.length) * 100}%` }} />
+              <span className="text-xs w-20 shrink-0" style={{ color: 'var(--wt-text-muted)' }}>{name}</span>
+              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--wt-n-200)' }}>
+                <div className="h-full rounded-full"
+                  style={{ width: `${(value / drives.length) * 100}%`, background: 'var(--wt-brand-500)' }} />
               </div>
-              <span className="text-xs font-semibold text-slate-700 dark:text-gray-300 w-6 text-right">{value}</span>
+              <span className="wt-mono text-xs font-semibold w-6 text-right" style={{ color: 'var(--wt-text)' }}>{value}</span>
             </div>
           ))}
         </div>
@@ -447,9 +465,10 @@ function DetailContent({ widgetId, drives, profiles }) {
           <>
             <SectionLabel>{other.length} drives with unknown type</SectionLabel>
             {other.map(d => (
-              <div key={d.serial} className="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-gray-800/50 last:border-0">
-                <span className="text-xs text-slate-600 dark:text-gray-300 truncate">{d.model || d.serial}</span>
-                <span className="text-[10px] font-mono text-slate-400 dark:text-gray-600 ml-2 shrink-0">{d.serial.slice(-6)}</span>
+              <div key={d.serial} className="flex items-center justify-between py-1.5 last:border-0"
+                style={{ borderBottom: '1px solid var(--wt-border)' }}>
+                <span className="text-xs truncate" style={{ color: 'var(--wt-text)' }}>{d.model || d.serial}</span>
+                <span className="wt-mono text-[10px] ml-2 shrink-0" style={{ color: 'var(--wt-text-faint)' }}>{d.serial.slice(-6)}</span>
               </div>
             ))}
           </>
@@ -461,15 +480,6 @@ function DetailContent({ widgetId, drives, profiles }) {
   return null
 }
 
-function EmptyState({ message, icon = '—', color = 'text-slate-400' }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-8 gap-2">
-      <span className={`text-2xl ${color}`}>{icon}</span>
-      <p className="text-sm text-slate-500 dark:text-gray-500 text-center">{message}</p>
-    </div>
-  )
-}
-
 export default function WidgetDetailModal({ widgetId, drives, profiles, onClose }) {
   const def = WIDGET_DEFS[widgetId]
   if (!def) return null
@@ -478,23 +488,24 @@ export default function WidgetDetailModal({ widgetId, drives, profiles, onClose 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 shadow-2xl overflow-hidden flex flex-col max-h-[82vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-gray-800/80 shrink-0">
+      <div className="relative w-full max-w-sm rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[82vh]"
+        style={{ background: 'var(--wt-surface)', borderColor: 'var(--wt-border)' }}>
+
+        <div className="flex items-center justify-between px-5 py-4 shrink-0"
+          style={{ borderBottom: '1px solid var(--wt-border)' }}>
           <div className="flex items-center gap-2.5">
-            <div className={`w-7 h-7 rounded-lg bg-slate-100 dark:bg-gray-800 flex items-center justify-center ${def.color}`}>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: 'var(--wt-surface-2)', color: def.colorVar }}>
               <Icon size={14} />
             </div>
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{def.label}</h2>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--wt-text)' }}>{def.label}</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 dark:text-gray-500 hover:text-slate-700 dark:hover:text-gray-200 transition-colors p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-gray-800"
-          >
+          <button onClick={onClose}
+            className="transition-colors p-1.5 rounded-lg hover:bg-[var(--wt-surface-2)] text-[var(--wt-text-faint)] hover:text-[var(--wt-text-subtle)]">
             <X size={15} />
           </button>
         </div>
-        {/* Body */}
+
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <DetailContent widgetId={widgetId} drives={drives} profiles={profiles} />
         </div>

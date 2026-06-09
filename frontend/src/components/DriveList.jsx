@@ -29,20 +29,30 @@ function DraggableDriveItem({ drive, profile, isSelected, onSelect, isAssigned }
         {...attributes}
         className={clsx(
           'flex items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors w-full cursor-grab active:cursor-grabbing',
-          isSelected
-            ? 'bg-blue-600 text-white'
-            : 'hover:bg-slate-100 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-200'
+          !isSelected && 'hover:bg-[var(--wt-surface-2)]',
         )}
+        style={isSelected
+          ? { background: 'var(--wt-brand-600)', color: 'var(--wt-text-on-brand)' }
+          : { color: 'var(--wt-text)' }
+        }
       >
-        <DriveIcon size={18} className={clsx('shrink-0', isSelected ? 'text-blue-200' : 'text-slate-400 dark:text-gray-400')} />
+        <DriveIcon size={18} className="shrink-0"
+          style={{ color: isSelected ? 'var(--wt-brand-200)' : 'var(--wt-text-faint)' }} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{drive.make || drive.serial}</p>
-          <p className={clsx('text-xs truncate', isSelected ? 'text-blue-200' : 'text-slate-400 dark:text-gray-400')}>{drive.model || drive.serial}</p>
+          <p className="text-xs truncate"
+            style={{ color: isSelected ? 'var(--wt-brand-200)' : 'var(--wt-text-muted)' }}>
+            {drive.model || drive.serial}
+          </p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
-          <span className={clsx('text-xs', isSelected ? 'text-blue-200' : 'text-slate-400 dark:text-gray-400')}>{formatBytes(drive.capacity_bytes)}</span>
+          <span className="wt-mono text-xs"
+            style={{ color: isSelected ? 'var(--wt-brand-200)' : 'var(--wt-text-faint)' }}>
+            {formatBytes(drive.capacity_bytes)}
+          </span>
           {drive.zfs_pool && !isSelected && (
-            <span className="text-[9px] font-mono font-medium px-1 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40 leading-none">
+            <span className="text-[9px] font-mono font-medium px-1 py-0.5 rounded leading-none"
+              style={{ background: 'var(--wt-brand-50)', color: 'var(--wt-brand-600)', border: '1px solid var(--wt-brand-200)' }}>
               {drive.zfs_pool}
             </span>
           )}
@@ -80,20 +90,21 @@ export default function DriveList({ drives, profiles = [], selectedSerial, onSel
   return (
     <div className="flex flex-col gap-2">
       <div className="relative">
-        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 pointer-events-none" />
+        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ color: 'var(--wt-text-faint)' }} />
         <input
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search drives…"
-          className="w-full rounded-md bg-slate-50 dark:bg-gray-800/60 border border-slate-200 dark:border-gray-700/60 pl-7 pr-3 py-1.5 text-xs text-slate-800 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="wt-input w-full pl-7 pr-3 py-1.5 text-xs"
         />
       </div>
 
       {assignedCount > 0 && !q && (
         <button
           onClick={() => setShowAll(v => !v)}
-          className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 transition-colors self-start px-0.5"
+          className="flex items-center gap-1.5 text-xs transition-colors self-start px-0.5 text-[var(--wt-text-faint)] hover:text-[var(--wt-text-subtle)]"
         >
           {showAll ? <EyeOff size={12} /> : <Eye size={12} />}
           {showAll ? 'Hide' : `Show ${assignedCount}`} assigned
@@ -102,7 +113,7 @@ export default function DriveList({ drives, profiles = [], selectedSerial, onSel
 
       <div className="flex flex-col gap-1 overflow-y-auto">
         {filtered.length === 0 && (
-          <p className="text-sm text-slate-500 dark:text-gray-500 p-3">
+          <p className="text-sm p-3" style={{ color: 'var(--wt-text-muted)' }}>
             {drives.length === 0
               ? 'No drives found. Run a scan.'
               : q

@@ -1,11 +1,11 @@
 import { X, HardDrive, Server } from 'lucide-react'
 
-function Row({ label, value, mono }) {
+function Row({ label, value, mono, color }) {
   if (value == null || value === '') return null
   return (
-    <div className="flex items-start justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-gray-800/60 last:border-0">
-      <span className="text-xs text-slate-500 dark:text-gray-500 shrink-0 w-36">{label}</span>
-      <span className={`text-xs text-slate-800 dark:text-gray-200 text-right ${mono ? 'font-mono' : ''}`}>{value}</span>
+    <div className="flex items-start justify-between gap-4 py-1.5" style={{ borderBottom: '1px solid var(--wt-border)' }}>
+      <span className="text-xs shrink-0 w-36" style={{ color: 'var(--wt-text-muted)' }}>{label}</span>
+      <span className={`text-xs text-right ${mono ? 'wt-mono' : ''}`} style={{ color: color || 'var(--wt-text)' }}>{value}</span>
     </div>
   )
 }
@@ -28,14 +28,14 @@ export default function RemoteDriveModal({ drive, bayInfo, instanceName, onClose
   if (!drive) return null
 
   const tempColor =
-    drive.temperature_c >= 55 ? 'text-red-500' :
-    drive.temperature_c >= 45 ? 'text-amber-500' :
-    'text-slate-800 dark:text-gray-200'
+    drive.temperature_c >= 55 ? 'var(--wt-down-500)' :
+    drive.temperature_c >= 45 ? 'var(--wt-warn-600)' :
+    'var(--wt-text)'
 
   const smartColor =
-    drive.smart_status === 'PASSED' ? 'text-emerald-600 dark:text-emerald-400' :
-    drive.smart_status === 'FAILED' ? 'text-red-500 dark:text-red-400' :
-    'text-slate-500 dark:text-gray-500'
+    drive.smart_status === 'PASSED' ? 'var(--wt-up-600)' :
+    drive.smart_status === 'FAILED' ? 'var(--wt-down-500)' :
+    'var(--wt-text-muted)'
 
   const bayLabel = bayInfo
     ? [bayInfo.enclosure_name, bayInfo.array_name, bayInfo.label || `Row ${(bayInfo.row ?? 0) + 1}, Slot ${(bayInfo.col ?? 0) + 1}`].filter(Boolean).join(' › ')
@@ -45,32 +45,34 @@ export default function RemoteDriveModal({ drive, bayInfo, instanceName, onClose
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="flex min-h-full items-start justify-center p-4 pt-16">
-        <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 shadow-2xl overflow-hidden">
+        <div className="relative w-full max-w-md rounded-2xl border shadow-2xl overflow-hidden"
+          style={{ background: 'var(--wt-surface)', borderColor: 'var(--wt-border)' }}>
 
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-gray-800">
+          <div className="flex items-center justify-between px-5 py-4"
+            style={{ borderBottom: '1px solid var(--wt-border)' }}>
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-gray-800 flex items-center justify-center">
-                <HardDrive size={16} className="text-blue-500 dark:text-blue-400" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: 'var(--wt-surface-2)' }}>
+                <HardDrive size={16} style={{ color: 'var(--wt-brand-500)' }} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">Remote Drive</p>
-                <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-gray-500">
+                <p className="text-sm font-semibold" style={{ color: 'var(--wt-text)' }}>Remote Drive</p>
+                <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--wt-text-muted)' }}>
                   <Server size={10} />
                   <span>{instanceName}</span>
                 </div>
               </div>
             </div>
-            <button onClick={onClose} className="text-slate-400 dark:text-gray-500 hover:text-slate-700 dark:hover:text-gray-200 transition-colors p-1 rounded">
+            <button onClick={onClose}
+              className="transition-colors p-1 rounded text-[var(--wt-text-faint)] hover:text-[var(--wt-text-subtle)]">
               <X size={18} />
             </button>
           </div>
 
           <div className="p-5 flex flex-col gap-5">
 
-            {/* Identity */}
             <section>
-              <p className="text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-2">Identity</p>
+              <p className="wt-eyebrow mb-2">Identity</p>
               <Row label="Serial"       value={drive.serial}         mono />
               <Row label="Make"         value={drive.make} />
               <Row label="Model"        value={drive.model} />
@@ -81,17 +83,16 @@ export default function RemoteDriveModal({ drive, bayInfo, instanceName, onClose
               <Row label="Device Path"  value={drive.device_path}    mono />
             </section>
 
-            {/* Health */}
             <section>
-              <p className="text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-2">Health</p>
-              <div className="flex items-start justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-gray-800/60">
-                <span className="text-xs text-slate-500 dark:text-gray-500 shrink-0 w-36">SMART Status</span>
-                <span className={`text-xs font-medium ${smartColor}`}>{drive.smart_status || 'Unknown'}</span>
+              <p className="wt-eyebrow mb-2">Health</p>
+              <div className="flex items-start justify-between gap-4 py-1.5" style={{ borderBottom: '1px solid var(--wt-border)' }}>
+                <span className="text-xs shrink-0 w-36" style={{ color: 'var(--wt-text-muted)' }}>SMART Status</span>
+                <span className="wt-mono text-xs font-medium" style={{ color: smartColor }}>{drive.smart_status || 'Unknown'}</span>
               </div>
               {drive.temperature_c != null && (
-                <div className="flex items-start justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-gray-800/60">
-                  <span className="text-xs text-slate-500 dark:text-gray-500 shrink-0 w-36">Temperature</span>
-                  <span className={`text-xs font-medium ${tempColor}`}>{drive.temperature_c}°C</span>
+                <div className="flex items-start justify-between gap-4 py-1.5" style={{ borderBottom: '1px solid var(--wt-border)' }}>
+                  <span className="text-xs shrink-0 w-36" style={{ color: 'var(--wt-text-muted)' }}>Temperature</span>
+                  <span className="wt-mono text-xs font-medium" style={{ color: tempColor }}>{drive.temperature_c}°C</span>
                 </div>
               )}
               <Row label="Power-On Hours"       value={fmtHours(drive.power_on_hours)} />
@@ -100,23 +101,22 @@ export default function RemoteDriveModal({ drive, bayInfo, instanceName, onClose
               <Row label="Uncorrectable Errors" value={drive.uncorrectable_errors != null ? String(drive.uncorrectable_errors) : null} />
             </section>
 
-            {/* Location */}
             <section>
-              <p className="text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-2">Location</p>
-              <div className="flex items-start justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-gray-800/60">
-                <span className="text-xs text-slate-500 dark:text-gray-500 shrink-0 w-36">Bay</span>
-                <span className="text-xs text-slate-800 dark:text-gray-200 text-right">{bayLabel}</span>
+              <p className="wt-eyebrow mb-2">Location</p>
+              <div className="flex items-start justify-between gap-4 py-1.5" style={{ borderBottom: '1px solid var(--wt-border)' }}>
+                <span className="text-xs shrink-0 w-36" style={{ color: 'var(--wt-text-muted)' }}>Bay</span>
+                <span className="text-xs text-right" style={{ color: 'var(--wt-text)' }}>{bayLabel}</span>
               </div>
               {drive.zfs_pool && (
                 <div className="flex items-start justify-between gap-4 py-1.5">
-                  <span className="text-xs text-slate-500 dark:text-gray-500 shrink-0 w-36">ZFS Pool</span>
-                  <span className="text-xs font-mono text-blue-500 dark:text-blue-400">{drive.zfs_pool}</span>
+                  <span className="text-xs shrink-0 w-36" style={{ color: 'var(--wt-text-muted)' }}>ZFS Pool</span>
+                  <span className="wt-mono text-xs" style={{ color: 'var(--wt-brand-500)' }}>{drive.zfs_pool}</span>
                 </div>
               )}
             </section>
 
             {drive.last_scanned && (
-              <p className="text-[10px] text-slate-300 dark:text-gray-700 text-right">
+              <p className="wt-mono text-[10px] text-right" style={{ color: 'var(--wt-text-faint)' }}>
                 Last scanned {new Date(drive.last_scanned).toLocaleString()}
               </p>
             )}

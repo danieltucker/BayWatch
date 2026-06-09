@@ -4,6 +4,24 @@ All notable changes to BayWatch are documented here. Follows [Keep a Changelog](
 
 ---
 
+## [1.11.0] — 2026-06-09
+
+### Changed
+- **Watchtower design system migration** — all UI components now use `wt-*` CSS custom property tokens exclusively; every hardcoded Tailwind color class and `dark:` variant has been replaced with semantic role tokens (`--wt-surface`, `--wt-text`, `--wt-border`, `--wt-up/warn/down-*`, etc.) so the entire UI re-maps correctly on theme toggle with zero markup changes
+- **BayWatch signature ink** — app-specific teal-cyan accent (`--bw-ink`, `--bw-from`, `--bw-to`) wired up in ThemeContext; used for hot-spare status, drive icon gradients, and temperature bars
+- **Status color functions** — `healthGradient()`, `iconStyle()`, `scoreLabel()`, `bayStatusActiveStyle()`, `statePillStyle()` and equivalents now return inline style objects with CSS variable values instead of Tailwind className strings, eliminating `dark:` class dependencies entirely
+- **Eyebrow labels** — all section headers previously using `text-[10px] uppercase tracking-wider` classes converted to `wt-eyebrow`
+- **Form controls** — all inputs, selects, and textareas across DriveEditModal, BayModal, EmptyBayModal, and SettingsModal converted to `wt-input`, `wt-select`, `wt-textarea`, `wt-label`, `wt-field`
+- **Buttons** — primary and ghost buttons across all modals converted to `wt-btn wt-btn--primary` / `wt-btn--ghost`
+- **Temperature bars** — all temperature and progress bars converted to `wt-meter` / `wt-meter__fill--temp`
+- **SVG rings** — health score rings use `style={{ stroke }}` instead of presentation attributes so CSS variables resolve correctly
+- **Chart axes** — Recharts `XAxis`/`YAxis` tick styles use `{ fontSize: 8, fill: 'var(--wt-text-faint)' }` object instead of `className` for reliable SVG color application
+- **Widget stat pills and tier badges** — WidgetDetailModal `StatPill`, TIERS, and inline status badges all use CSS variable color strings instead of Tailwind color classes
+- **PoolTopologyPanel charts and cards** — SMART status card styles, state pill styles, and pool capacity bar converted to wt token inline styles
+- **SettingsModal** — sidebar nav active state uses `color-mix` brand tint; all inputs, toggles, and buttons migrated to wt tokens; version bumped to v1.11.0 in sidebar footer
+
+---
+
 ## [1.10.0] — 2026-05-28
 
 ### Added

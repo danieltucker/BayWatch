@@ -50,7 +50,7 @@ function ArrayTempSparkline({ arrayId }) {
   if (data.length < 2) return null
 
   const latest = data[data.length - 1]?.avg_temp_c ?? 0
-  const color = latest >= dangerC ? '#f87171' : latest >= warnC ? '#fbbf24' : '#38bdf8'
+  const color = latest >= dangerC ? 'oklch(0.620 0.215 26)' : latest >= warnC ? 'oklch(0.760 0.150 73)' : 'oklch(0.720 0.120 205)'
 
   return (
     <div className="w-full h-7">
@@ -80,10 +80,10 @@ function ArrayTempSparkline({ arrayId }) {
 function HealthBar({ stats }) {
   return (
     <div className="flex h-[3px] w-full rounded-full overflow-hidden">
-      {stats.passed > 0 && <div className="bg-emerald-400 dark:bg-emerald-500" style={{ flex: stats.passed }} />}
-      {stats.warn > 0 && <div className="bg-amber-400" style={{ flex: stats.warn }} />}
-      {stats.failed > 0 && <div className="bg-red-400" style={{ flex: stats.failed }} />}
-      {stats.empty > 0 && <div className="bg-slate-200 dark:bg-gray-800" style={{ flex: stats.empty }} />}
+      {stats.passed > 0 && <div style={{ flex: stats.passed, background: 'var(--wt-up-500)' }} />}
+      {stats.warn > 0   && <div style={{ flex: stats.warn,   background: 'var(--wt-warn-500)' }} />}
+      {stats.failed > 0 && <div style={{ flex: stats.failed, background: 'var(--wt-down-500)' }} />}
+      {stats.empty > 0  && <div style={{ flex: stats.empty,  background: 'var(--wt-n-200)' }} />}
     </div>
   )
 }
@@ -124,71 +124,38 @@ export default function BayGrid({
     <div className="w-full">
       {/* ── Header ── */}
       <div className="flex items-center gap-2 mb-2">
-        {/* Collapse toggle */}
-        <button
-          onClick={toggleCollapse}
-          className="text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 shrink-0 transition-colors"
-        >
+        <button onClick={toggleCollapse} className="shrink-0 transition-colors" style={{ color: 'var(--wt-text-faint)' }}>
           {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
         </button>
 
-        {/* Name + badges */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-slate-600 dark:text-gray-300 truncate">{array.name}</h3>
+          <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--wt-text-muted)' }}>{array.name}</h3>
           {array.group_type && array.group_type !== 'drive_bays' && (
-            <span className="text-[10px] font-medium text-slate-400 dark:text-gray-600 bg-slate-100 dark:bg-gray-800/60 px-1.5 py-0.5 rounded-full shrink-0">
-              {groupLabel}
-            </span>
+            <span className="wt-chip wt-chip--plain shrink-0">{groupLabel}</span>
           )}
           {array.purpose && (
-            <span className="text-[10px] text-slate-400 dark:text-gray-600 truncate hidden sm:block">{array.purpose}</span>
+            <span className="text-[10px] truncate hidden sm:block" style={{ color: 'var(--wt-text-faint)' }}>{array.purpose}</span>
           )}
         </div>
 
-        {/* Right controls: reorder + size toggle */}
         <div className="flex items-center gap-1.5 shrink-0">
           {showReorder && (
             <div className="flex gap-0.5">
-              <button
-                onClick={onMoveUp}
-                disabled={!onMoveUp}
-                className={clsx(
-                  'p-0.5 rounded transition-colors',
-                  onMoveUp
-                    ? 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800'
-                    : 'text-slate-200 dark:text-gray-800 cursor-not-allowed'
-                )}
-              >
+              <button onClick={onMoveUp} disabled={!onMoveUp} className="p-0.5 rounded transition-colors"
+                style={{ color: onMoveUp ? 'var(--wt-text-subtle)' : 'var(--wt-text-faint)', cursor: onMoveUp ? undefined : 'not-allowed' }}>
                 <ArrowUp size={12} />
               </button>
-              <button
-                onClick={onMoveDown}
-                disabled={!onMoveDown}
-                className={clsx(
-                  'p-0.5 rounded transition-colors',
-                  onMoveDown
-                    ? 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800'
-                    : 'text-slate-200 dark:text-gray-800 cursor-not-allowed'
-                )}
-              >
+              <button onClick={onMoveDown} disabled={!onMoveDown} className="p-0.5 rounded transition-colors"
+                style={{ color: onMoveDown ? 'var(--wt-text-subtle)' : 'var(--wt-text-faint)', cursor: onMoveDown ? undefined : 'not-allowed' }}>
                 <ArrowDown size={12} />
               </button>
-              <div className="w-px h-4 bg-slate-200 dark:bg-gray-700/60 mx-0.5 self-center" />
+              <div className="w-px h-4 mx-0.5 self-center" style={{ background: 'var(--wt-border)' }} />
             </div>
           )}
 
-          <div className="flex rounded-md border border-slate-200 dark:border-gray-700/60 overflow-hidden">
+          <div className="wt-seg">
             {SIZES.map(s => (
-              <button
-                key={s}
-                onClick={() => handleSize(s)}
-                className={clsx(
-                  'px-2 py-0.5 text-[10px] font-medium transition-colors',
-                  size === s
-                    ? 'bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-gray-200'
-                    : 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400'
-                )}
-              >
+              <button key={s} onClick={() => handleSize(s)} aria-selected={size === s}>
                 {s.toUpperCase()}
               </button>
             ))}
@@ -201,26 +168,26 @@ export default function BayGrid({
         <HealthBar stats={stats} />
         <ArrayTempSparkline arrayId={array.id} />
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-slate-400 dark:text-gray-600">
-            <span className="font-semibold text-slate-600 dark:text-gray-400">{stats.occupied}</span>
+          <span className="wt-mono text-[10px]" style={{ color: 'var(--wt-text-faint)' }}>
+            <span className="font-semibold" style={{ color: 'var(--wt-text-subtle)' }}>{stats.occupied}</span>
             <span>/{stats.total}</span>
           </span>
           {stats.failed > 0 && (
-            <span className="text-[10px] font-semibold text-red-500 dark:text-red-400">
+            <span className="wt-mono text-[10px] font-semibold" style={{ color: 'var(--wt-down-500)' }}>
               {stats.failed} {stats.failed === 1 ? 'failure' : 'failures'}
             </span>
           )}
           {stats.warn > 0 && (
-            <span className="text-[10px] font-semibold text-amber-500 dark:text-amber-400">
+            <span className="wt-mono text-[10px] font-semibold" style={{ color: 'var(--wt-warn-500)' }}>
               {stats.warn} degraded
             </span>
           )}
           {stats.failed === 0 && stats.warn === 0 && stats.occupied > 0 && (
-            <span className="text-[10px] text-emerald-500 dark:text-emerald-400">All healthy</span>
+            <span className="wt-mono text-[10px]" style={{ color: 'var(--wt-up-600)' }}>All healthy</span>
           )}
           {stats.avgTemp != null && (
-            <span className="text-[10px] text-slate-400 dark:text-gray-600 ml-auto">
-              avg <span className="font-semibold text-slate-500 dark:text-gray-400">{stats.avgTemp}°C</span>
+            <span className="wt-mono text-[10px] ml-auto" style={{ color: 'var(--wt-text-faint)' }}>
+              avg <span className="font-semibold" style={{ color: 'var(--wt-text-subtle)' }}>{stats.avgTemp}°C</span>
             </span>
           )}
         </div>

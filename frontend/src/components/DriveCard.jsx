@@ -13,9 +13,15 @@ import { useTempThresholds } from '../context/TempThresholdContext'
 import { getDriveHistory, getDrivePartitions } from '../api/client'
 
 const BAY_STATUS_INFO = {
-  damaged:    { label: 'Damaged',    icon: AlertTriangle, color: 'text-orange-500 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800/40' },
-  hot_spare:  { label: 'Hot Spare',  icon: Zap,           color: 'text-cyan-500 dark:text-cyan-400',    bg: 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800/40' },
-  cold_spare: { label: 'Cold Spare', icon: Archive,        color: 'text-violet-500 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800/40' },
+  damaged:    { label: 'Damaged',    icon: AlertTriangle,
+    colorStyle: { color: 'var(--wt-warn-600)' },
+    bgStyle: { background: 'var(--wt-warn-50)', borderColor: 'var(--wt-warn-200)' } },
+  hot_spare:  { label: 'Hot Spare',  icon: Zap,
+    colorStyle: { color: 'var(--bw-ink)' },
+    bgStyle: { background: 'color-mix(in oklch, var(--bw-ink) 8%, transparent)', borderColor: 'color-mix(in oklch, var(--bw-ink) 25%, transparent)' } },
+  cold_spare: { label: 'Cold Spare', icon: Archive,
+    colorStyle: { color: 'var(--wt-text-muted)' },
+    bgStyle: { background: 'var(--wt-surface-2)', borderColor: 'var(--wt-border)' } },
 }
 
 function formatBytes(bytes) {
@@ -79,15 +85,24 @@ function healthState(drive) {
   return 'unknown'
 }
 function healthGradient(state) {
-  if (state === 'ok')     return 'from-emerald-50 dark:from-emerald-500/10 to-white dark:to-gray-900 border-emerald-200 dark:border-emerald-700/30'
-  if (state === 'warn')   return 'from-amber-50 dark:from-amber-500/10 to-white dark:to-gray-900 border-amber-300 dark:border-amber-600/50'
-  if (state === 'failed') return 'from-red-50 dark:from-red-500/15 to-white dark:to-gray-900 border-red-300 dark:border-red-600/60'
-  return 'from-slate-50 dark:from-gray-700/20 to-white dark:to-gray-900 border-slate-200 dark:border-gray-700/30'
+  if (state === 'ok')     return { background: 'linear-gradient(to bottom, var(--wt-up-50), var(--wt-surface))',   borderColor: 'var(--wt-up-100)' }
+  if (state === 'warn')   return { background: 'linear-gradient(to bottom, var(--wt-warn-50), var(--wt-surface))', borderColor: 'var(--wt-warn-200)' }
+  if (state === 'failed') return { background: 'linear-gradient(to bottom, var(--wt-down-50), var(--wt-surface))', borderColor: 'var(--wt-down-200)' }
+  return { background: 'linear-gradient(to bottom, var(--wt-surface-2), var(--wt-surface))', borderColor: 'var(--wt-border)' }
 }
 function iconStyle(state) {
-  if (state === 'failed') return { wrap: 'bg-red-100 dark:bg-red-950/40 border-red-200 dark:border-red-800/50',   icon: 'text-red-500 dark:text-red-400' }
-  if (state === 'warn')   return { wrap: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/40', icon: 'text-amber-500 dark:text-amber-400' }
-  return { wrap: 'bg-slate-100 dark:bg-gray-800/80 border-slate-200 dark:border-gray-700/50', icon: 'text-blue-500 dark:text-blue-400' }
+  if (state === 'failed') return {
+    wrap: { background: 'var(--wt-down-50)', border: '1px solid var(--wt-down-100)' },
+    icon: { color: 'var(--wt-down-500)' },
+  }
+  if (state === 'warn') return {
+    wrap: { background: 'var(--wt-warn-50)', border: '1px solid var(--wt-warn-100)' },
+    icon: { color: 'var(--wt-warn-600)' },
+  }
+  return {
+    wrap: { background: 'var(--wt-surface-2)', border: '1px solid var(--wt-border)' },
+    icon: { color: 'var(--wt-brand-500)' },
+  }
 }
 
 // Expected lifetime I/O in bytes by drive type
@@ -220,12 +235,12 @@ function computeHealthScore(drive, history = [], ratedTbw = null, warnC = 55, da
   return { score: Math.max(0, Math.round(score)), breakdown }
 }
 function scoreLabel(score) {
-  if (score == null) return { label: 'Unknown', color: '#94a3b8' }
-  if (score >= 90)   return { label: 'Excellent', color: '#22c55e' }
-  if (score >= 75)   return { label: 'Good',      color: '#4ade80' }
-  if (score >= 60)   return { label: 'Fair',      color: '#f59e0b' }
-  if (score >= 40)   return { label: 'Poor',      color: '#f97316' }
-  return               { label: 'Critical',   color: '#ef4444' }
+  if (score == null) return { label: 'Unknown',  color: 'var(--wt-text-faint)' }
+  if (score >= 90)   return { label: 'Excellent', color: 'var(--wt-up-600)' }
+  if (score >= 75)   return { label: 'Good',      color: 'var(--wt-up-500)' }
+  if (score >= 60)   return { label: 'Fair',      color: 'var(--wt-warn-600)' }
+  if (score >= 40)   return { label: 'Poor',      color: 'var(--wt-warn-500)' }
+  return               { label: 'Critical',   color: 'var(--wt-down-500)' }
 }
 
 function HealthRing({ score, onClick }) {
@@ -241,22 +256,21 @@ function HealthRing({ score, onClick }) {
     >
       <div className="relative w-[52px] h-[52px] shrink-0">
         <svg width={52} height={52} className="-rotate-90">
-          <circle cx={26} cy={26} r={r} fill="none" stroke="currentColor"
-            className="text-slate-200 dark:text-gray-800" strokeWidth={4} />
-          <circle cx={26} cy={26} r={r} fill="none" stroke={color} strokeWidth={4}
-            strokeDasharray={`${fill} ${circ - fill}`} strokeLinecap="round"
-            style={{ transition: 'stroke-dasharray 0.6s ease' }} />
+          <circle cx={26} cy={26} r={r} fill="none"
+            style={{ stroke: 'var(--wt-n-200)', strokeWidth: 4 }} />
+          <circle cx={26} cy={26} r={r} fill="none"
+            style={{ stroke: color, strokeWidth: 4, strokeDasharray: `${fill} ${circ - fill}`, strokeLinecap: 'round', transition: 'stroke-dasharray 0.6s ease' }} />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-xs font-bold" style={{ color }}>
+          <span className="wt-mono text-xs font-bold" style={{ color }}>
             {score == null ? '?' : score}
           </span>
         </div>
       </div>
       <div>
         <p className="text-sm font-semibold leading-tight" style={{ color }}>{label}</p>
-        <p className="text-[10px] text-slate-400 dark:text-gray-500 leading-snug">Health Score</p>
-        <p className="text-[9px] text-slate-300 dark:text-gray-700 leading-snug mt-0.5">
+        <p className="wt-eyebrow leading-snug" style={{ color: 'var(--wt-text-muted)' }}>Health Score</p>
+        <p className="text-[9px] leading-snug mt-0.5" style={{ color: 'var(--wt-text-faint)' }}>
           {onClick ? 'click for breakdown' : 'SMART · age · temp'}
         </p>
       </div>
@@ -366,49 +380,50 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
     fontSize: 10, padding: '4px 8px', borderRadius: 6,
     border: 'none', background: 'rgba(15,23,42,0.85)', color: '#e2e8f0',
   }
-  const axisStyle = { fontSize: 8, fill: 'currentColor' }
+  const axisStyle = { fontSize: 8, fill: 'var(--wt-text-faint)' }
 
   return (
-    <div className={`flex flex-col gap-0 rounded-2xl border bg-gradient-to-b overflow-hidden shadow-xl ${healthGradient(state)}`}>
+    <div className="flex flex-col gap-0 rounded-2xl border overflow-hidden shadow-xl" style={healthGradient(state)}>
 
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
         <div className="flex items-center gap-3 min-w-0">
-          <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${iconWrap}`}>
-            <DriveIcon size={18} className={iconCls} />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={iconWrap}>
+            <DriveIcon size={18} style={iconCls} />
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-slate-900 dark:text-white text-sm leading-tight truncate">
+            <p className="font-semibold text-sm leading-tight truncate" style={{ color: 'var(--wt-text)' }}>
               {drive.make || 'Unknown Make'}
             </p>
-            <p className="text-xs text-slate-500 dark:text-gray-500 leading-snug truncate">{drive.model || 'Unknown Model'}</p>
-            <p className="text-[10px] font-mono text-slate-400 dark:text-gray-600 leading-snug">{drive.serial}</p>
+            <p className="text-xs leading-snug truncate" style={{ color: 'var(--wt-text-muted)' }}>{drive.model || 'Unknown Model'}</p>
+            <p className="wt-mono text-[10px] leading-snug" style={{ color: 'var(--wt-text-faint)' }}>{drive.serial}</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 pt-0.5 shrink-0">
           {remote && instanceName && (
-            <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 shrink-0 uppercase tracking-wide">
+            <span className="wt-eyebrow px-1.5 py-0.5 rounded shrink-0"
+              style={{ background: 'var(--wt-brand-50)', color: 'var(--wt-brand-600)', border: '1px solid var(--wt-brand-200)' }}>
               {instanceName}
             </span>
           )}
           <WarningBadge status={drive.smart_status} days={warrantyDays} />
           {onReassign && (
-            <button onClick={onReassign} className="text-slate-400 dark:text-gray-600 hover:text-amber-500 dark:hover:text-amber-400 transition-colors p-0.5 rounded" title="Reassign bay">
+            <button onClick={onReassign} className="transition-colors p-0.5 rounded text-[var(--wt-text-faint)] hover:text-[var(--wt-warn-500)]" title="Reassign bay">
               <ArrowLeftRight size={14} />
             </button>
           )}
           {onEdit && (
-            <button onClick={onEdit} className="text-slate-400 dark:text-gray-600 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-0.5 rounded" title="Edit drive">
+            <button onClick={onEdit} className="transition-colors p-0.5 rounded text-[var(--wt-text-faint)] hover:text-[var(--wt-brand-500)]" title="Edit drive">
               <Pencil size={14} />
             </button>
           )}
           {onDelete && (
-            <button onClick={() => setConfirmDelete(true)} className="text-slate-400 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors p-0.5 rounded" title="Delete drive">
+            <button onClick={() => setConfirmDelete(true)} className="transition-colors p-0.5 rounded text-[var(--wt-text-faint)] hover:text-[var(--wt-down-500)]" title="Delete drive">
               <Trash2 size={14} />
             </button>
           )}
           {onClose && (
-            <button onClick={onClose} className="text-slate-400 dark:text-gray-600 hover:text-slate-700 dark:hover:text-gray-300 transition-colors p-0.5 rounded">
+            <button onClick={onClose} className="transition-colors p-0.5 rounded text-[var(--wt-text-faint)] hover:text-[var(--wt-text-subtle)]">
               <X size={15} />
             </button>
           )}
@@ -417,27 +432,29 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
 
       {/* ── Delete confirm ── */}
       {confirmDelete && (
-        <div className="mx-4 mb-1 rounded-lg border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30 px-3 py-2.5 flex items-center gap-3">
-          <p className="text-xs text-red-700 dark:text-red-300 flex-1">Permanently delete this drive?</p>
+        <div className="mx-4 mb-1 rounded-lg border px-3 py-2.5 flex items-center gap-3"
+          style={{ background: 'var(--wt-down-50)', borderColor: 'var(--wt-down-100)' }}>
+          <p className="text-xs flex-1" style={{ color: 'var(--wt-down-700)' }}>Permanently delete this drive?</p>
           <button
             onClick={() => { onDelete(drive.serial); setConfirmDelete(false) }}
-            className="px-2.5 py-1 rounded-md bg-red-500 hover:bg-red-600 text-white text-xs font-medium transition-colors"
+            className="wt-btn wt-btn--danger wt-btn--sm"
           >Delete</button>
           <button
             onClick={() => setConfirmDelete(false)}
-            className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-gray-700 text-slate-600 dark:text-gray-400 text-xs transition-colors hover:border-slate-300 dark:hover:border-gray-600"
+            className="wt-btn wt-btn--secondary wt-btn--sm"
           >Cancel</button>
         </div>
       )}
 
       {/* ── Disconnected banner ── */}
       {drive.is_connected === false && (
-        <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg px-3 py-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40">
-          <WifiOff size={14} className="text-amber-500 dark:text-amber-400 shrink-0" />
+        <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg px-3 py-2.5 border"
+          style={{ background: 'var(--wt-warn-50)', borderColor: 'var(--wt-warn-200)' }}>
+          <WifiOff size={14} className="shrink-0" style={{ color: 'var(--wt-warn-600)' }} />
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">Drive not detected</p>
+            <p className="text-xs font-semibold" style={{ color: 'var(--wt-warn-700)' }}>Drive not detected</p>
             {drive.last_scanned && (
-              <p className="text-[10px] text-amber-600/70 dark:text-amber-500/70 leading-snug">
+              <p className="text-[10px] leading-snug" style={{ color: 'var(--wt-warn-600)' }}>
                 Last seen {new Date(drive.last_scanned).toLocaleString()}
               </p>
             )}
@@ -458,7 +475,8 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
 
       {/* ── Health score ring ── */}
       {healthScore !== null && (
-        <div className="mx-4 mb-3 rounded-xl border border-slate-200 dark:border-gray-700/50 bg-slate-50/80 dark:bg-gray-800/20 px-3 py-2.5">
+        <div className="mx-4 mb-3 rounded-xl border px-3 py-2.5"
+          style={{ borderColor: 'var(--wt-border)', background: 'var(--wt-surface-2)' }}>
           <HealthRing score={healthScore} onClick={() => setBreakdownOpen(true)} />
         </div>
       )}
@@ -469,32 +487,32 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
           {drive.temperature_c != null && (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Temp</span>
-                <span className={`text-xs font-bold ${
-                  drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
-                  drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
-                  'text-sky-500 dark:text-sky-400'
-                }`}>{drive.temperature_c}°C</span>
+                <span className="wt-eyebrow">Temp</span>
+                <span className="wt-mono text-xs font-bold" style={{ color:
+                  drive.temperature_c >= dangerC ? 'var(--wt-down-500)' :
+                  drive.temperature_c >= warnC   ? 'var(--wt-warn-600)' :
+                  'var(--wt-brand-500)'
+                }}>{drive.temperature_c}°C</span>
               </div>
-              <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${
-                  drive.temperature_c >= dangerC ? 'bg-red-400' :
-                  drive.temperature_c >= warnC   ? 'bg-amber-400' : 'bg-sky-500'
-                }`} style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }} />
+              <div className="wt-meter">
+                <div className="wt-meter__fill wt-meter__fill--temp"
+                  style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }} />
               </div>
             </div>
           )}
           {drive.power_on_hours != null && (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Hours</span>
-                <span className="text-xs font-bold text-slate-500 dark:text-gray-400">{drive.power_on_hours.toLocaleString()}h</span>
+                <span className="wt-eyebrow">Hours</span>
+                <span className="wt-mono text-xs font-bold" style={{ color: 'var(--wt-text-muted)' }}>{drive.power_on_hours.toLocaleString()}h</span>
               </div>
-              <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${
-                  drive.power_on_hours >= 40000 ? 'bg-orange-400' :
-                  drive.power_on_hours >= 25000 ? 'bg-amber-400' : 'bg-blue-400'
-                }`} style={{ width: `${Math.min(100, (drive.power_on_hours / 50000) * 100)}%` }} />
+              <div className="wt-meter">
+                <div className="wt-meter__fill" style={{
+                  width: `${Math.min(100, (drive.power_on_hours / 50000) * 100)}%`,
+                  background: drive.power_on_hours >= 40000 ? 'var(--wt-down-500)' :
+                              drive.power_on_hours >= 25000 ? 'var(--wt-warn-500)' :
+                              'var(--wt-brand-500)',
+                }} />
               </div>
             </div>
           )}
@@ -503,9 +521,10 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
 
       {/* ── Remote history error banner ── */}
       {remote && remoteHistoryError && (
-        <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg px-3 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40">
-          <AlertTriangle size={12} className="text-amber-500 dark:text-amber-400 shrink-0" />
-          <p className="text-[10px] text-amber-700 dark:text-amber-400">History unavailable: {remoteHistoryError} — showing last cached data</p>
+        <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg px-3 py-2 border"
+          style={{ background: 'var(--wt-warn-50)', borderColor: 'var(--wt-warn-200)' }}>
+          <AlertTriangle size={12} className="shrink-0" style={{ color: 'var(--wt-warn-600)' }} />
+          <p className="text-[10px]" style={{ color: 'var(--wt-warn-700)' }}>History unavailable: {remoteHistoryError} — showing last cached data</p>
         </div>
       )}
 
@@ -515,24 +534,22 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
           {lifetimeReadBytes != null && (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Read</span>
-                <span className="text-xs font-bold text-emerald-500 dark:text-emerald-400">{formatBytes(lifetimeReadBytes)}</span>
+                <span className="wt-eyebrow">Read</span>
+                <span className="wt-mono text-xs font-bold" style={{ color: 'var(--wt-up-600)' }}>{formatBytes(lifetimeReadBytes)}</span>
               </div>
-              <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
-                <div className="h-full rounded-full bg-emerald-400 transition-all"
-                  style={{ width: `${Math.min(100, (lifetimeReadBytes / ioMaxRead) * 100)}%` }} />
+              <div className="wt-meter">
+                <div className="wt-meter__fill" style={{ width: `${Math.min(100, (lifetimeReadBytes / ioMaxRead) * 100)}%`, background: 'var(--wt-up-500)' }} />
               </div>
             </div>
           )}
           {lifetimeWriteBytes != null && (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider">Write</span>
-                <span className="text-xs font-bold text-violet-500 dark:text-violet-400">{formatBytes(lifetimeWriteBytes)}</span>
+                <span className="wt-eyebrow">Write</span>
+                <span className="wt-mono text-xs font-bold" style={{ color: 'var(--wt-viz-4)' }}>{formatBytes(lifetimeWriteBytes)}</span>
               </div>
-              <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800/80 overflow-hidden">
-                <div className="h-full rounded-full bg-violet-400 transition-all"
-                  style={{ width: `${Math.min(100, (lifetimeWriteBytes / ioMaxWrite) * 100)}%` }} />
+              <div className="wt-meter">
+                <div className="wt-meter__fill" style={{ width: `${Math.min(100, (lifetimeWriteBytes / ioMaxWrite) * 100)}%`, background: 'var(--wt-viz-4)' }} />
               </div>
             </div>
           )}
@@ -544,9 +561,10 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
         {state === 'failed' || hasErrors ? (
           <div className="flex flex-col gap-2">
             {state === 'failed' && (
-              <div className="flex items-center gap-2 rounded-lg px-3 py-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40">
-                <ShieldAlert size={13} className="text-red-500 dark:text-red-400 shrink-0" />
-                <span className="text-xs font-semibold text-red-600 dark:text-red-400">SMART failure detected</span>
+              <div className="flex items-center gap-2 rounded-lg px-3 py-2 border"
+                style={{ background: 'var(--wt-down-50)', borderColor: 'var(--wt-down-100)' }}>
+                <ShieldAlert size={13} className="shrink-0" style={{ color: 'var(--wt-down-500)' }} />
+                <span className="text-xs font-semibold" style={{ color: 'var(--wt-down-600)' }}>SMART failure detected</span>
               </div>
             )}
             <div className="grid grid-cols-3 gap-1.5">
@@ -555,23 +573,24 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
                 { label: 'Pending',     value: drive.pending_sectors },
                 { label: 'Uncorrect.',  value: drive.uncorrectable_errors },
               ].map(({ label, value }) => (
-                <div key={label} className={`rounded-lg px-2 py-2 text-center border ${
+                <div key={label} className="rounded-lg px-2 py-2 text-center border" style={
                   (value ?? 0) > 0
-                    ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/40'
-                    : 'bg-slate-50 dark:bg-gray-800/30 border-slate-200 dark:border-gray-700/40'
-                }`}>
-                  <p className={`text-sm font-bold leading-none ${(value ?? 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-gray-600'}`}>
+                    ? { background: 'var(--wt-warn-50)', borderColor: 'var(--wt-warn-200)' }
+                    : { background: 'var(--wt-surface-2)', borderColor: 'var(--wt-border)' }
+                }>
+                  <p className="wt-mono text-sm font-bold leading-none" style={{ color: (value ?? 0) > 0 ? 'var(--wt-warn-600)' : 'var(--wt-text-faint)' }}>
                     {value ?? '—'}
                   </p>
-                  <p className="text-[9px] text-slate-400 dark:text-gray-600 mt-1 leading-none">{label}</p>
+                  <p className="text-[9px] mt-1 leading-none" style={{ color: 'var(--wt-text-faint)' }}>{label}</p>
                 </div>
               ))}
             </div>
           </div>
         ) : drive.smart_status === 'PASSED' ? (
-          <div className="flex items-center gap-2 rounded-lg px-3 py-2 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30">
-            <CheckCircle2 size={13} className="text-emerald-500 dark:text-emerald-400 shrink-0" />
-            <span className="text-xs text-emerald-600 dark:text-emerald-400">No SMART errors detected</span>
+          <div className="flex items-center gap-2 rounded-lg px-3 py-2 border"
+            style={{ background: 'var(--wt-up-50)', borderColor: 'var(--wt-up-100)' }}>
+            <CheckCircle2 size={13} className="shrink-0" style={{ color: 'var(--wt-up-500)' }} />
+            <span className="text-xs" style={{ color: 'var(--wt-up-600)' }}>No SMART errors detected</span>
           </div>
         ) : null}
       </div>
@@ -579,7 +598,7 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
       {/* ── Temperature history — gradient area chart, 25–65°C scale ── */}
       {tempHistory.length > 1 && (
         <div className="px-4 pb-3">
-          <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-1.5">Temp History (30d)</p>
+          <p className="wt-eyebrow mb-1.5">Temp History (30d)</p>
           <ResponsiveContainer width="100%" height={80}>
             <AreaChart data={tempHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
               <defs>
@@ -588,8 +607,8 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
                   <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} domain={[tempDomainLow, tempDomainHigh]} />
+              <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={axisStyle} tickLine={false} axisLine={false} domain={[tempDomainLow, tempDomainHigh]} />
               <Tooltip contentStyle={tooltipStyle} formatter={v => [`${v}°C`, 'Temp']} labelStyle={{ color: '#94a3b8' }} />
               <ReferenceLine y={warnC}   stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} label={{ value: `${warnC}°`, position: 'right', fontSize: 7, fill: '#f59e0b' }} />
               <ReferenceLine y={dangerC} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} label={{ value: `${dangerC}°`, position: 'right', fontSize: 7, fill: '#ef4444' }} />
@@ -602,7 +621,7 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
       {/* ── Used space trend ── */}
       {spaceHistory.length > 1 && (
         <div className="px-4 pb-3">
-          <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-1.5">Used Space (30d)</p>
+          <p className="wt-eyebrow mb-1.5">Used Space (30d)</p>
           <ResponsiveContainer width="100%" height={60}>
             <AreaChart data={spaceHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
               <defs>
@@ -611,8 +630,8 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
                   <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} unit=" GB" />
+              <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={axisStyle} tickLine={false} axisLine={false} unit=" GB" />
               <Tooltip contentStyle={tooltipStyle} formatter={v => [`${v} GB`, 'Used']} labelStyle={{ color: '#94a3b8' }} />
               <Area type="monotone" dataKey="usedGB" stroke="#2dd4bf" fill="url(#spaceGrad)" strokeWidth={1.5} dot={false} />
             </AreaChart>
@@ -623,7 +642,7 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
       {/* ── Reallocated sectors trend ── */}
       {hasReallocHistory && (
         <div className="px-4 pb-3">
-          <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-1.5">Reallocated Sectors (30d)</p>
+          <p className="wt-eyebrow mb-1.5">Reallocated Sectors (30d)</p>
           <ResponsiveContainer width="100%" height={60}>
             <AreaChart data={reallocHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
               <defs>
@@ -632,8 +651,8 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
                   <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} allowDecimals={false} />
+              <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={axisStyle} tickLine={false} axisLine={false} allowDecimals={false} />
               <Tooltip contentStyle={tooltipStyle} formatter={v => [v, 'Sectors']} labelStyle={{ color: '#94a3b8' }} />
               <Area type="monotone" dataKey="sectors" stroke="#f59e0b" fill="url(#reallocGrad)" strokeWidth={1.5} dot={false} />
             </AreaChart>
@@ -644,11 +663,11 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
       {/* ── I/O activity chart ── */}
       {ioHistory.length > 0 && (
         <div className="px-4 pb-3">
-          <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-0.5">I/O Activity (30d)</p>
-          <p className="text-[9px] text-slate-300 dark:text-gray-700 mb-1.5">{ioUnit} per scan interval · this drive</p>
+          <p className="wt-eyebrow mb-0.5">I/O Activity (30d)</p>
+          <p className="text-[9px] mb-1.5" style={{ color: 'var(--wt-text-faint)' }}>{ioUnit} per scan interval · this drive</p>
           <div className="flex items-center gap-3 mb-1">
-            <span className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-gray-600"><span className="w-2 h-0.5 rounded bg-emerald-400 inline-block" />Read</span>
-            <span className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-gray-600"><span className="w-2 h-0.5 rounded bg-violet-400 inline-block" />Write</span>
+            <span className="flex items-center gap-1 text-[9px]" style={{ color: 'var(--wt-text-faint)' }}><span className="w-2 h-0.5 rounded inline-block" style={{ background: '#34d399' }} />Read</span>
+            <span className="flex items-center gap-1 text-[9px]" style={{ color: 'var(--wt-text-faint)' }}><span className="w-2 h-0.5 rounded inline-block" style={{ background: '#a78bfa' }} />Write</span>
           </div>
           <ResponsiveContainer width="100%" height={70}>
             <AreaChart data={ioData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
@@ -662,8 +681,8 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
                   <stop offset="95%" stopColor="#a78bfa" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="date" tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tick={axisStyle} className="text-slate-400 dark:text-gray-600" tickLine={false} axisLine={false} unit={` ${ioUnit}`} />
+              <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={axisStyle} tickLine={false} axisLine={false} unit={` ${ioUnit}`} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [`${v.toLocaleString()} ${ioUnit}`, n === 'readMB' ? 'Read' : 'Write']} labelStyle={{ color: '#94a3b8' }} />
               <Area type="monotone" dataKey="readMB"  stroke="#34d399" fill="url(#readGrad)"  strokeWidth={1.5} dot={false} />
               <Area type="monotone" dataKey="writeMB" stroke="#a78bfa" fill="url(#writeGrad)" strokeWidth={1.5} dot={false} />
@@ -684,7 +703,7 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
         if (!pieData.length) return null
         return (
           <div className="px-4 pb-3">
-            <p className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wider mb-2">Partitions</p>
+            <p className="wt-eyebrow mb-2">Partitions</p>
             <div className="flex items-center gap-4">
               <PieChart width={80} height={80}>
                 <Pie data={pieData} cx={35} cy={35} innerRadius={22} outerRadius={36} dataKey="value" stroke="none">
@@ -695,8 +714,8 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
                 {pieData.map((entry, i) => (
                   <div key={i} className="flex items-center gap-1.5 min-w-0">
                     <div className="w-2 h-2 rounded-sm shrink-0" style={{ background: fstypeColor(entry.fstype) }} />
-                    <span className="text-[10px] text-slate-500 dark:text-gray-400 truncate">{fstypeLabel(entry.fstype)}</span>
-                    <span className="text-[10px] text-slate-400 dark:text-gray-600 ml-auto shrink-0">{formatSize(entry.value)}</span>
+                    <span className="wt-mono text-[10px] truncate" style={{ color: 'var(--wt-text-muted)' }}>{fstypeLabel(entry.fstype)}</span>
+                    <span className="wt-mono text-[10px] ml-auto shrink-0" style={{ color: 'var(--wt-text-faint)' }}>{formatSize(entry.value)}</span>
                   </div>
                 ))}
               </div>
@@ -707,28 +726,32 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
 
       {/* ── ZFS pool ── */}
       {drive.zfs_pool && (
-        <div className="mx-4 mb-3 rounded-xl border border-blue-200/60 dark:border-blue-800/30 bg-blue-50/50 dark:bg-blue-950/10 px-3 py-2.5">
-          <p className="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">ZFS Pool</p>
+        <div className="mx-4 mb-3 rounded-xl border px-3 py-2.5"
+          style={{ borderColor: 'var(--wt-brand-200)', background: 'color-mix(in oklch, var(--wt-brand-50) 60%, var(--wt-surface))' }}>
+          <p className="wt-eyebrow mb-1.5">ZFS Pool</p>
           <div className="flex items-center justify-between mb-1.5 gap-2">
-            <span className="text-xs font-mono font-semibold text-blue-600 dark:text-blue-400 truncate">{drive.zfs_pool}</span>
+            <span className="wt-mono text-xs font-semibold truncate" style={{ color: 'var(--wt-brand-600)' }}>{drive.zfs_pool}</span>
             {drive.vdev_name && (
-              <span className="text-[9px] font-mono font-medium px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40 shrink-0">
+              <span className="wt-mono text-[9px] font-medium px-1.5 py-0.5 rounded shrink-0"
+                style={{ background: 'var(--wt-brand-100)', color: 'var(--wt-brand-600)', border: '1px solid var(--wt-brand-200)' }}>
                 {drive.vdev_name}
               </span>
             )}
             {poolInfo && (
-              <span className="text-[10px] text-slate-500 dark:text-gray-500 shrink-0">{poolInfo.capacity_pct}% used</span>
+              <span className="wt-mono text-[10px] shrink-0" style={{ color: 'var(--wt-text-muted)' }}>{poolInfo.capacity_pct}% used</span>
             )}
           </div>
           {poolInfo && (
             <>
-              <div className="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden mb-1">
-                <div className={`h-full rounded-full transition-all ${
-                  poolInfo.capacity_pct >= 80 ? 'bg-red-400' :
-                  poolInfo.capacity_pct >= 60 ? 'bg-amber-400' : 'bg-blue-400'
-                }`} style={{ width: `${poolInfo.capacity_pct}%` }} />
+              <div className="wt-meter mb-1">
+                <div className="wt-meter__fill" style={{
+                  width: `${poolInfo.capacity_pct}%`,
+                  background: poolInfo.capacity_pct >= 80 ? 'var(--wt-down-500)' :
+                              poolInfo.capacity_pct >= 60 ? 'var(--wt-warn-500)' :
+                              'var(--wt-brand-500)',
+                }} />
               </div>
-              <p className="text-[10px] text-slate-400 dark:text-gray-600">
+              <p className="wt-mono text-[10px]" style={{ color: 'var(--wt-text-faint)' }}>
                 {formatBytes(poolInfo.alloc_bytes)} used of {formatBytes(poolInfo.size_bytes)}
               </p>
             </>
@@ -738,8 +761,9 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
 
       {/* ── Profile ── */}
       {profile && (
-        <div className="mx-4 mb-3 rounded-xl border border-slate-200 dark:border-gray-700/50 bg-slate-50 dark:bg-gray-800/20 px-3 py-2.5">
-          <p className="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-2">Profile</p>
+        <div className="mx-4 mb-3 rounded-xl border px-3 py-2.5"
+          style={{ borderColor: 'var(--wt-border)', background: 'var(--wt-surface-2)' }}>
+          <p className="wt-eyebrow mb-2">Profile</p>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
             <Row label="Purchased" value={profile.purchase_date || '—'} />
             <Row label="Warranty" value={formatWarrantyYears(profile.warranty_months)} />
@@ -747,9 +771,9 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
             {profile.vendor && <Row label="Vendor" value={profile.vendor} />}
           </dl>
           {profile.notes && (
-            <div className="mt-2 pt-2 border-t border-slate-200 dark:border-gray-700/40">
-              <p className="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-1">Notes</p>
-              <p className="text-xs text-slate-700 dark:text-gray-200 whitespace-pre-wrap">{profile.notes}</p>
+            <div className="mt-2 pt-2" style={{ borderTop: '1px solid var(--wt-border)' }}>
+              <p className="wt-eyebrow mb-1">Notes</p>
+              <p className="text-xs whitespace-pre-wrap" style={{ color: 'var(--wt-text)' }}>{profile.notes}</p>
             </div>
           )}
         </div>
@@ -757,17 +781,18 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
 
       {/* ── Bay status ── */}
       {bayStatusInfo && (
-        <div className={`mx-4 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 border text-xs ${bayStatusInfo.bg}`}>
-          <bayStatusInfo.icon size={12} className={bayStatusInfo.color} />
-          <span className={`font-medium ${bayStatusInfo.color}`}>{bayStatusInfo.label}</span>
-          <span className="text-slate-400 dark:text-gray-500">bay status</span>
+        <div className="mx-4 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 border text-xs"
+          style={bayStatusInfo.bgStyle}>
+          <bayStatusInfo.icon size={12} style={bayStatusInfo.colorStyle} />
+          <span className="font-medium" style={bayStatusInfo.colorStyle}>{bayStatusInfo.label}</span>
+          <span style={{ color: 'var(--wt-text-faint)' }}>bay status</span>
         </div>
       )}
 
       {/* ── Footer ── */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-200 dark:border-gray-800/50">
+      <div className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: '1px solid var(--wt-border)' }}>
         {drive.last_scanned ? (
-          <span className="flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-gray-600">
+          <span className="wt-mono flex items-center gap-1.5 text-[10px]" style={{ color: 'var(--wt-text-faint)' }}>
             <Clock size={10} />
             Scanned {new Date(drive.last_scanned).toLocaleString()}
           </span>
@@ -775,7 +800,7 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
         {!remote && (
           <button
             onClick={() => setHistoryOpen(true)}
-            className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+            className="flex items-center gap-1 text-[10px] transition-colors text-[var(--wt-text-faint)] hover:text-[var(--wt-brand-500)]"
           >
             <History size={10} />
             History
@@ -807,7 +832,8 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
 
 function Chip({ children, mono = false }) {
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-gray-800/60 border border-slate-200 dark:border-gray-700/50 text-[10px] text-slate-600 dark:text-gray-400 leading-none ${mono ? 'font-mono' : ''}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] leading-none ${mono ? 'wt-mono' : ''}`}
+      style={{ background: 'var(--wt-surface-2)', borderColor: 'var(--wt-border)', color: 'var(--wt-text-muted)' }}>
       {children}
     </span>
   )
@@ -815,8 +841,8 @@ function Chip({ children, mono = false }) {
 function Row({ label, value, warn }) {
   return (
     <>
-      <dt className="text-slate-500 dark:text-gray-500 text-xs">{label}</dt>
-      <dd className={`text-xs truncate ${warn ? 'text-amber-500 dark:text-amber-400 font-medium' : 'text-slate-700 dark:text-gray-200'}`}>
+      <dt className="text-xs" style={{ color: 'var(--wt-text-muted)' }}>{label}</dt>
+      <dd className="text-xs truncate" style={{ color: warn ? 'var(--wt-warn-600)' : 'var(--wt-text)', fontWeight: warn ? 500 : undefined }}>
         {value}
       </dd>
     </>

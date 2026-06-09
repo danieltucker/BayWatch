@@ -9,6 +9,7 @@ export function ThemeProvider({ children }) {
     function apply(t) {
       const isDark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
       document.documentElement.classList.toggle('dark', isDark)
+      document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
     }
 
     apply(theme)

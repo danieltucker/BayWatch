@@ -283,8 +283,8 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-400 dark:text-gray-600">
-        <div className="w-8 h-8 rounded-full border-2 border-blue-500/30 border-t-blue-500 animate-spin" />
+      <div className="flex flex-col items-center justify-center h-64 gap-3" style={{ color: 'var(--wt-text-faint)' }}>
+        <div className="w-8 h-8 rounded-full border-2 animate-spin" style={{ borderColor: 'var(--wt-brand-100)', borderTopColor: 'var(--wt-brand-500)' }} />
         <span className="text-sm">Loading drives…</span>
       </div>
     )
@@ -300,12 +300,12 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
       {toasts.length > 0 && (
         <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
           {toasts.map(t => (
-            <div key={t.id} className="pointer-events-auto flex items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-800/50 bg-white dark:bg-gray-900 shadow-lg px-4 py-3 min-w-[240px]">
+            <div key={t.id} className="pointer-events-auto flex items-center gap-3 rounded-xl px-4 py-3 min-w-[240px]" style={{ background: 'var(--wt-warn-50)', border: '1px solid var(--wt-warn-100)', boxShadow: 'var(--wt-shadow-md)' }}>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 truncate">{t.label}</p>
-                <p className="text-[10px] text-amber-500/70 dark:text-amber-500/60">Drive no longer detected</p>
+                <p className="text-xs font-semibold truncate" style={{ color: 'var(--wt-warn-700)' }}>{t.label}</p>
+                <p className="text-[10px]" style={{ color: 'var(--wt-warn-600)' }}>Drive no longer detected</p>
               </div>
-              <button onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))} className="text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 shrink-0">
+              <button onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))} className="shrink-0" style={{ color: 'var(--wt-text-faint)' }}>
                 <X size={13} />
               </button>
             </div>
@@ -314,26 +314,24 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
       )}
       <div className="flex flex-col lg:flex-row gap-0 min-h-[calc(100vh-49px)]">
         {/* Main area */}
-        <div className="flex-1 flex flex-col min-w-0 border-r border-slate-200 dark:border-gray-800/60">
+        <div className="flex-1 flex flex-col min-w-0" style={{ borderRight: '1px solid var(--wt-border)' }}>
 
           <WidgetBar drives={drives} profiles={profiles} baysMap={baysMap} />
 
           {/* Enclosure area */}
           <div className="flex-1 p-5 flex flex-col gap-5">
             <div className="flex items-center justify-between">
-              <h1 className="text-base font-semibold text-slate-700 dark:text-gray-300 tracking-tight">
-                {enclosures.length > 0 ? 'Enclosures' : 'Getting Started'}
-              </h1>
+              <span className="wt-eyebrow">{enclosures.length > 0 ? 'Enclosures' : 'Getting Started'}</span>
               <div className="flex items-center gap-3">
                 {lastRefreshed && (
-                  <span className="text-xs text-slate-400 dark:text-gray-600">
+                  <span className="wt-mono text-[11px]" style={{ color: 'var(--wt-text-faint)' }}>
                     Updated {relativeTime(lastRefreshed)}
                   </span>
                 )}
                 {drives.length > 0 && (
                   <button
                     onClick={() => exportDrivesCSV(drives, profiles, enclosures, baysMap)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-gray-700/60 text-xs text-slate-500 dark:text-gray-500 hover:text-slate-700 dark:hover:text-gray-300 hover:border-slate-300 dark:hover:border-gray-600 hover:bg-slate-50 dark:hover:bg-gray-800/40 transition-colors"
+                    className="wt-btn wt-btn--ghost wt-btn--sm"
                     title="Export drives to CSV"
                   >
                     <Download size={12} />
@@ -345,15 +343,15 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
             </div>
 
             {enclosures.length === 0 && (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 dark:border-gray-700/60 bg-white dark:bg-gray-900/30 p-16 text-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-400/10 border border-blue-500/20 flex items-center justify-center">
-                  <HardDrive size={26} className="text-blue-400" />
-                </div>
+              <div className="flex flex-col items-center justify-center rounded-2xl border-dashed p-16 text-center gap-4" style={{ border: '1px dashed var(--wt-border-strong)', background: 'var(--wt-surface)' }}>
+                <span className="wt-appicon" style={{ '--ai-size': '56px', '--ai-from': 'var(--bw-from)', '--ai-to': 'var(--bw-to)' }}>
+                  <HardDrive size={26} />
+                </span>
                 <div>
-                  <p className="text-slate-900 dark:text-white font-semibold mb-1">No enclosures yet</p>
-                  <p className="text-sm text-slate-500 dark:text-gray-500">
+                  <p className="font-semibold mb-1" style={{ color: 'var(--wt-text)' }}>No enclosures yet</p>
+                  <p className="text-sm" style={{ color: 'var(--wt-text-subtle)' }}>
                     Go to{' '}
-                    <button onClick={onOpenSettings} className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 underline underline-offset-2">
+                    <button onClick={onOpenSettings} className="underline underline-offset-2" style={{ color: 'var(--bw-ink)' }}>
                       Settings
                     </button>{' '}
                     to add your first enclosure and bay array.
@@ -367,21 +365,22 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
               return (
                 <div
                   key={enc.id}
-                  className="rounded-2xl bg-white dark:bg-gray-900/50 border border-slate-200 dark:border-gray-800/60 overflow-hidden"
+                  className="wt-card overflow-hidden"
                 >
                   {/* Enclosure header */}
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-gray-800/60 bg-slate-50 dark:bg-gray-900/80">
+                  <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--wt-border)', background: 'var(--wt-surface-2)' }}>
                     <button
                       onClick={() => toggleEncCollapse(enc.id)}
-                      className="text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 shrink-0 transition-colors"
+                      className="shrink-0 transition-colors"
+                      style={{ color: 'var(--wt-text-faint)' }}
                     >
                       {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                     </button>
-                    <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-gray-800 flex items-center justify-center">
-                      <Server size={13} className="text-slate-500 dark:text-gray-400" />
+                    <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'var(--wt-surface-3)' }}>
+                      <Server size={13} style={{ color: 'var(--wt-text-subtle)' }} />
                     </div>
-                    <h2 className="font-semibold text-slate-800 dark:text-gray-200 text-sm flex-1">{enc.name}</h2>
-                    <span className="text-xs text-slate-500 dark:text-gray-600 capitalize bg-slate-100 dark:bg-gray-800/60 px-2 py-0.5 rounded-full">
+                    <h2 className="font-semibold text-sm flex-1" style={{ color: 'var(--wt-text)' }}>{enc.name}</h2>
+                    <span className="wt-mono text-[11px] capitalize px-2 py-0.5 rounded-full" style={{ color: 'var(--wt-text-subtle)', background: 'var(--wt-surface-3)' }}>
                       {enc.type}
                     </span>
                     {/* Enclosure reorder buttons */}
@@ -389,24 +388,16 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                       <button
                         onClick={() => moveEnclosure(encIdx, -1)}
                         disabled={encIdx === 0}
-                        className={clsx(
-                          'p-0.5 rounded transition-colors',
-                          encIdx === 0
-                            ? 'text-slate-200 dark:text-gray-800 cursor-not-allowed'
-                            : 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800'
-                        )}
+                        className="p-0.5 rounded transition-colors"
+                        style={{ color: encIdx === 0 ? 'var(--wt-text-faint)' : 'var(--wt-text-subtle)', cursor: encIdx === 0 ? 'not-allowed' : undefined }}
                       >
                         <ArrowUp size={13} />
                       </button>
                       <button
                         onClick={() => moveEnclosure(encIdx, 1)}
                         disabled={encIdx === enclosures.length - 1}
-                        className={clsx(
-                          'p-0.5 rounded transition-colors',
-                          encIdx === enclosures.length - 1
-                            ? 'text-slate-200 dark:text-gray-800 cursor-not-allowed'
-                            : 'text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800'
-                        )}
+                        className="p-0.5 rounded transition-colors"
+                        style={{ color: encIdx === enclosures.length - 1 ? 'var(--wt-text-faint)' : 'var(--wt-text-subtle)', cursor: encIdx === enclosures.length - 1 ? 'not-allowed' : undefined }}
                       >
                         <ArrowDown size={13} />
                       </button>
@@ -454,19 +445,20 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
             )}
 
             {federationData.length > 0 && (
-              <div className="rounded-2xl bg-white dark:bg-gray-900/50 border border-slate-200 dark:border-gray-800/60 overflow-hidden">
+              <div className="wt-card overflow-hidden">
                 <div
-                  className="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-gray-800/60 bg-slate-50 dark:bg-gray-900/80 cursor-pointer select-none"
+                  className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none"
+                  style={{ borderBottom: '1px solid var(--wt-border)', background: 'var(--wt-surface-2)' }}
                   onClick={() => setCollapsedFederation(v => !v)}
                 >
-                  <span className="text-slate-400 dark:text-gray-600">
+                  <span style={{ color: 'var(--wt-text-faint)' }}>
                     {collapsedFederation ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                   </span>
-                  <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-gray-800 flex items-center justify-center">
-                    <Server size={13} className="text-blue-500" />
+                  <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'var(--wt-brand-50)' }}>
+                    <Server size={13} style={{ color: 'var(--wt-brand-500)' }} />
                   </div>
-                  <h2 className="font-semibold text-slate-800 dark:text-gray-200 text-sm flex-1">Remote Instances</h2>
-                  <span className="text-xs text-slate-500 dark:text-gray-600 bg-slate-100 dark:bg-gray-800/60 px-2 py-0.5 rounded-full">
+                  <h2 className="font-semibold text-sm flex-1" style={{ color: 'var(--wt-text)' }}>Remote Instances</h2>
+                  <span className="wt-mono text-[11px] px-2 py-0.5 rounded-full" style={{ color: 'var(--wt-text-subtle)', background: 'var(--wt-surface-3)' }}>
                     {federationData.length} {federationData.length === 1 ? 'instance' : 'instances'}
                   </span>
                 </div>
@@ -476,22 +468,24 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                     {federationData.map(snapshot => {
                       const isCollapsed = collapsedRemotes[snapshot.target_id] ?? false
                       return (
-                        <div key={snapshot.target_id} className="rounded-xl border border-slate-200 dark:border-gray-800/60 overflow-hidden">
+                        <div key={snapshot.target_id} className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--wt-border)' }}>
                           <div
-                            className="flex items-center gap-2 px-3 py-2.5 bg-slate-50/70 dark:bg-gray-900/60 cursor-pointer select-none"
+                            className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none"
+                            style={{ background: 'var(--wt-surface-2)' }}
                             onClick={() => setCollapsedRemotes(prev => ({ ...prev, [snapshot.target_id]: !prev[snapshot.target_id] }))}
                           >
-                            <span className="text-slate-400 dark:text-gray-600">
+                            <span style={{ color: 'var(--wt-text-faint)' }}>
                               {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
                             </span>
-                            <span className="font-medium text-sm text-slate-700 dark:text-gray-300 flex-1">{snapshot.target_name}</span>
-                            <span className="text-xs text-slate-400 dark:text-gray-600 font-mono truncate max-w-[160px]">{snapshot.target_url}</span>
-                            <span className="text-xs text-slate-400 dark:text-gray-600 shrink-0">
+                            <span className="font-medium text-sm flex-1" style={{ color: 'var(--wt-text)' }}>{snapshot.target_name}</span>
+                            <span className="wt-mono text-[10px] truncate max-w-[160px]" style={{ color: 'var(--wt-text-faint)' }}>{snapshot.target_url}</span>
+                            <span className="wt-mono text-[11px] shrink-0" style={{ color: 'var(--wt-text-faint)' }}>
                               {snapshot.drives.length} drives
                             </span>
                             <button
                               onClick={e => { e.stopPropagation(); toggleRemoteView(snapshot.target_id) }}
-                              className="p-1 rounded text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
+                              className="p-1 rounded transition-colors"
+                              style={{ color: 'var(--wt-text-faint)' }}
                               title={getRemoteView(snapshot.target_id) === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
                             >
                               {getRemoteView(snapshot.target_id) === 'grid' ? <List size={13} /> : <LayoutGrid size={13} />}
@@ -537,18 +531,18 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                                                 const smartWarn = drive?.smart_status === 'PASSED' && hasErrors
                                                 const smartFail = drive?.smart_status === 'FAILED'
                                                 const BayIcon = drive ? getDriveIcon(drive.form_factor, drive.rpm) : null
-                                                const iconColor = smartFail ? 'text-red-500 dark:text-red-400' : smartWarn ? 'text-amber-500 dark:text-amber-400' : smartOk ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-gray-500'
-                                                const serialColor = smartFail ? 'text-red-600 dark:text-red-400' : smartWarn ? 'text-amber-600 dark:text-amber-400' : smartOk ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-gray-400'
-                                                const dotColor = smartFail ? 'bg-red-400 dark:bg-red-500' : smartWarn ? 'bg-amber-400' : smartOk ? 'bg-emerald-400 dark:bg-emerald-500' : 'bg-slate-300 dark:bg-gray-600'
-                                                const cardBg = !drive
-                                                  ? 'border-dashed border-slate-200 dark:border-gray-700/50 bg-slate-50/50 dark:bg-gray-900/10 cursor-default'
+                                                const iconColor = smartFail ? 'var(--wt-down-500)' : smartWarn ? 'var(--wt-warn-500)' : smartOk ? 'var(--wt-up-500)' : 'var(--wt-text-faint)'
+                                                const serialColor = smartFail ? 'var(--wt-down-600)' : smartWarn ? 'var(--wt-warn-600)' : smartOk ? 'var(--wt-up-600)' : 'var(--wt-text-subtle)'
+                                                const dotBg = smartFail ? 'var(--wt-down-500)' : smartWarn ? 'var(--wt-warn-500)' : smartOk ? 'var(--wt-up-500)' : 'var(--wt-n-400)'
+                                                const cardStyle = !drive
+                                                  ? { borderColor: 'var(--wt-border)', background: 'var(--wt-surface-2)', borderStyle: 'dashed', cursor: 'default' }
                                                   : smartFail
-                                                  ? 'bg-gradient-to-b from-red-50 dark:from-red-950/30 to-white dark:to-gray-900/60 border-red-200 dark:border-red-800/60 hover:from-red-100/70 cursor-pointer'
+                                                  ? { background: 'linear-gradient(to bottom, var(--wt-down-50), var(--wt-surface))', borderColor: 'var(--wt-down-100)' }
                                                   : smartWarn
-                                                  ? 'bg-gradient-to-b from-amber-50 dark:from-amber-950/30 to-white dark:to-gray-900/60 border-amber-200 dark:border-amber-700/60 hover:from-amber-100/70 cursor-pointer'
+                                                  ? { background: 'linear-gradient(to bottom, var(--wt-warn-50), var(--wt-surface))', borderColor: 'var(--wt-warn-100)' }
                                                   : smartOk
-                                                  ? 'bg-gradient-to-b from-emerald-50 dark:from-emerald-950/30 to-white dark:to-gray-900/60 border-emerald-200 dark:border-emerald-800/60 hover:from-emerald-100/70 dark:hover:from-emerald-950/50 cursor-pointer'
-                                                  : 'bg-gradient-to-b from-slate-50 dark:from-gray-800/20 to-white dark:to-gray-900/60 border-slate-200 dark:border-gray-700/50 hover:from-slate-100/70 cursor-pointer'
+                                                  ? { background: 'linear-gradient(to bottom, var(--wt-up-50), var(--wt-surface))', borderColor: 'var(--wt-up-100)' }
+                                                  : { background: 'linear-gradient(to bottom, var(--wt-surface-2), var(--wt-surface))', borderColor: 'var(--wt-border)' }
                                                 return (
                                                   <button
                                                     key={i}
@@ -556,66 +550,60 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                                                     onClick={() => drive && setSelectedRemoteDrive({ drive, bayInfo: bay, instanceName: snapshot.target_name, targetId: snapshot.target_id })}
                                                     onMouseEnter={() => drive && setHoveredRemoteDrive({ drive, instanceName: snapshot.target_name })}
                                                     onMouseLeave={() => setHoveredRemoteDrive(null)}
-                                                    className={clsx(
-                                                      'relative min-h-[180px] flex flex-col rounded-xl border select-none transition-all duration-150 overflow-hidden group text-left',
-                                                      cardBg
-                                                    )}
+                                                    style={cardStyle}
+                                                    className="relative min-h-[180px] flex flex-col rounded-xl border select-none transition-all duration-150 overflow-hidden group text-left"
                                                   >
-                                                    <span className="absolute top-1.5 left-2 text-[9px] text-slate-400 dark:text-gray-600 font-mono leading-none z-10">
+                                                    <span className="absolute top-1.5 left-2 wt-mono text-[9px] leading-none z-10" style={{ color: 'var(--wt-text-faint)' }}>
                                                       {bay.label || `${bay.row + 1}-${bay.col + 1}`}
                                                     </span>
                                                     {drive && (
-                                                      <span className={clsx('absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full shadow-sm z-10', dotColor)} />
+                                                      <span className="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full shadow-sm z-10" style={{ background: dotBg }} />
                                                     )}
                                                     {!drive ? (
                                                       <div className="flex-1 flex items-center justify-center">
-                                                        <span className="text-slate-200 dark:text-gray-800 text-3xl">·</span>
+                                                        <span className="text-3xl" style={{ color: 'var(--wt-text-faint)' }}>·</span>
                                                       </div>
                                                     ) : (
                                                       <div className="flex-1 flex flex-col gap-2 px-2.5 pt-7 pb-3">
                                                         <div className="flex items-center gap-2">
-                                                          <div className="w-8 h-8 rounded-lg bg-white/70 dark:bg-gray-800/60 border border-slate-200/80 dark:border-gray-700/40 flex items-center justify-center shrink-0">
-                                                            <BayIcon size={15} className={iconColor} />
+                                                          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--wt-surface)', border: '1px solid var(--wt-border)' }}>
+                                                            <BayIcon size={15} style={{ color: iconColor }} />
                                                           </div>
                                                           <div className="min-w-0">
-                                                            <p className="text-[12px] font-semibold text-slate-800 dark:text-gray-200 leading-tight truncate">
+                                                            <p className="text-[12px] font-semibold leading-tight truncate" style={{ color: 'var(--wt-text)' }}>
                                                               {drive.make || 'Unknown'}
                                                             </p>
                                                             {drive.model && (
-                                                              <p className="text-[11px] text-slate-400 dark:text-gray-500 leading-none truncate">{drive.model}</p>
+                                                              <p className="text-[11px] leading-none truncate" style={{ color: 'var(--wt-text-subtle)' }}>{drive.model}</p>
                                                             )}
                                                           </div>
                                                         </div>
-                                                        <span className={clsx('text-[10px] font-mono leading-none truncate', serialColor)}>
+                                                        <span className="wt-mono text-[10px] leading-none truncate" style={{ color: serialColor }}>
                                                           {drive.serial}
                                                         </span>
                                                         {drive.zfs_pool && (
                                                           <div className="flex items-center gap-1.5">
-                                                            <span className="text-[10px] text-slate-400 dark:text-gray-500 font-mono truncate flex-1">{drive.zfs_pool}</span>
+                                                            <span className="wt-mono text-[10px] truncate flex-1" style={{ color: 'var(--wt-text-subtle)' }}>{drive.zfs_pool}</span>
                                                             {drive.vdev_name && (
-                                                              <span className="text-[10px] font-mono text-slate-400 dark:text-gray-600 shrink-0">{drive.vdev_name}</span>
+                                                              <span className="wt-mono text-[10px] shrink-0" style={{ color: 'var(--wt-text-faint)' }}>{drive.vdev_name}</span>
                                                             )}
                                                           </div>
                                                         )}
                                                         {drive.temperature_c != null && (
                                                           <div>
-                                                            <div className="flex items-center justify-between mb-0.5">
-                                                              <span className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wide">Temp</span>
-                                                              <span className={clsx(
-                                                                'text-[10px] font-mono font-bold',
-                                                                drive.temperature_c >= 65 ? 'text-red-500 dark:text-red-400' :
-                                                                drive.temperature_c >= 55 ? 'text-amber-500 dark:text-amber-400' :
-                                                                'text-sky-500 dark:text-sky-400'
-                                                              )}>
+                                                            <div className="flex items-center justify-between mb-1">
+                                                              <span className="wt-eyebrow">Temp</span>
+                                                              <span className="wt-mono text-[10px] font-bold" style={{ color:
+                                                                drive.temperature_c >= 65 ? 'var(--wt-down-500)' :
+                                                                drive.temperature_c >= 55 ? 'var(--wt-warn-500)' :
+                                                                'var(--wt-teal-500)'
+                                                              }}>
                                                                 {drive.temperature_c}°C
                                                               </span>
                                                             </div>
-                                                            <div className="h-1 rounded-full bg-slate-200/80 dark:bg-gray-800">
+                                                            <div className="wt-meter">
                                                               <div
-                                                                className={clsx('h-full rounded-full transition-all',
-                                                                  drive.temperature_c >= 65 ? 'bg-red-400' :
-                                                                  drive.temperature_c >= 55 ? 'bg-amber-400' : 'bg-sky-400'
-                                                                )}
+                                                                className="wt-meter__fill wt-meter__fill--temp"
                                                                 style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }}
                                                               />
                                                             </div>
@@ -623,12 +611,12 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                                                         )}
                                                         <div className="flex items-center justify-between gap-1 mt-auto">
                                                           {drive.capacity_bytes && (
-                                                            <span className="text-[10px] text-slate-500 dark:text-gray-500">
+                                                            <span className="text-[10px]" style={{ color: 'var(--wt-text-muted)' }}>
                                                               {drive.capacity_bytes >= 1e12 ? `${(drive.capacity_bytes / 1e12).toFixed(1)} TB` : `${(drive.capacity_bytes / 1e9).toFixed(0)} GB`}
                                                             </span>
                                                           )}
                                                           {drive.device_path && (
-                                                            <span className="text-[10px] font-mono text-slate-400 dark:text-gray-600 truncate">{drive.device_path}</span>
+                                                            <span className="wt-mono text-[10px] truncate" style={{ color: 'var(--wt-text-faint)' }}>{drive.device_path}</span>
                                                           )}
                                                         </div>
                                                       </div>
@@ -644,9 +632,9 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                                   ))
                                 })()
                               ) : (
-                                <div className="divide-y divide-slate-100 dark:divide-gray-800/60">
+                                <div className="divide-y" style={{ borderColor: 'var(--wt-border)' }}>
                                   {snapshot.drives.length === 0 && (
-                                    <p className="px-4 py-3 text-xs text-slate-400 dark:text-gray-600 italic">No drives reported</p>
+                                    <p className="px-4 py-3 text-xs italic" style={{ color: 'var(--wt-text-faint)' }}>No drives reported</p>
                                   )}
                                   {(() => {
                                     const bayBySerial = Object.fromEntries(
@@ -665,24 +653,21 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                                           onClick={() => setSelectedRemoteDrive({ drive: d, bayInfo, instanceName: snapshot.target_name, targetId: snapshot.target_id })}
                                           onMouseEnter={() => setHoveredRemoteDrive({ drive: d, instanceName: snapshot.target_name })}
                                           onMouseLeave={() => setHoveredRemoteDrive(null)}
-                                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-gray-900/40 transition-colors text-left"
+                                          className="w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left hover:bg-[var(--wt-surface-2)]"
                                         >
-                                          <span className={clsx(
-                                            'w-2 h-2 rounded-full shrink-0',
-                                            smartOk ? 'bg-emerald-400' : smartFail ? 'bg-red-400' : 'bg-slate-300 dark:bg-gray-600'
-                                          )} />
+                                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: smartOk ? 'var(--wt-up-500)' : smartFail ? 'var(--wt-down-500)' : 'var(--wt-n-400)' }} />
                                           <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-mono text-slate-700 dark:text-gray-300 truncate">{d.serial}</p>
-                                            <p className="text-xs text-slate-400 dark:text-gray-600 truncate">{[d.make, d.model].filter(Boolean).join(' ') || 'Unknown'}</p>
+                                            <p className="wt-mono text-xs truncate" style={{ color: 'var(--wt-text)' }}>{d.serial}</p>
+                                            <p className="text-xs truncate" style={{ color: 'var(--wt-text-faint)' }}>{[d.make, d.model].filter(Boolean).join(' ') || 'Unknown'}</p>
                                           </div>
-                                          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-gray-500 shrink-0">
-                                            {bayLabel && <span className="text-slate-400 dark:text-gray-600 truncate max-w-[120px]">{bayLabel}</span>}
+                                          <div className="flex items-center gap-3 text-xs shrink-0" style={{ color: 'var(--wt-text-subtle)' }}>
+                                            {bayLabel && <span className="truncate max-w-[120px]" style={{ color: 'var(--wt-text-faint)' }}>{bayLabel}</span>}
                                             {d.temperature_c != null && (
-                                              <span className={clsx(d.temperature_c >= 55 ? 'text-red-500' : d.temperature_c >= 45 ? 'text-amber-500' : '')}>
+                                              <span className="wt-mono" style={{ color: d.temperature_c >= 55 ? 'var(--wt-down-500)' : d.temperature_c >= 45 ? 'var(--wt-warn-500)' : undefined }}>
                                                 {d.temperature_c}°C
                                               </span>
                                             )}
-                                            {d.zfs_pool && <span className="font-mono text-blue-500 dark:text-blue-400">{d.zfs_pool}</span>}
+                                            {d.zfs_pool && <span className="wt-mono" style={{ color: 'var(--wt-brand-500)' }}>{d.zfs_pool}</span>}
                                           </div>
                                         </button>
                                       )
@@ -690,7 +675,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
                                   })()}
                                 </div>
                               )}
-                              <p className="px-4 py-1.5 text-[10px] text-slate-300 dark:text-gray-700 border-t border-slate-100 dark:border-gray-800/60">
+                              <p className="wt-mono px-4 py-1.5 text-[10px]" style={{ color: 'var(--wt-text-faint)', borderTop: '1px solid var(--wt-border)' }}>
                                 Synced {snapshot.fetched_at ? new Date(snapshot.fetched_at).toLocaleString() : '—'}
                               </p>
                             </div>
@@ -746,11 +731,11 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
         <SettingsModal open={settingsOpen} onClose={onCloseSettings} onUpdate={loadAll} />
 
         {/* Sidebar */}
-        <div className="w-full lg:w-[340px] shrink-0 flex flex-col bg-white dark:bg-gray-950 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-gray-800 lg:sticky lg:top-[49px] lg:h-[calc(100vh-49px)] lg:self-start">
-          <div className="px-4 py-3 border-b border-slate-200 dark:border-gray-800/60">
-            <p className="text-xs font-medium text-slate-500 dark:text-gray-500 uppercase tracking-widest">
+        <div className="w-full lg:w-[340px] shrink-0 flex flex-col lg:sticky lg:top-[49px] lg:h-[calc(100vh-49px)] lg:self-start" style={{ background: 'var(--wt-surface)', borderTop: '1px solid var(--wt-border)', borderLeft: '1px solid var(--wt-border)' }}>
+          <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--wt-border)' }}>
+            <span className="wt-eyebrow">
               {hoveredRemoteDrive ? 'Remote Drive' : displayDrive ? 'Drive Details' : 'All Drives'}
-            </p>
+            </span>
           </div>
           <div className="flex-1 overflow-y-auto p-3">
             {hoveredRemoteDrive ? (
@@ -798,9 +783,9 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
 
       <DragOverlay>
         {activeDrive && (
-          <div className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white shadow-lg pointer-events-none">
+          <div className="wt-btn wt-btn--primary pointer-events-none shadow-[var(--wt-shadow-md)]">
             <HardDrive size={12} />
-            <span className="font-mono">{(activeDrive.model || activeDriveSerial).slice(0, 24)}</span>
+            <span className="wt-mono">{(activeDrive.model || activeDriveSerial).slice(0, 24)}</span>
           </div>
         )}
       </DragOverlay>

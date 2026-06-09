@@ -11,67 +11,57 @@ function formatCapacity(bytes) {
   return `${(bytes / 1e9).toFixed(0)} GB`
 }
 
+// Returns className strings (layout/structure) + a lgStyle object (gradient for LG cards)
 function statusStyle(status) {
   if (status === 'PASSED') return {
-    border: 'border-emerald-400/60 dark:border-emerald-700/60',
-    bg: 'bg-emerald-50 dark:bg-emerald-950/20',
-    hover: 'hover:border-emerald-500/80 dark:hover:border-emerald-500/60 hover:bg-emerald-100/80 dark:hover:bg-emerald-950/40',
-    text: 'text-emerald-600 dark:text-emerald-400',
-    dot: 'bg-emerald-500 dark:bg-emerald-400',
-    icon: 'text-emerald-500 dark:text-emerald-400',
-    lgFrom: 'from-emerald-50 dark:from-emerald-950/30',
-    lgBorder: 'border-emerald-200 dark:border-emerald-800/60',
+    border: 'border-[color:var(--wt-up-100)]',
+    bg: 'bg-[var(--wt-up-50)]',
+    hover: 'hover:bg-[var(--wt-up-100)]',
+    text: 'text-[var(--wt-up-600)]',
+    icon: 'text-[var(--wt-up-500)]',
+    lgStyle: { background: 'linear-gradient(to bottom, var(--wt-up-50), var(--wt-surface))', borderColor: 'var(--wt-up-100)' },
   }
   if (status === 'FAILED') return {
-    border: 'border-red-400/60 dark:border-red-700/60',
-    bg: 'bg-red-50 dark:bg-red-950/20 animate-pulse',
-    hover: 'hover:border-red-500 dark:hover:border-red-500/60 hover:bg-red-100/80 dark:hover:bg-red-950/40',
-    text: 'text-red-600 dark:text-red-400',
-    dot: 'bg-red-500 dark:bg-red-400',
-    icon: 'text-red-500 dark:text-red-400',
-    lgFrom: 'from-red-50 dark:from-red-950/30',
-    lgBorder: 'border-red-200 dark:border-red-800/60',
+    border: 'border-[color:var(--wt-down-100)] animate-pulse',
+    bg: 'bg-[var(--wt-down-50)]',
+    hover: 'hover:bg-[var(--wt-down-100)]',
+    text: 'text-[var(--wt-down-600)]',
+    icon: 'text-[var(--wt-down-500)]',
+    lgStyle: { background: 'linear-gradient(to bottom, var(--wt-down-50), var(--wt-surface))', borderColor: 'var(--wt-down-100)' },
   }
   return {
-    border: 'border-slate-300/60 dark:border-gray-600/50',
-    bg: 'bg-slate-100 dark:bg-gray-800/40',
-    hover: 'hover:border-slate-400/70 dark:hover:border-gray-500/60 hover:bg-slate-100 dark:hover:bg-gray-800/60',
-    text: 'text-slate-500 dark:text-gray-400',
-    dot: 'bg-slate-400 dark:bg-gray-500',
-    icon: 'text-slate-400 dark:text-gray-500',
-    lgFrom: 'from-slate-50 dark:from-gray-800/20',
-    lgBorder: 'border-slate-200 dark:border-gray-700/50',
+    border: 'border-[color:var(--wt-border)]',
+    bg: 'bg-[var(--wt-surface-2)]',
+    hover: 'hover:bg-[var(--wt-surface-3)]',
+    text: 'text-[var(--wt-text-subtle)]',
+    icon: 'text-[var(--wt-text-faint)]',
+    lgStyle: { background: 'linear-gradient(to bottom, var(--wt-surface-2), var(--wt-surface))', borderColor: 'var(--wt-border)' },
   }
 }
 
+// Bay-status badge styles: use wt-warn for hot_spare, wt-down for damaged, wt-brand for cold_spare
 const BAY_STATUS_STYLE = {
-  damaged:    { badge: 'bg-orange-500/20 text-orange-400 border border-orange-500/40', label: 'DMG', ring: 'ring-1 ring-orange-500/40 !border-orange-500/50' },
-  hot_spare:  { badge: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40',       label: 'HS',  ring: 'ring-1 ring-cyan-500/40 !border-cyan-500/50' },
-  cold_spare: { badge: 'bg-violet-500/20 text-violet-400 border border-violet-500/40', label: 'CS',  ring: 'ring-1 ring-violet-500/40 !border-violet-500/50' },
+  damaged:    { badgeStyle: { background: 'var(--wt-down-50)', color: 'var(--wt-down-600)', border: '1px solid var(--wt-down-100)' },  label: 'DMG' },
+  hot_spare:  { badgeStyle: { background: 'var(--wt-warn-50)', color: 'var(--wt-warn-700)', border: '1px solid var(--wt-warn-100)' },  label: 'HS'  },
+  cold_spare: { badgeStyle: { background: 'var(--wt-brand-50)', color: 'var(--wt-brand-700)', border: '1px solid var(--wt-brand-100)' }, label: 'CS'  },
 }
 
-function healthDotColor(drive) {
-  if (!drive) return 'bg-slate-200 dark:bg-gray-700'
-  if (drive.smart_status === 'FAILED') return 'bg-red-400 dark:bg-red-500'
+function healthDotStyle(drive) {
+  if (!drive) return { background: 'var(--wt-n-300)' }
+  if (drive.smart_status === 'FAILED') return { background: 'var(--wt-down-500)' }
   if (drive.smart_status === 'PASSED') {
     const hasErrors = (drive.reallocated_sectors ?? 0) > 0
       || (drive.pending_sectors ?? 0) > 0
       || (drive.uncorrectable_errors ?? 0) > 0
-    return hasErrors ? 'bg-amber-400' : 'bg-emerald-400 dark:bg-emerald-500'
+    return { background: hasErrors ? 'var(--wt-warn-500)' : 'var(--wt-up-500)' }
   }
-  return 'bg-slate-300 dark:bg-gray-600'
+  return { background: 'var(--wt-n-400)' }
 }
 
-const STATUS_TILE = {
-  damaged:    'bg-red-50 dark:bg-red-950/25 border-red-200 dark:border-red-800/60',
-  hot_spare:  'bg-amber-50 dark:bg-amber-950/25 border-amber-200 dark:border-amber-700/60',
-  cold_spare: 'bg-sky-50 dark:bg-sky-950/25 border-sky-200 dark:border-sky-700/60',
-}
-
-const STATUS_TILE_HOVER = {
-  damaged:    'hover:bg-red-100/80 dark:hover:bg-red-950/40',
-  hot_spare:  'hover:bg-amber-100/80 dark:hover:bg-amber-950/40',
-  cold_spare: 'hover:bg-sky-100/80 dark:hover:bg-sky-950/40',
+const STATUS_TILE_STYLE = {
+  damaged:    { background: 'var(--wt-down-50)',  borderColor: 'var(--wt-down-100)'  },
+  hot_spare:  { background: 'var(--wt-warn-50)',  borderColor: 'var(--wt-warn-100)'  },
+  cold_spare: { background: 'var(--wt-brand-50)', borderColor: 'var(--wt-brand-100)' },
 }
 
 const GAP = { sm: 'gap-1', md: 'gap-1.5', lg: 'gap-2' }
@@ -86,13 +76,11 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
   const bayStatus = BAY_STATUS_STYLE[bay.status] ?? null
   const isPeer = isVdevPeer && !isSelected
 
-  // Drag-over and selection highlights — work for all sizes
   const selectionHighlight = clsx(
-    isOver && '!border-blue-400 !bg-blue-50 dark:!bg-blue-950/40 ring-2 ring-blue-400/40',
-    isSelected && '!border-blue-500/70 dark:!border-white/60 ring-2 ring-blue-400/20 dark:ring-white/20',
+    isOver     && '!border-[color:var(--wt-brand-400)] ring-2 ring-[color:var(--wt-brand-300)]',
+    isSelected && '!border-[color:var(--wt-brand-500)] ring-2 ring-[color:var(--wt-brand-300)]',
   )
-  // Peer highlight for SM/MD: flat bg override with !important is safe since no gradient
-  const peerFlat = isPeer && '!bg-blue-50 dark:!bg-blue-950/30 ring-1 ring-blue-400/60 !border-blue-500/50'
+  const peerFlat = isPeer && '!bg-[var(--wt-brand-50)] ring-1 ring-[color:var(--wt-brand-300)] !border-[color:var(--wt-brand-200)]'
 
   // ── SM: compact row — make · size on left, temp + dot on right ───────────────
   if (size === 'sm') {
@@ -101,49 +89,49 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
       ? [drive.make, cap].filter(Boolean).join(' · ')
       : null
 
+    const tileStyle = bay.status && STATUS_TILE_STYLE[bay.status]
+
     return (
       <div
         ref={setNodeRef}
         onClick={() => onClick?.(bay)}
         onMouseEnter={() => onHover?.(bay)}
         onMouseLeave={onHoverEnd}
+        style={tileStyle || undefined}
         className={clsx(
           'h-8 flex items-center px-2 gap-1.5 rounded border cursor-pointer select-none transition-all duration-150',
           isEmpty
-            ? 'border-dashed border-slate-200 dark:border-gray-800/50 hover:border-slate-300 dark:hover:border-gray-700/60 bg-transparent'
-            : STATUS_TILE[bay.status]
-            ? clsx(STATUS_TILE[bay.status], STATUS_TILE_HOVER[bay.status])
-            : clsx(s.border, s.bg, s.hover),
+            ? 'border-dashed border-[color:var(--wt-border)] hover:border-[color:var(--wt-border-strong)] bg-transparent'
+            : !tileStyle && clsx(s.border, s.bg, s.hover),
           selectionHighlight,
           peerFlat,
         )}
       >
-        <span className="text-[10px] text-slate-400 dark:text-gray-700 font-mono w-5 shrink-0 leading-none">{label}</span>
+        <span className="wt-mono text-[10px] w-5 shrink-0 leading-none" style={{ color: 'var(--wt-text-faint)' }}>{label}</span>
         {drive ? (
           <div className={clsx('flex-1 flex items-center gap-1.5 min-w-0', isDisconnected && 'opacity-50')}>
             <span className={clsx('text-[10px] flex-1 truncate leading-none', s.text)}>
               {makeSize || drive.serial?.slice(-8)}
             </span>
             {isDisconnected
-              ? <WifiOff size={10} className="text-amber-500 dark:text-amber-400 shrink-0" />
+              ? <WifiOff size={10} className="shrink-0" style={{ color: 'var(--wt-warn-500)' }} />
               : drive.temperature_c != null && (
-                <span className={clsx(
-                  'text-[10px] font-mono shrink-0 leading-none',
-                  drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
-                  drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
-                  'text-slate-400 dark:text-gray-600'
-                )}>
+                <span className="wt-mono text-[10px] shrink-0 leading-none" style={{ color:
+                  drive.temperature_c >= dangerC ? 'var(--wt-down-500)' :
+                  drive.temperature_c >= warnC   ? 'var(--wt-warn-500)' :
+                  'var(--wt-text-faint)'
+                }}>
                   {drive.temperature_c}°
                 </span>
               )
             }
-            <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', healthDotColor(drive))} />
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={healthDotStyle(drive)} />
           </div>
         ) : (
-          <span className="text-slate-200 dark:text-gray-800 text-sm flex-1">·</span>
+          <span className="text-sm flex-1" style={{ color: 'var(--wt-text-faint)' }}>·</span>
         )}
         {bayStatus && (
-          <span className={clsx('text-[9px] font-mono font-bold px-1 py-0.5 rounded shrink-0', bayStatus.badge)}>
+          <span className="wt-mono text-[9px] font-bold px-1 py-0.5 rounded shrink-0" style={bayStatus.badgeStyle}>
             {bayStatus.label}
           </span>
         )}
@@ -154,60 +142,57 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
   // ── MD: card — icon + make (primary) + serial (secondary) + temp bar ─────────
   if (size === 'md') {
     const Icon = drive ? getDriveIcon(drive.form_factor, drive.rpm) : null
+    const tileStyle = bay.status && STATUS_TILE_STYLE[bay.status]
     return (
       <div
         ref={setNodeRef}
         onClick={() => onClick?.(bay)}
         onMouseEnter={() => onHover?.(bay)}
         onMouseLeave={onHoverEnd}
+        style={tileStyle || undefined}
         className={clsx(
           'relative min-h-[80px] flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-xl border cursor-pointer select-none transition-all duration-150 group',
           isEmpty
-            ? 'border-dashed border-slate-300 dark:border-gray-700/50 bg-slate-50 dark:bg-gray-900/20 hover:border-slate-400 dark:hover:border-gray-600/70 hover:bg-slate-100 dark:hover:bg-gray-800/20'
-            : STATUS_TILE[bay.status]
-            ? clsx(STATUS_TILE[bay.status], STATUS_TILE_HOVER[bay.status])
-            : clsx(s.border, s.bg, s.hover),
+            ? 'border-dashed border-[color:var(--wt-border)] bg-[var(--wt-surface-2)] hover:border-[color:var(--wt-border-strong)]'
+            : !tileStyle && clsx(s.border, s.bg, s.hover),
           selectionHighlight,
           peerFlat,
         )}
       >
-        <span className="absolute top-1 left-1.5 text-[9px] text-slate-400 dark:text-gray-700 font-mono leading-none">{label}</span>
-        {drive && <span className={clsx('absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full', healthDotColor(drive))} />}
+        <span className="absolute top-1 left-1.5 wt-mono text-[9px] leading-none" style={{ color: 'var(--wt-text-faint)' }}>{label}</span>
+        {drive && <span className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full" style={healthDotStyle(drive)} />}
         {bayStatus && (
-          <span className={clsx('absolute top-1 right-1 text-[9px] font-mono font-bold px-1 py-0.5 rounded leading-none', bayStatus.badge)}>
+          <span className="absolute top-1 right-1 wt-mono text-[9px] font-bold px-1 py-0.5 rounded leading-none" style={bayStatus.badgeStyle}>
             {bayStatus.label}
           </span>
         )}
         {isEmpty ? (
-          <span className="text-slate-300 dark:text-gray-800 text-xl">·</span>
+          <span className="text-xl" style={{ color: 'var(--wt-text-faint)' }}>·</span>
         ) : (
           <div className={clsx('flex flex-col items-center gap-1', isDisconnected && 'opacity-50')}>
             <Icon size={18} className={clsx('mt-0.5 transition-transform group-hover:scale-110', s.icon)} />
             <span className={clsx('text-[10px] font-medium px-1 truncate w-full text-center leading-none', s.text)}>
               {drive.make || drive.model || '—'}
             </span>
-            <span className="text-[9px] font-mono text-slate-400 dark:text-gray-500 px-1 truncate w-full text-center leading-none">
+            <span className="wt-mono text-[9px] px-1 truncate w-full text-center leading-none" style={{ color: 'var(--wt-text-subtle)' }}>
               {drive.serial?.slice(-6)}
             </span>
             {isDisconnected ? (
-              <WifiOff size={10} className="text-amber-500 dark:text-amber-400 mt-0.5" />
+              <WifiOff size={10} className="mt-0.5" style={{ color: 'var(--wt-warn-500)' }} />
             ) : drive.temperature_c != null && (
               <div className="w-full px-1 mt-0.5">
                 <div className="flex items-center gap-1.5">
-                  <div className="h-[3px] flex-1 rounded-full bg-slate-200/80 dark:bg-gray-800 overflow-hidden">
+                  <div className="wt-meter flex-1">
                     <div
-                      className={clsx('h-full rounded-full',
-                        drive.temperature_c >= dangerC ? 'bg-red-400' :
-                        drive.temperature_c >= warnC   ? 'bg-amber-400' : 'bg-sky-400'
-                      )}
+                      className="wt-meter__fill wt-meter__fill--temp"
                       style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }}
                     />
                   </div>
-                  <span className={clsx('text-[9px] font-mono leading-none shrink-0',
-                    drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
-                    drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
-                    'text-slate-400 dark:text-gray-600'
-                  )}>
+                  <span className="wt-mono text-[9px] leading-none shrink-0" style={{ color:
+                    drive.temperature_c >= dangerC ? 'var(--wt-down-500)' :
+                    drive.temperature_c >= warnC   ? 'var(--wt-warn-500)' :
+                    'var(--wt-text-faint)'
+                  }}>
                     {drive.temperature_c}°
                   </span>
                 </div>
@@ -224,14 +209,12 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
   const cap = drive ? formatCapacity(drive.capacity_bytes) : null
   const warrantyDays = profile?.warranty_days_remaining ?? null
 
-  // For LG, apply blue gradient directly (no !important needed) for vdev peers
-  const lgBg = isEmpty
-    ? 'border-dashed border-slate-200 dark:border-gray-700/50 bg-slate-50/50 dark:bg-gray-900/10 hover:border-slate-300 dark:hover:border-gray-600'
-    : STATUS_TILE[bay.status]
-    ? clsx(STATUS_TILE[bay.status], STATUS_TILE_HOVER[bay.status])
-    : isPeer
-    ? 'bg-gradient-to-b from-blue-50 to-white dark:from-blue-950/30 dark:to-gray-900/60 border-blue-300/70 dark:border-blue-700/50 hover:from-blue-100/70 dark:hover:from-blue-950/50'
-    : clsx('bg-gradient-to-b to-white dark:to-gray-900/60', s.lgFrom, s.lgBorder, s.hover)
+  const tileStyle = bay.status && STATUS_TILE_STYLE[bay.status]
+  const lgStyle = isEmpty
+    ? { borderColor: 'var(--wt-border)', background: 'var(--wt-surface-2)' }
+    : tileStyle || (isPeer
+      ? { background: 'linear-gradient(to bottom, var(--wt-brand-50), var(--wt-surface))', borderColor: 'var(--wt-brand-200)' }
+      : s.lgStyle)
 
   return (
     <div
@@ -239,55 +222,56 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
       onClick={() => onClick?.(bay)}
       onMouseEnter={() => onHover?.(bay)}
       onMouseLeave={onHoverEnd}
+      style={lgStyle}
       className={clsx(
         '@container relative min-h-[190px] flex flex-col rounded-xl border cursor-pointer select-none transition-all duration-150 overflow-hidden group',
-        lgBg,
+        isEmpty && 'border-dashed',
         selectionHighlight,
-        isPeer && !isSelected && 'ring-1 ring-blue-400/50',
+        isPeer && !isSelected && 'ring-1 ring-[color:var(--wt-brand-300)]',
       )}
     >
-      <span className="absolute top-1.5 left-2 text-[9px] text-slate-400 dark:text-gray-600 font-mono leading-none z-10">{label}</span>
-      {drive && <span className={clsx('absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full shadow-sm z-10', healthDotColor(drive))} />}
+      <span className="absolute top-1.5 left-2 wt-mono text-[9px] leading-none z-10" style={{ color: 'var(--wt-text-faint)' }}>{label}</span>
+      {drive && <span className="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full shadow-sm z-10" style={healthDotStyle(drive)} />}
       {bayStatus && (
-        <span className={clsx('absolute top-1.5 right-1.5 z-10 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded leading-none', bayStatus.badge)}>
+        <span className="absolute top-1.5 right-1.5 z-10 wt-mono text-[9px] font-bold px-1.5 py-0.5 rounded leading-none" style={bayStatus.badgeStyle}>
           {bayStatus.label}
         </span>
       )}
 
       {isEmpty ? (
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-slate-200 dark:text-gray-800 text-3xl">·</span>
+          <span className="text-3xl" style={{ color: 'var(--wt-text-faint)' }}>·</span>
         </div>
       ) : (
         <div className={clsx('flex-1 flex flex-col gap-2 px-2.5 pt-7 pb-3', isDisconnected && 'opacity-50')}>
           {/* Icon + make/model */}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white/70 dark:bg-gray-800/60 border border-slate-200/80 dark:border-gray-700/40 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--wt-surface)', border: '1px solid var(--wt-border)' }}>
               <Icon size={15} className={s.icon} />
             </div>
             <div className="min-w-0">
-              <p className="text-[12px] font-semibold text-slate-800 dark:text-gray-200 leading-tight truncate">
+              <p className="text-[12px] font-semibold leading-tight truncate" style={{ color: 'var(--wt-text)' }}>
                 {drive.make || 'Unknown'}
               </p>
               {drive.model && (
-                <p className="text-[11px] text-slate-400 dark:text-gray-500 leading-none truncate">{drive.model}</p>
+                <p className="text-[11px] leading-none truncate" style={{ color: 'var(--wt-text-subtle)' }}>{drive.model}</p>
               )}
             </div>
           </div>
 
           {/* Serial */}
-          <span className={clsx('text-[10px] font-mono leading-none truncate', s.text)}>
+          <span className={clsx('wt-mono text-[10px] leading-none truncate', s.text)}>
             {drive.serial}
           </span>
 
           {/* Pool info — hidden on narrow cards */}
           {drive.zfs_pool && (
             <div className="hidden @[130px]:flex items-center gap-1.5">
-              <span className="text-[10px] text-slate-400 dark:text-gray-500 font-mono truncate flex-1">
+              <span className="wt-mono text-[10px] truncate flex-1" style={{ color: 'var(--wt-text-subtle)' }}>
                 {drive.zfs_pool}
               </span>
               {drive.vdev_name && (
-                <span className="text-[10px] font-mono text-slate-400 dark:text-gray-600 shrink-0">
+                <span className="wt-mono text-[10px] shrink-0" style={{ color: 'var(--wt-text-faint)' }}>
                   {drive.vdev_name}
                 </span>
               )}
@@ -297,28 +281,24 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
           {/* Temp bar or disconnected indicator */}
           {isDisconnected ? (
             <div className="flex items-center gap-1.5">
-              <WifiOff size={11} className="text-amber-500 dark:text-amber-400 shrink-0" />
-              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Not detected</span>
+              <WifiOff size={11} className="shrink-0" style={{ color: 'var(--wt-warn-500)' }} />
+              <span className="text-[10px] font-medium" style={{ color: 'var(--wt-warn-600)' }}>Not detected</span>
             </div>
           ) : drive.temperature_c != null && (
             <div>
-              <div className="flex items-center justify-between mb-0.5">
-                <span className="text-[10px] text-slate-400 dark:text-gray-600 uppercase tracking-wide">Temp</span>
-                <span className={clsx(
-                  'text-[10px] font-mono font-bold',
-                  drive.temperature_c >= dangerC ? 'text-red-500 dark:text-red-400' :
-                  drive.temperature_c >= warnC   ? 'text-amber-500 dark:text-amber-400' :
-                  'text-sky-500 dark:text-sky-400'
-                )}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="wt-eyebrow">Temp</span>
+                <span className="wt-mono text-[10px] font-bold" style={{ color:
+                  drive.temperature_c >= dangerC ? 'var(--wt-down-500)' :
+                  drive.temperature_c >= warnC   ? 'var(--wt-warn-500)' :
+                  'var(--wt-teal-500)'
+                }}>
                   {drive.temperature_c}°C
                 </span>
               </div>
-              <div className="h-1 rounded-full bg-slate-200/80 dark:bg-gray-800">
+              <div className="wt-meter">
                 <div
-                  className={clsx('h-full rounded-full transition-all',
-                    drive.temperature_c >= dangerC ? 'bg-red-400' :
-                    drive.temperature_c >= warnC   ? 'bg-amber-400' : 'bg-sky-400'
-                  )}
+                  className="wt-meter__fill wt-meter__fill--temp"
                   style={{ width: `${Math.min(100, (drive.temperature_c / 70) * 100)}%` }}
                 />
               </div>
@@ -327,22 +307,23 @@ export default function BaySlot({ bay, drive, profile, isSelected, isVdevPeer, o
 
           {/* Capacity + device path — hidden on narrow cards */}
           <div className="hidden @[130px]:flex items-center justify-between gap-1 mt-auto">
-            {cap && <span className="text-[10px] text-slate-500 dark:text-gray-500">{cap}</span>}
+            {cap && <span className="text-[10px]" style={{ color: 'var(--wt-text-muted)' }}>{cap}</span>}
             {drive.device_path && (
-              <span className="text-[10px] font-mono text-slate-400 dark:text-gray-600 truncate">{drive.device_path}</span>
+              <span className="wt-mono text-[10px] truncate" style={{ color: 'var(--wt-text-faint)' }}>{drive.device_path}</span>
             )}
           </div>
 
           {/* Warranty badge */}
           {warrantyDays != null && warrantyDays <= 365 && (
-            <div className={clsx(
-              'text-[9px] font-medium rounded px-1.5 py-0.5 text-center',
-              warrantyDays < 0
-                ? 'bg-red-100 dark:bg-red-950/40 text-red-500 dark:text-red-400'
+            <div
+              className="text-[9px] font-medium rounded px-1.5 py-0.5 text-center"
+              style={warrantyDays < 0
+                ? { background: 'var(--wt-down-50)', color: 'var(--wt-down-600)' }
                 : warrantyDays <= 90
-                ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400'
-                : 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400'
-            )}>
+                ? { background: 'var(--wt-warn-50)', color: 'var(--wt-warn-700)' }
+                : { background: 'var(--wt-up-50)', color: 'var(--wt-up-700)' }
+              }
+            >
               {warrantyDays < 0 ? 'Warranty expired' : `${Math.round(warrantyDays / 30)}mo left`}
             </div>
           )}

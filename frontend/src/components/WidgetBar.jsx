@@ -20,25 +20,25 @@ export const WIDGET_DEFS = {
   total_drives: {
     label: 'Total Drives',
     icon: HardDrive,
-    color: 'text-slate-600 dark:text-gray-300',
+    colorVar: 'var(--wt-text-muted)',
     getValue: (drives) => ({ value: drives.length }),
   },
   healthy: {
     label: 'Healthy',
     icon: CheckCircle2,
-    color: 'text-emerald-600 dark:text-emerald-400',
+    colorVar: 'var(--wt-up-600)',
     getValue: (drives) => ({ value: drives.filter(d => d.smart_status === 'PASSED').length }),
   },
   failed: {
     label: 'Failed',
     icon: XCircle,
-    color: 'text-red-500 dark:text-red-400',
+    colorVar: 'var(--wt-down-500)',
     getValue: (drives) => ({ value: drives.filter(d => d.smart_status === 'FAILED').length }),
   },
   avg_temp: {
     label: 'Avg Temp',
     icon: Thermometer,
-    color: 'text-sky-500 dark:text-sky-400',
+    colorVar: 'var(--wt-teal-500)',
     getValue: (drives) => {
       const temps = drives.map(d => d.temperature_c).filter(t => t != null)
       const avg = temps.length ? Math.round(temps.reduce((a, b) => a + b, 0) / temps.length) : null
@@ -48,7 +48,7 @@ export const WIDGET_DEFS = {
   hottest_drive: {
     label: 'Hottest Drive',
     icon: Flame,
-    color: 'text-orange-500 dark:text-orange-400',
+    colorVar: 'var(--wt-warn-500)',
     getValue: (drives) => {
       const w = drives.filter(d => d.temperature_c != null)
       if (!w.length) return { value: '—' }
@@ -59,7 +59,7 @@ export const WIDGET_DEFS = {
   oldest_drive: {
     label: 'Oldest Drive',
     icon: Clock,
-    color: 'text-purple-500 dark:text-purple-400',
+    colorVar: 'var(--wt-viz-6)',
     getValue: (drives) => {
       const w = drives.filter(d => d.power_on_hours != null)
       if (!w.length) return { value: '—' }
@@ -70,7 +70,7 @@ export const WIDGET_DEFS = {
   total_capacity: {
     label: 'Total Capacity',
     icon: Database,
-    color: 'text-blue-500 dark:text-blue-400',
+    colorVar: 'var(--wt-brand-500)',
     getValue: (drives) => {
       const total = drives.reduce((s, d) => s + (d.capacity_bytes || 0), 0)
       if (!total) return { value: '—' }
@@ -81,7 +81,7 @@ export const WIDGET_DEFS = {
   assigned_bays: {
     label: 'Assigned Bays',
     icon: LayoutGrid,
-    color: 'text-cyan-500 dark:text-cyan-400',
+    colorVar: 'var(--wt-teal-600)',
     getValue: (drives, profiles, baysMap) => {
       const all = Object.values(baysMap).flat()
       const n = all.filter(b => b.drive_serial).length
@@ -91,7 +91,7 @@ export const WIDGET_DEFS = {
   health_pct: {
     label: 'Drive Health',
     icon: Activity,
-    color: 'text-emerald-500 dark:text-emerald-400',
+    colorVar: 'var(--wt-up-600)',
     getValue: (drives) => {
       if (!drives.length) return { value: '—' }
       const pct = Math.round(drives.filter(d => d.smart_status === 'PASSED').length / drives.length * 100)
@@ -101,7 +101,7 @@ export const WIDGET_DEFS = {
   reallocated: {
     label: 'Reallocated',
     icon: AlertTriangle,
-    color: 'text-amber-500 dark:text-amber-400',
+    colorVar: 'var(--wt-warn-600)',
     getValue: (drives) => {
       const total = drives.reduce((s, d) => s + (d.reallocated_sectors || 0), 0)
       return { value: total, sub: 'sectors total' }
@@ -110,19 +110,19 @@ export const WIDGET_DEFS = {
   ssd_count: {
     label: 'SSDs',
     icon: Cpu,
-    color: 'text-violet-500 dark:text-violet-400',
+    colorVar: 'var(--wt-viz-6)',
     getValue: (drives) => ({ value: drives.filter(d => d.rpm === 0).length }),
   },
   hdd_count: {
     label: 'HDDs',
     icon: HardDrive,
-    color: 'text-slate-500 dark:text-gray-400',
+    colorVar: 'var(--wt-text-subtle)',
     getValue: (drives) => ({ value: drives.filter(d => d.rpm > 0).length }),
   },
   warranty_warnings: {
     label: 'Warranty',
     icon: ShieldAlert,
-    color: 'text-amber-500 dark:text-amber-400',
+    colorVar: 'var(--wt-warn-600)',
     getValue: (drives, profiles) => {
       const n = profiles.filter(p => p.warranty_days_remaining != null && p.warranty_days_remaining <= 90).length
       return { value: n, sub: 'expiring soon' }
@@ -131,13 +131,13 @@ export const WIDGET_DEFS = {
   disconnected: {
     label: 'Disconnected',
     icon: WifiOff,
-    color: 'text-amber-500 dark:text-amber-400',
+    colorVar: 'var(--wt-warn-600)',
     getValue: (drives) => ({ value: drives.filter(d => d.is_connected === false).length, sub: 'not detected' }),
   },
   uncorrectable: {
     label: 'Uncorrectable',
     icon: Bug,
-    color: 'text-red-500 dark:text-red-400',
+    colorVar: 'var(--wt-down-500)',
     getValue: (drives) => ({
       value: drives.reduce((s, d) => s + (d.uncorrectable_errors || 0), 0),
       sub: 'errors total',
@@ -146,7 +146,7 @@ export const WIDGET_DEFS = {
   zfs_pools: {
     label: 'ZFS Pools',
     icon: Layers,
-    color: 'text-blue-500 dark:text-blue-400',
+    colorVar: 'var(--wt-brand-500)',
     getValue: (drives) => ({
       value: new Set(drives.map(d => d.zfs_pool).filter(Boolean)).size,
       sub: 'active pools',
@@ -193,19 +193,20 @@ function SortableWidgetCard({ id, drives, profiles, baysMap, onRemove, onOpenDet
       {...attributes}
       {...listeners}
       onClick={() => { if (hasDetail && !isDragging) onOpenDetail(id) }}
-      className={`group relative flex items-center gap-3 rounded-xl bg-white dark:bg-gray-900/70 border border-slate-200 dark:border-gray-800/60 px-4 h-[72px] shrink-0 select-none ${hasDetail ? 'cursor-pointer hover:border-blue-400/60 dark:hover:border-blue-600/60 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-colors' : 'cursor-grab active:cursor-grabbing'}`}
+      className={`wt-card group relative flex items-center gap-3 px-4 h-[72px] shrink-0 select-none transition-[box-shadow,border-color] ${hasDetail ? 'cursor-pointer hover:shadow-[var(--wt-shadow-md)]' : 'cursor-grab active:cursor-grabbing'}`}
     >
-      <div className={`shrink-0 ${def.color}`}>
+      <div className="shrink-0" style={{ color: def.colorVar }}>
         <Icon size={18} />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-slate-500 dark:text-gray-500 leading-none mb-0.5">{def.label}</p>
-        <p className={`text-lg font-bold leading-none ${def.color}`}>{value}</p>
+        <p className="wt-eyebrow mb-1">{def.label}</p>
+        <p className="wt-mono font-semibold leading-none" style={{ fontSize: 'var(--wt-text-lg)', color: def.colorVar }}>{value}</p>
       </div>
       <button
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onRemove(id) }}
-        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-200 dark:bg-gray-700 text-slate-500 dark:text-gray-400 hover:bg-red-500 hover:text-white transition-colors items-center justify-center hidden group-hover:flex"
+        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-white transition-colors items-center justify-center hidden group-hover:flex"
+        style={{ background: 'var(--wt-down-500)' }}
       >
         <X size={10} />
       </button>
@@ -263,7 +264,7 @@ export default function WidgetBar({ drives, profiles, baysMap }) {
     <>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={widgetIds} strategy={horizontalListSortingStrategy}>
-          <div className="flex items-center gap-3 px-5 py-3 border-b border-slate-200 dark:border-gray-800/60 overflow-x-auto">
+          <div className="flex items-center gap-3 px-5 py-3 overflow-x-auto" style={{ borderBottom: '1px solid var(--wt-border)' }}>
             {widgetIds.map(id => (
               <SortableWidgetCard
                 key={id}
@@ -279,10 +280,11 @@ export default function WidgetBar({ drives, profiles, baysMap }) {
             {/* Plus button — same shape as widget cards */}
             <button
               onClick={() => setPickerOpen(true)}
-              className="flex items-center gap-2 rounded-xl border border-dashed border-slate-300 dark:border-gray-700/60 bg-transparent hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 px-4 py-3 shrink-0 transition-colors text-slate-400 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400"
+              className="wt-btn wt-btn--ghost shrink-0 h-[72px] px-4 rounded-[var(--wt-r-lg)]"
+              style={{ border: '1px dashed var(--wt-border-strong)' }}
             >
               <Plus size={16} />
-              <span className="text-xs font-medium">Add</span>
+              <span className="wt-eyebrow">Add</span>
             </button>
           </div>
         </SortableContext>

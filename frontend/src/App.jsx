@@ -10,39 +10,40 @@ import { getAlerts } from './api/client'
 
 function Nav({ onSettings, onBell, alertCount, alertSeverity }) {
   const bellColor =
-    alertSeverity === 'critical' ? 'text-red-500 dark:text-red-400' :
-    alertSeverity === 'status'   ? 'text-amber-500 dark:text-amber-400' :
-    'text-slate-400 dark:text-gray-500'
+    alertSeverity === 'critical' ? 'text-[--wt-down-500]' :
+    alertSeverity === 'status'   ? 'text-[--wt-warn-500]' :
+    'text-[--wt-text-faint]'
+
+  const badgeColor =
+    alertSeverity === 'critical' ? 'bg-[--wt-down-500]' :
+    alertSeverity === 'status'   ? 'bg-[--wt-warn-500]' :
+    'bg-[--wt-brand-500]'
 
   return (
-    <nav className="flex items-center justify-between px-5 py-3 border-b border-slate-200/80 dark:border-gray-800/80 bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm sticky top-0 z-40">
+    <nav className="wt-appbar sticky top-0 z-40 justify-between">
       <div className="flex items-center gap-2.5">
-        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 shadow-lg shadow-blue-500/30">
-          <HardDrive size={14} className="text-white" strokeWidth={2.5} />
-        </div>
-        <span className="font-bold text-slate-900 dark:text-white tracking-tight">
-          Bay<span className="text-blue-500 dark:text-blue-400">Watch</span>
+        <span
+          className="wt-appicon"
+          style={{ '--ai-size': '30px', '--ai-from': 'var(--bw-from)', '--ai-to': 'var(--bw-to)' }}
+        >
+          <HardDrive size={14} strokeWidth={2.5} />
+        </span>
+        <span className="font-bold tracking-tight" style={{ color: 'var(--wt-text)', fontSize: 'var(--wt-text-md)' }}>
+          Bay<span style={{ color: 'var(--bw-ink)' }}>Watch</span>
         </span>
       </div>
       <div className="flex items-center gap-1">
         <button
           onClick={onBell}
-          className="relative flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-100 dark:hover:bg-gray-800/60 transition-colors"
+          className="wt-btn wt-btn--ghost relative"
           title="Notifications"
         >
           <Bell size={15} className={bellColor} />
           {alertCount > 0 && (
-            <span className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${
-              alertSeverity === 'critical' ? 'bg-red-500' :
-              alertSeverity === 'status'   ? 'bg-amber-500' :
-              'bg-blue-500'
-            }`} />
+            <span className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${badgeColor}`} />
           )}
         </button>
-        <button
-          onClick={onSettings}
-          className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-800/60 transition-colors"
-        >
+        <button onClick={onSettings} className="wt-btn wt-btn--ghost">
           <SettingsIcon size={15} /> Settings
         </button>
       </div>
@@ -103,7 +104,7 @@ export default function App() {
     <ThemeProvider>
       <TempThresholdProvider>
       <BrowserRouter>
-        <div className="min-h-screen bg-slate-50 dark:bg-gray-950 text-slate-900 dark:text-gray-100">
+        <div className="min-h-screen">
           {logOpen && (
             <div
               className="fixed inset-0 z-[45]"
