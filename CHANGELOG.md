@@ -4,7 +4,7 @@ All notable changes to BayWatch are documented here. Follows [Keep a Changelog](
 
 ---
 
-## [1.11.0] — 2026-06-09
+## [2.0.0] — 2026-06-09
 
 ### Changed
 - **Watchtower design system migration** — all UI components now use `wt-*` CSS custom property tokens exclusively; every hardcoded Tailwind color class and `dark:` variant has been replaced with semantic role tokens (`--wt-surface`, `--wt-text`, `--wt-border`, `--wt-up/warn/down-*`, etc.) so the entire UI re-maps correctly on theme toggle with zero markup changes

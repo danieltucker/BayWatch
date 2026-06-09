@@ -8,6 +8,9 @@ import { ThemeProvider } from './context/ThemeContext'
 import { TempThresholdProvider } from './context/TempThresholdContext'
 import { getAlerts } from './api/client'
 
+const APP_VERSION = '2.0.0'
+const REPO_URL = 'https://github.com/danieltucker/BayWatch'
+
 function Nav({ onSettings, onBell, alertCount, alertSeverity }) {
   const bellColor =
     alertSeverity === 'critical' ? 'text-[--wt-down-500]' :
@@ -31,6 +34,15 @@ function Nav({ onSettings, onBell, alertCount, alertSeverity }) {
         <span className="font-bold tracking-tight" style={{ color: 'var(--wt-text)', fontSize: 'var(--wt-text-md)' }}>
           Bay<span style={{ color: 'var(--bw-ink)' }}>Watch</span>
         </span>
+        <a
+          href={REPO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="wt-chip wt-chip--plain"
+          style={{ textDecoration: 'none' }}
+        >
+          v{APP_VERSION}
+        </a>
       </div>
       <div className="flex items-center gap-1">
         <button
