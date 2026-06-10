@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { BarChart2, Clock, ChevronRight, Trash2, CheckCircle2, XCircle, AlertTriangle, HardDrive, Thermometer, Database, Wifi, WifiOff } from 'lucide-react'
-import { getReports, generateReport, getReport, deleteReport } from '../api/client'
+import { BarChart2, Clock, ChevronRight, Trash2, CheckCircle2, XCircle, AlertTriangle, HardDrive, Thermometer, Database, Wifi, WifiOff, Download } from 'lucide-react'
+import * as XLSX from 'xlsx'
+import { getReports, generateReport, getReport, deleteReport, getReportSchedule, saveReportSchedule } from '../api/client'
 
 function fmt(dt) {
   return new Date(dt).toLocaleString()
@@ -15,6 +16,138 @@ function fmtHours(h) {
   if (h >= 8760) return `${(h / 8760).toFixed(1)}y`
   if (h >= 720) return `${(h / 720).toFixed(1)}mo`
   return `${h.toLocaleString()}h`
+}
+
+function buildInventoryRows(inventory) {
+  return inventory.map(d => ({
+    Drive: [d.make, d.model].filter(Boolean).join(' ') || '—',
+    Serial: d.serial,
+    Type: d.drive_type || d.form_factor || '—',
+    SMART: d.smart_status || '—',
+    'Temp (°C)': d.temperature_c ?? '—',
+    'Age (hrs)': d.power_on_hours ?? '—',
+    Capacity: d.capacity || '—',
+    Pool: d.zfs_pool || '—',
+    Bay: [d.enclosure, d.array, d.bay].filter(Boolean).join(' › ') || '—',
+    Connected: d.is_connected === false ? 'No' : 'Yes',
+  }))
+}
+
+function buildSmartRows(smart_events) {
+  return smart_events.map(e => ({
+    Drive: [e.make, e.model].filter(Boolean).join(' ') || '—',
+    Serial: e.serial,
+    Event: e.event_type.replace(/_/g, ' '),
+    Detail: e.description,
+  }))
+}
+
+function buildTempRows(temperature) {
+  return temperature.map(t => ({
+    Drive: [t.make, t.model].filter(Boolean).join(' ') || t.serial,
+    Serial: t.serial,
+    'Current (°C)': t.current_temp ?? '—',
+    'Avg (°C)': t.avg_temp ?? '—',
+    'Peak (°C)': t.peak_temp ?? '—',
+    'Hrs ≥ Warn': t.hours_above_warn ?? '—',
+    'Hrs ≥ Danger': t.hours_above_danger ?? '—',
+  }))
+}
+
+function buildPoolRows(pools) {
+  return pools.map(p => ({
+    Pool: p.name,
+    Drives: p.drive_count,
+    vDevs: p.vdevs.join(', ') || '—',
+  }))
+}
+
+function exportReportCSV(report) {
+  const rows = buildInventoryRows(report.data.inventory)
+  if (!rows.length) return
+  const headers = Object.keys(rows[0])
+  const lines = [
+    headers.join(','),
+    ...rows.map(r => headers.map(h => {
+      const v = String(r[h] ?? '')
+      return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v
+    }).join(',')),
+  ]
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `baywatch-report-${fmtDate(report.period_start).replace(/\//g, '-')}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function exportReportXLSX(report) {
+  const wb = XLSX.utils.book_new()
+  const sheets = [
+    { name: 'Inventory', rows: buildInventoryRows(report.data.inventory) },
+    { name: 'SMART Events', rows: buildSmartRows(report.data.smart_events) },
+    { name: 'Temperature', rows: buildTempRows(report.data.temperature) },
+    { name: 'Pools', rows: buildPoolRows(report.data.pools) },
+  ]
+  for (const { name, rows } of sheets) {
+    const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{}])
+    XLSX.utils.book_append_sheet(wb, ws, name)
+  }
+  XLSX.writeFile(wb, `baywatch-report-${fmtDate(report.period_start).replace(/\//g, '-')}.xlsx`)
+}
+
+function mdTable(rows) {
+  if (!rows.length) return '_No data_\n'
+  const headers = Object.keys(rows[0])
+  const sep = headers.map(() => '---')
+  const lines = [
+    `| ${headers.join(' | ')} |`,
+    `| ${sep.join(' | ')} |`,
+    ...rows.map(r => `| ${headers.map(h => String(r[h] ?? '—')).join(' | ')} |`),
+  ]
+  return lines.join('\n') + '\n'
+}
+
+function exportReportMD(report) {
+  const d = report.data
+  const s = d.summary
+  const lines = [
+    `# BayWatch Report`,
+    `**Period:** ${fmtDate(report.period_start)} — ${fmtDate(report.period_end)}  `,
+    `**Generated:** ${fmt(report.generated_at)}`,
+    '',
+    '## Summary',
+    '',
+    `| Metric | Value |`,
+    `| --- | --- |`,
+    `| Total drives | ${s.total_drives} |`,
+    `| SMART passed | ${s.passed} |`,
+    `| SMART failed | ${s.failed} |`,
+    `| With errors | ${s.drives_with_errors} |`,
+    s.avg_temp_c != null ? `| Avg temperature | ${s.avg_temp_c}°C |` : null,
+    s.disconnected > 0 ? `| Disconnected | ${s.disconnected} |` : null,
+    '',
+    '## Inventory',
+    '',
+    mdTable(buildInventoryRows(d.inventory)),
+    '## SMART Events',
+    '',
+    mdTable(buildSmartRows(d.smart_events)),
+    '## Temperature',
+    '',
+    mdTable(buildTempRows(d.temperature)),
+    '## Pools',
+    '',
+    mdTable(buildPoolRows(d.pools)),
+  ].filter(l => l !== null).join('\n')
+  const blob = new Blob([lines], { type: 'text/markdown' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `baywatch-report-${fmtDate(report.period_start).replace(/\//g, '-')}.md`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 function SmartPill({ status }) {
@@ -217,10 +350,21 @@ export default function Reports() {
   const [pastReports, setPastReports] = useState([])
   const [error, setError] = useState(null)
   const [loadingReport, setLoadingReport] = useState(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [schedule, setSchedule] = useState({ enabled: false, frequency: 'weekly', period_days: 30 })
+  const [scheduleSaving, setScheduleSaving] = useState(false)
 
   useEffect(() => {
     getReports().then(setPastReports).catch(() => {})
+    getReportSchedule().then(setSchedule).catch(() => {})
   }, [])
+
+  async function handleSaveSchedule(next) {
+    setSchedule(next)
+    setScheduleSaving(true)
+    try { await saveReportSchedule(next) } catch {}
+    finally { setScheduleSaving(false) }
+  }
 
   async function handleGenerate() {
     setGenerating(true)
@@ -249,11 +393,11 @@ export default function Reports() {
     }
   }
 
-  async function handleDeleteReport(id, e) {
-    e.stopPropagation()
+  async function handleDeleteReport(id) {
     await deleteReport(id)
     setPastReports(prev => prev.filter(r => r.id !== id))
     if (activeReport?.id === id) setActiveReport(null)
+    setConfirmDeleteId(null)
   }
 
   return (
@@ -285,6 +429,53 @@ export default function Reports() {
         </button>
       </div>
 
+      {/* Schedule */}
+      <div className="wt-card p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="wt-eyebrow">Scheduled Generation</span>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--wt-text-faint)' }}>
+              Auto-generate reports on a recurring schedule. A notification is sent when the report is ready.
+            </p>
+          </div>
+          <label className="wt-switch">
+            <input
+              type="checkbox"
+              checked={schedule.enabled}
+              onChange={e => handleSaveSchedule({ ...schedule, enabled: e.target.checked })}
+            />
+            <span />
+          </label>
+        </div>
+        {schedule.enabled && (
+          <div className="flex flex-wrap items-end gap-4">
+            <div>
+              <span className="wt-eyebrow mb-2 block">Frequency</span>
+              <div className="wt-seg">
+                {['daily', 'weekly', 'monthly'].map(f => (
+                  <button key={f} onClick={() => handleSaveSchedule({ ...schedule, frequency: f })} aria-selected={schedule.frequency === f}>
+                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <span className="wt-eyebrow mb-2 block">Period</span>
+              <div className="wt-seg">
+                {[7, 30, 90].map(d => (
+                  <button key={d} onClick={() => handleSaveSchedule({ ...schedule, period_days: d })} aria-selected={schedule.period_days === d}>
+                    {d}D
+                  </button>
+                ))}
+              </div>
+            </div>
+            {scheduleSaving && (
+              <span className="text-xs" style={{ color: 'var(--wt-text-faint)' }}>Saving…</span>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Preview */}
       <div className="wt-card p-5" style={{ minHeight: '220px' }}>
         {generating ? (
@@ -294,13 +485,25 @@ export default function Reports() {
           </div>
         ) : activeReport ? (
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
                 <span className="wt-eyebrow">Report</span>
                 <p className="text-sm mt-0.5" style={{ color: 'var(--wt-text-muted)' }}>
                   {fmtDate(activeReport.period_start)} — {fmtDate(activeReport.period_end)}
                   <span className="ml-2 wt-mono text-xs" style={{ color: 'var(--wt-text-faint)' }}>Generated {fmt(activeReport.generated_at)}</span>
                 </p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="wt-eyebrow mr-1">Export</span>
+                <button onClick={() => exportReportCSV(activeReport)} className="wt-btn wt-btn--ghost wt-btn--sm" title="Export as CSV">
+                  <Download size={12} /> CSV
+                </button>
+                <button onClick={() => exportReportXLSX(activeReport)} className="wt-btn wt-btn--ghost wt-btn--sm" title="Export as Excel">
+                  <Download size={12} /> XLS
+                </button>
+                <button onClick={() => exportReportMD(activeReport)} className="wt-btn wt-btn--ghost wt-btn--sm" title="Export as Markdown">
+                  <Download size={12} /> MD
+                </button>
               </div>
             </div>
             <ReportView report={activeReport} />
@@ -334,17 +537,33 @@ export default function Reports() {
                   </p>
                   <p className="text-xs" style={{ color: 'var(--wt-text-faint)' }}>Generated {fmt(r.generated_at)}</p>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={(e) => handleDeleteReport(r.id, e)}
-                    className="p-1.5 rounded transition-colors"
-                    style={{ color: 'var(--wt-text-faint)' }}
-                    onMouseEnter={e => e.currentTarget.style.color = 'var(--wt-down-500)'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'var(--wt-text-faint)'}
-                    title="Delete report">
-                    <Trash2 size={13} />
-                  </button>
-                  <ChevronRight size={15} style={{ color: 'var(--wt-text-faint)' }} />
+                <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                  {confirmDeleteId === r.id ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs" style={{ color: 'var(--wt-text-muted)' }}>Delete?</span>
+                      <button
+                        onClick={() => handleDeleteReport(r.id)}
+                        className="wt-btn wt-btn--danger wt-btn--sm">
+                        Yes
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="wt-btn wt-btn--ghost wt-btn--sm">
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setConfirmDeleteId(r.id)}
+                        className="wt-btn wt-btn--ghost wt-btn--sm"
+                        style={{ color: 'var(--wt-down-500)' }}
+                        title="Delete report">
+                        <Trash2 size={13} /> Delete
+                      </button>
+                      <ChevronRight size={15} style={{ color: 'var(--wt-text-faint)' }} />
+                    </>
+                  )}
                 </div>
               </button>
             ))}

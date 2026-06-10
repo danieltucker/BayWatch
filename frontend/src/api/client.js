@@ -102,4 +102,11 @@ export const generateReport = (periodDays) => api.post('/reports', { period_days
 export const getReport = (id) => api.get(`/reports/${id}`).then(r => r.data)
 export const deleteReport = (id) => api.delete(`/reports/${id}`)
 
+export const getReportSchedule = () =>
+  api.get('/config/report_schedule')
+    .then(r => JSON.parse(r.data.value))
+    .catch(() => ({ enabled: false, frequency: 'weekly', period_days: 30 }))
+export const saveReportSchedule = (cfg) =>
+  api.put('/config/report_schedule', { value: JSON.stringify(cfg) }).then(r => r.data)
+
 export default api
