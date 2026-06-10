@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { Server, HardDrive, ChevronDown, ChevronRight, ArrowUp, ArrowDown, Download, X, LayoutGrid, List } from 'lucide-react'
+import { Server, HardDrive, ChevronDown, ChevronRight, ArrowUp, ArrowDown, Download, X, LayoutGrid, List, BarChart2 } from 'lucide-react'
+import DrivesPage from './DrivesPage'
+import Reports from './Reports'
 import { getDriveIcon } from '../utils/driveIcon'
 import clsx from 'clsx'
 import BayGrid from '../components/BayGrid'
@@ -109,6 +111,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
   const [hoveredRemoteDrive, setHoveredRemoteDrive] = useState(null)
   const [remoteViewModes, setRemoteViewModes] = useState({})
   const [toasts, setToasts] = useState([])
+  const [activeView, setActiveView] = useState('bays')
   const prevConnectedRef = useRef(null)
 
   const sensors = useSensors(
@@ -312,9 +315,76 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
           ))}
         </div>
       )}
-      <div className="flex flex-col lg:flex-row gap-0 min-h-[calc(100vh-49px)]">
-        {/* Main area */}
-        <div className="flex-1 flex flex-col min-w-0" style={{ borderRight: '1px solid var(--wt-border)' }}>
+      <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 49px)' }}>
+
+        {/* Left sidebar */}
+        <div className="w-[260px] shrink-0 flex flex-col overflow-hidden" style={{ background: 'var(--wt-surface)', borderRight: '1px solid var(--wt-border)' }}>
+          <nav className="flex flex-col gap-0.5 px-2 py-3" style={{ borderBottom: '1px solid var(--wt-border)' }}>
+            <span className="wt-eyebrow px-2 mb-1">Views</span>
+            {[
+              { key: 'bays',    label: 'Bays',    Icon: LayoutGrid },
+              { key: 'drives',  label: 'Drives',  Icon: HardDrive },
+              { key: 'reports', label: 'Reports', Icon: BarChart2 },
+            ].map(({ key, label, Icon }) => (
+              <button key={key} onClick={() => setActiveView(key)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors w-full text-left"
+                style={activeView === key
+                  ? { background: 'color-mix(in oklch, var(--wt-brand-500) 10%, transparent)', color: 'var(--wt-brand-600)', fontWeight: 600 }
+                  : { color: 'var(--wt-text-muted)' }
+                }>
+                <Icon size={15} />
+                {label}
+              </button>
+            ))}
+          </nav>
+          {activeView === 'bays' && (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="px-4 py-2.5 shrink-0" style={{ borderBottom: '1px solid var(--wt-border)' }}>
+                <span className="wt-eyebrow">
+                  {hoveredRemoteDrive ? 'Remote Drive' : displayDrive ? 'Drive Details' : 'All Drives'}
+                </span>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3">
+                {hoveredRemoteDrive ? (
+                  <DriveCard drive={hoveredRemoteDrive.drive} remote instanceName={hoveredRemoteDrive.instanceName} />
+                ) : displayDrive ? (
+                  <DriveCard
+                    drive={displayDrive}
+                    profile={displayProfile}
+                    bay={displayBay}
+                    poolStats={poolStats}
+                    onEdit={selectedBay ? () => setBayModal({
+                      bay: selectedBay,
+                      drive: selectedDrive,
+                      profile: selectedProfile,
+                      arrayName: findArrayName(selectedBay?.id),
+                    }) : undefined}
+                    onClose={selectedDrive ? () => { setSelectedBay(null); setSelectedDriveSerial(null) } : undefined}
+                    onDelete={selectedDrive ? async (serial) => {
+                      await deleteDrive(serial)
+                      setSelectedBay(null)
+                      setSelectedDriveSerial(null)
+                      loadAll()
+                    } : undefined}
+                    onReassign={undefined}
+                  />
+                ) : (
+                  <DriveList
+                    drives={drives}
+                    profiles={profiles}
+                    selectedSerial={selectedDriveSerial}
+                    onSelect={serial => { setSelectedDriveSerial(serial); setSelectedBay(null) }}
+                    assignedSerials={assignedSerials}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 min-w-0 overflow-y-auto flex flex-col">
+          {activeView === 'bays' && <>
 
           <WidgetBar drives={drives} profiles={profiles} baysMap={baysMap} />
 
@@ -688,6 +758,9 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
               </div>
             )}
           </div>
+          </>}
+          {activeView === 'drives' && <DrivesPage drives={drives} profiles={profiles} enclosures={enclosures} baysMap={baysMap} />}
+          {activeView === 'reports' && <Reports />}
         </div>
 
         {selectedRemoteDrive && (
@@ -729,56 +802,6 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
         )}
 
         <SettingsModal open={settingsOpen} onClose={onCloseSettings} onUpdate={loadAll} />
-
-        {/* Sidebar */}
-        <div className="w-full lg:w-[340px] shrink-0 flex flex-col lg:sticky lg:top-[49px] lg:h-[calc(100vh-49px)] lg:self-start" style={{ background: 'var(--wt-surface)', borderTop: '1px solid var(--wt-border)', borderLeft: '1px solid var(--wt-border)' }}>
-          <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--wt-border)' }}>
-            <span className="wt-eyebrow">
-              {hoveredRemoteDrive ? 'Remote Drive' : displayDrive ? 'Drive Details' : 'All Drives'}
-            </span>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3">
-            {hoveredRemoteDrive ? (
-              <DriveCard
-                drive={hoveredRemoteDrive.drive}
-                remote
-                instanceName={hoveredRemoteDrive.instanceName}
-              />
-            ) : displayDrive ? (
-              <DriveCard
-                drive={displayDrive}
-                profile={displayProfile}
-                bay={displayBay}
-                poolStats={poolStats}
-                onEdit={selectedBay ? () => setBayModal({
-                  bay: selectedBay,
-                  drive: selectedDrive,
-                  profile: selectedProfile,
-                  arrayName: findArrayName(selectedBay?.id),
-                }) : undefined}
-                onClose={selectedDrive ? () => { setSelectedBay(null); setSelectedDriveSerial(null) } : undefined}
-                onDelete={selectedDrive ? async (serial) => {
-                  await deleteDrive(serial)
-                  setSelectedBay(null)
-                  setSelectedDriveSerial(null)
-                  loadAll()
-                } : undefined}
-                onReassign={undefined}
-              />
-            ) : (
-              <DriveList
-                drives={drives}
-                profiles={profiles}
-                selectedSerial={selectedDriveSerial}
-                onSelect={serial => {
-                  setSelectedDriveSerial(serial)
-                  setSelectedBay(null)
-                }}
-                assignedSerials={assignedSerials}
-              />
-            )}
-          </div>
-        </div>
       </div>
 
       <DragOverlay>

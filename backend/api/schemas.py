@@ -256,6 +256,23 @@ class ExternalBayRead(BayRead):
     array_name: str
 
 
+# ── Reports ──────────────────────────────────────────────────────────────────
+
+class ReportCreate(BaseModel):
+    period_days: int = 30
+
+class ReportListItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    generated_at: datetime.datetime
+    period_days: int
+    period_start: datetime.datetime
+    period_end: datetime.datetime
+
+class ReportRead(ReportListItem):
+    data: str
+
+
 # ── Federation ────────────────────────────────────────────────────────────────
 
 class FederatedTargetCreate(BaseModel):

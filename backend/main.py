@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from db.base import Base, engine, SessionLocal
 import models  # noqa: F401 — registers all ORM models with Base.metadata
-from api.routes import drives, bays, enclosures, profiles, alerts, pools, history, api_keys, external, federation, config
+from api.routes import drives, bays, enclosures, profiles, alerts, pools, history, api_keys, external, federation, config, reports
 from services import log_buffer, scheduler
 
 
@@ -30,6 +30,7 @@ _MIGRATIONS = [
     "ALTER TABLE drives ADD COLUMN is_connected BOOLEAN DEFAULT 1",
     "ALTER TABLE drives ADD COLUMN drive_type VARCHAR(32)",
     "ALTER TABLE drive_profiles ADD COLUMN rated_tbw INTEGER",
+    "CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, generated_at DATETIME NOT NULL, period_days INTEGER NOT NULL, period_start DATETIME NOT NULL, period_end DATETIME NOT NULL, data TEXT NOT NULL)",
 ]
 
 
@@ -67,7 +68,7 @@ async def lifespan(app: FastAPI):
     scheduler.stop()
 
 
-app = FastAPI(title="BayWatch API", version="2.1.0", lifespan=lifespan)
+app = FastAPI(title="BayWatch API", version="2.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -86,9 +87,10 @@ app.include_router(history.router, prefix="/api/history", tags=["history"])
 app.include_router(api_keys.router, prefix="/api/api-keys", tags=["api-keys"])
 app.include_router(federation.router, prefix="/api/federation", tags=["federation"])
 app.include_router(config.router, prefix="/api/config", tags=["config"])
+app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 app.include_router(external.router, prefix="", tags=["external-api"])
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "version": "2.1.0"}
+    return {"status": "ok", "version": "2.2.0"}

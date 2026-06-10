@@ -4,6 +4,22 @@ All notable changes to BayWatch are documented here. Follows [Keep a Changelog](
 
 ---
 
+## [2.2.0] — 2026-06-09
+
+### Added
+- **Reports** — generate on-demand health reports for 7-day, 30-day, or 90-day periods; reports include a drive health summary, SMART event log, per-drive temperature statistics, full drive inventory, and ZFS pool groupings; reports are saved to the database and listed as past reports with expand/delete
+- **Left sidebar navigation** — the main content area is now preceded by a 260px fixed sidebar containing a Views nav (Bays · Drives · Reports) plus the existing drive list / drive details panel (Bays view only); selecting a view from the nav replaces the main content area without a page reload
+- **Drives view** — a flat, sortable, filterable table of all drives across all enclosures; columns include drive make/model, serial (mono), type, SMART status pill, temperature, age, capacity, ZFS pool, and bay assignment; filterable by status (All / Passed / Failed / Errors) and searchable by name or serial
+
+### Backend
+- `backend/models/report.py` — SQLAlchemy `Report` model (`id`, `generated_at`, `period_days`, `period_start`, `period_end`, `data`)
+- `backend/services/report_generator.py` — queries drives, bay assignments, and history; produces the JSON report payload
+- `backend/api/routes/reports.py` — REST endpoints: `GET /api/reports`, `POST /api/reports`, `GET /api/reports/{id}`, `DELETE /api/reports/{id}`
+- `backend/api/schemas.py` — `ReportCreate`, `ReportListItem`, `ReportRead` schemas added
+- DB migration added for `reports` table
+
+---
+
 ## [2.1.0] — 2026-06-09
 
 ### Added

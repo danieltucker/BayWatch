@@ -96,4 +96,10 @@ export const getFederationData = () => api.get('/federation/data').then(r => r.d
 export const getRemoteDriveHistory = (targetId, serial, days = 90) =>
   api.get(`/federation/targets/${targetId}/drives/${serial}/history`, { params: { days } }).then(r => r.data)
 
+// ── Reports ───────────────────────────────────────────────────────────────────
+export const getReports = () => api.get('/reports').then(r => r.data)
+export const generateReport = (periodDays) => api.post('/reports', { period_days: periodDays }).then(r => r.data)
+export const getReport = (id) => api.get(`/reports/${id}`).then(r => r.data)
+export const deleteReport = (id) => api.delete(`/reports/${id}`)
+
 export default api
