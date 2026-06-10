@@ -8,7 +8,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { TempThresholdProvider } from './context/TempThresholdContext'
 import { getAlerts } from './api/client'
 
-const APP_VERSION = '2.0.0'
+const APP_VERSION = '2.1.0'
 const REPO_URL = 'https://github.com/danieltucker/BayWatch'
 
 function Nav({ onSettings, onBell, alertCount, alertSeverity }) {

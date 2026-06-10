@@ -457,7 +457,7 @@ export default function LogConsole({ open, alerts = [], onDismissAlert }) {
       }`}
       style={{ height: '50vh' }}
     >
-      <div className="wt-console h-full flex flex-col rounded-none" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', boxShadow: 'var(--wt-shadow-lg)' }}>
+      <div className="wt-console h-full flex flex-col rounded-none" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', boxShadow: open ? 'var(--wt-shadow-lg)' : 'none' }}>
         {/* Title bar */}
         <div className="wt-console__bar shrink-0 gap-3">
           <div className="flex items-center gap-2 shrink-0">

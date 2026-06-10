@@ -715,7 +715,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
             profile={bayModal.profile}
             drives={drives}
             arrayName={bayModal.arrayName}
-            onClose={() => setBayModal(null)}
+            onClose={() => { setBayModal(null); setSelectedBay(null) }}
             onSaved={() => { setBayModal(null); loadAll() }}
             drivePanel={bayModal.drive ? (
               <DriveCard

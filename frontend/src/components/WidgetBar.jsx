@@ -264,7 +264,7 @@ export default function WidgetBar({ drives, profiles, baysMap }) {
     <>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={widgetIds} strategy={horizontalListSortingStrategy}>
-          <div className="flex items-center gap-3 px-5 py-3 overflow-x-auto" style={{ borderBottom: '1px solid var(--wt-border)' }}>
+          <div className="flex items-center flex-wrap gap-3 px-5 py-3" style={{ borderBottom: '1px solid var(--wt-border)' }}>
             {widgetIds.map(id => (
               <SortableWidgetCard
                 key={id}

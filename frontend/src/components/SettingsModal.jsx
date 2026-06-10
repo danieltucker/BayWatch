@@ -17,7 +17,6 @@ const TABS = [
   { key: 'api_keys',      label: 'API Keys',       icon: Key,       description: 'Generate keys for external API access' },
   { key: 'federation',    label: 'Federation',     icon: Globe,     description: 'Connect remote BayWatch instances' },
   { key: 'import',        label: 'Import',         icon: Upload,    description: 'Bulk import drive inventory from CSV' },
-  { key: 'appearance',    label: 'Appearance',     icon: Sun,       description: 'Theme and display preferences' },
 ]
 
 const GROUP_TYPES = [
@@ -148,10 +147,24 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
     }
   }
 
-  function copyRowKey(id, fallback) {
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      const el = document.createElement('textarea')
+      el.value = text
+      el.style.cssText = 'position:fixed;opacity:0;top:0;left:0'
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+    }
+  }
+
+  async function copyRowKey(id, fallback) {
     const key = sessionStorage.getItem(`apikey-${id}`) || fallback
     if (!key) return
-    navigator.clipboard.writeText(key)
+    await copyToClipboard(key)
     setCopiedRowId(id)
     setTimeout(() => setCopiedRowId(null), 2000)
   }
@@ -331,7 +344,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
               })}
             </nav>
             <div className="px-4 py-3" style={{ borderTop: '1px solid var(--wt-border)' }}>
-              <p className="wt-mono text-[10px]" style={{ color: 'var(--wt-text-faint)' }}>BayWatch v2.0.0</p>
+              <p className="wt-mono text-[10px]" style={{ color: 'var(--wt-text-faint)' }}>BayWatch v2.1.0</p>
             </div>
           </div>
 
@@ -381,6 +394,27 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                     >
                       <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition duration-200 ${tildeOverride ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
+                  </div>
+
+                  <div className="flex flex-col gap-2" style={{ borderTop: '1px solid var(--wt-border)', paddingTop: '1.25rem' }}>
+                    <label className="text-sm font-medium" style={{ color: 'var(--wt-text)' }}>Theme</label>
+                    <div className="flex gap-2">
+                      {[
+                        { value: 'light', label: 'Light', Icon: Sun },
+                        { value: 'dark',  label: 'Dark',  Icon: Moon },
+                        { value: 'auto',  label: 'Auto',  Icon: Monitor },
+                      ].map(({ value, label, Icon }) => (
+                        <button key={value} onClick={() => setTheme(value)}
+                          className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors"
+                          style={theme === value
+                            ? { background: 'var(--wt-brand-500)', borderColor: 'var(--wt-brand-500)', color: 'var(--wt-text-on-brand)' }
+                            : { background: 'var(--wt-surface-2)', borderColor: 'var(--wt-border)', color: 'var(--wt-text-muted)' }
+                          }>
+                          <Icon size={14} /> {label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs" style={{ color: 'var(--wt-text-faint)' }}>Auto follows your system preference.</p>
                   </div>
                 </div>
               )}
@@ -654,7 +688,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                           {generatedKey.key}
                         </code>
                         <button
-                          onClick={() => { navigator.clipboard.writeText(generatedKey.key); setKeyCopied(true); setTimeout(() => setKeyCopied(false), 2000) }}
+                          onClick={() => { copyToClipboard(generatedKey.key); setKeyCopied(true); setTimeout(() => setKeyCopied(false), 2000) }}
                           className="shrink-0 p-2 rounded-lg transition-colors"
                           style={{ background: 'var(--wt-surface)', border: '1px solid var(--wt-border)', color: 'var(--wt-text-muted)' }}
                           title="Copy to clipboard">
@@ -738,12 +772,12 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                                       )
                                     )}
                                     {confirmDeleteKeyId === k.id ? (
-                                      <span className="flex items-center gap-1.5">
-                                        <span className="text-xs" style={{ color: 'var(--wt-text-muted)' }}>Delete?</span>
-                                        <button onClick={() => handleDeleteKey(k.id)} className="text-xs font-medium"
+                                      <span className="flex items-center gap-1.5 rounded-md px-2 py-1" style={{ background: 'var(--wt-down-50)', border: '1px solid var(--wt-down-100)' }}>
+                                        <span className="text-xs font-medium" style={{ color: 'var(--wt-down-700)' }}>Delete?</span>
+                                        <button onClick={() => handleDeleteKey(k.id)} className="text-xs font-bold"
                                           style={{ color: 'var(--wt-down-500)' }}>Yes</button>
                                         <button onClick={() => setConfirmDeleteKeyId(null)} className="text-xs"
-                                          style={{ color: 'var(--wt-text-faint)' }}>No</button>
+                                          style={{ color: 'var(--wt-text-muted)' }}>No</button>
                                       </span>
                                     ) : (
                                       <button onClick={() => setConfirmDeleteKeyId(k.id)} className="p-1 transition-colors"
@@ -930,32 +964,6 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                       <AlertCircle size={15} /> {importError}
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* ── Appearance ── */}
-              {tab === 'appearance' && (
-                <div className="flex flex-col gap-5">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium" style={{ color: 'var(--wt-text)' }}>Theme</label>
-                    <div className="flex gap-2">
-                      {[
-                        { value: 'light', label: 'Light', Icon: Sun },
-                        { value: 'dark', label: 'Dark', Icon: Moon },
-                        { value: 'auto', label: 'Auto', Icon: Monitor },
-                      ].map(({ value, label, Icon }) => (
-                        <button key={value} onClick={() => setTheme(value)}
-                          className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors"
-                          style={theme === value
-                            ? { background: 'var(--wt-brand-500)', borderColor: 'var(--wt-brand-500)', color: 'var(--wt-text-on-brand)' }
-                            : { background: 'var(--wt-surface-2)', borderColor: 'var(--wt-border)', color: 'var(--wt-text-muted)' }
-                          }>
-                          <Icon size={14} /> {label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs mt-1" style={{ color: 'var(--wt-text-faint)' }}>Auto follows your system preference.</p>
-                  </div>
                 </div>
               )}
 

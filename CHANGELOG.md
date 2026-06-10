@@ -4,6 +4,23 @@ All notable changes to BayWatch are documented here. Follows [Keep a Changelog](
 
 ---
 
+## [2.1.0] — 2026-06-09
+
+### Added
+- **API key last-used timestamp** — the API Keys table now shows when each key was last used; sourced from `last_used_at` which is updated on every authenticated request
+
+### Changed
+- **Widget bar wraps** — widgets now wrap to a second line instead of showing a horizontal scrollbar when the bar is full
+- **Bay modal deselects drive on close** — closing the Edit Bay modal now clears the selected bay so the drive details panel closes cleanly
+- **Theme moved to General settings** — the Light / Dark / Auto theme selector has moved from the Appearance tab into General; the Appearance tab has been removed
+- **API key delete confirmation** — the inline delete confirmation now shows a red-tinted background pill so it is clearly visible against both light and dark surfaces
+- **Copy button fallback** — API key copy buttons now fall back to `execCommand('copy')` for HTTP (non-HTTPS) deployments where the Clipboard API is unavailable
+
+### Fixed
+- **Console shadow visible when closed** — the drop shadow from the log console was leaking through the top of the viewport when the console was slid off-screen; shadow is now only applied when the console is open
+
+---
+
 ## [2.0.0] — 2026-06-09
 
 ### Changed
