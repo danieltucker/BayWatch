@@ -237,6 +237,23 @@ def _partuuid_to_parent_dev(partuuid_path: str) -> str | None:
     return None
 
 
+def _by_id_to_parent_dev(by_id_path: str) -> str | None:
+    """Resolve /dev/disk/by-id/... (possibly a partition) → parent disk /dev/sdX."""
+    try:
+        target = os.readlink(by_id_path)        # e.g. "../../sda9"
+        part_name = Path(target).name            # "sda9" or "sda"
+        for disk_dir in Path("/sys/block").iterdir():
+            if (disk_dir / part_name).is_dir():  # partition child of this disk
+                return f"/dev/{disk_dir.name}"
+        # Already a disk-level symlink
+        dev = Path("/dev") / part_name
+        if dev.exists():
+            return str(dev)
+    except Exception:
+        pass
+    return None
+
+
 def build_disk_error_map(topology: list[PoolTopology]) -> dict[str, VdevDisk]:
     """Return {device_path: VdevDisk} for all disks, indexed by all known path forms."""
     mapping: dict[str, VdevDisk] = {}
@@ -251,6 +268,17 @@ def build_disk_error_map(topology: list[PoolTopology]) -> dict[str, VdevDisk]:
                     parent = _partuuid_to_parent_dev(disk.path)
                     if parent:
                         mapping[parent] = disk
+                elif disk.path.startswith("/dev/disk/by-id/"):
+                    # Also index by raw /dev/sdX so lookups work when
+                    # the container exposes raw devices but not by-id symlinks
+                    parent = _by_id_to_parent_dev(disk.path)
+                    if parent:
+                        mapping[parent] = disk
+                    # Also try stripping partition from base path
+                    if base != disk.path:
+                        parent_base = _by_id_to_parent_dev(base)
+                        if parent_base and parent_base not in mapping:
+                            mapping[parent_base] = disk
     return mapping
 
 
@@ -261,6 +289,7 @@ def build_disk_to_vdev_map(topology: list[PoolTopology]) -> dict[str, str]:
     how zpool status -P reports paths on a given system:
       - by-id with -partN suffix  → also index with suffix stripped
       - by-partuuid               → also index the parent /dev/sdX
+      - by-id                     → also index the raw /dev/sdX
     """
     mapping: dict[str, str] = {}
     for pool in topology:
@@ -268,14 +297,16 @@ def build_disk_to_vdev_map(topology: list[PoolTopology]) -> dict[str, str]:
             for disk in vdev.disks:
                 mapping[disk.path] = vdev.name
 
-                # /dev/disk/by-id/ata-...-part1 → strip -partN
                 base = re.sub(r"-part\d+$", "", disk.path)
                 if base != disk.path:
                     mapping[base] = vdev.name
 
-                # /dev/disk/by-partuuid/UUID → resolve to /dev/sdX
                 if disk.path.startswith("/dev/disk/by-partuuid/"):
                     parent = _partuuid_to_parent_dev(disk.path)
+                    if parent:
+                        mapping[parent] = vdev.name
+                elif disk.path.startswith("/dev/disk/by-id/"):
+                    parent = _by_id_to_parent_dev(disk.path)
                     if parent:
                         mapping[parent] = vdev.name
 
