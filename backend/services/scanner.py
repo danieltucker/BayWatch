@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import re
 
 from sqlalchemy.orm import Session
 
@@ -49,6 +50,7 @@ def run_scan(db: Session) -> tuple[list[Drive], list[Drive]]:
         topology = zpool_svc.get_pool_topology()
         disk_to_vdev = zpool_svc.build_disk_to_vdev_map(topology)
         disk_to_errors = zpool_svc.build_disk_error_map(topology)
+        logger.debug("ZFS error map keys: %s", list(disk_to_errors.keys()))
     except Exception:
         disk_to_vdev = {}
         disk_to_errors = {}
@@ -97,15 +99,23 @@ def run_scan(db: Session) -> tuple[list[Drive], list[Drive]]:
         drive.by_id_path = dev.by_id_path or drive.by_id_path
         drive.zfs_pool = dev.zfs_pool
         drive.vdev_name = disk_to_vdev.get(dev.path) or disk_to_vdev.get(dev.by_id_path or "")
-        disk_entry = disk_to_errors.get(dev.path) or disk_to_errors.get(dev.by_id_path or "")
+        by_id = dev.by_id_path or ""
+        by_id_base = re.sub(r"-part\d+$", "", by_id)
+        disk_entry = (
+            disk_to_errors.get(dev.path)
+            or disk_to_errors.get(by_id)
+            or (disk_to_errors.get(by_id_base) if by_id_base != by_id else None)
+        )
         if disk_entry:
             drive.zfs_read_errors = disk_entry.read_errors
             drive.zfs_write_errors = disk_entry.write_errors
             drive.zfs_checksum_errors = disk_entry.cksum_errors
+            logger.debug("ZFS errors for %s: R=%s W=%s C=%s", drive.serial, disk_entry.read_errors, disk_entry.write_errors, disk_entry.cksum_errors)
         else:
             drive.zfs_read_errors = None
             drive.zfs_write_errors = None
             drive.zfs_checksum_errors = None
+            logger.debug("No ZFS error entry for %s (path=%s by_id=%s)", drive.serial, dev.path, by_id)
         drive.smart_status = info.smart_status
         drive.temperature_c = info.temperature_c
         drive.power_on_hours = info.power_on_hours
