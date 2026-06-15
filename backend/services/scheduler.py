@@ -5,19 +5,23 @@ Started/stopped via FastAPI lifespan in main.py.
 """
 import asyncio
 import datetime
+import json
 import logging
 import os
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from db.base import SessionLocal
 from models.drive import Drive
 from models.drive_profile import DriveProfile
 from models.notification_config import NotificationConfig
+from models.report import Report
 from services import federation, notifications, scanner
+from services.report_generator import generate_report_data
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +45,14 @@ def start():
         _maybe_send_status_digest,
         CronTrigger(hour=8, minute=0),  # 08:00 daily; frequency filter applied inside
         id="status_digest",
+        replace_existing=True,
+    )
+
+    # Scheduled report generation — re-evaluated each run; gated by report_schedule config
+    _scheduler.add_job(
+        _maybe_generate_scheduled_report,
+        CronTrigger(hour=8, minute=30),  # 08:30 daily; frequency filter applied inside
+        id="scheduled_report",
         replace_existing=True,
     )
 
@@ -130,6 +142,54 @@ async def _maybe_send_status_digest() -> None:
 
         message = _build_status_message(db, config.warranty_warning_days)
         await notifications.dispatch_status(message)
+    finally:
+        db.close()
+
+
+async def _maybe_generate_scheduled_report() -> None:
+    db: Session = SessionLocal()
+    try:
+        row = db.execute(
+            text("SELECT value FROM app_config WHERE key = 'report_schedule'")
+        ).fetchone()
+        if not row:
+            return
+        try:
+            cfg = json.loads(row[0])
+        except (json.JSONDecodeError, TypeError):
+            return
+
+        if not cfg.get("enabled"):
+            return
+
+        today = datetime.date.today()
+        frequency = cfg.get("frequency", "weekly")
+        if not _should_send_today(frequency, today):
+            return
+
+        period_days = int(cfg.get("period_days", 30))
+        now = datetime.datetime.utcnow()
+        period_start = now - datetime.timedelta(days=period_days)
+        data_json = generate_report_data(db, period_start, now)
+        report = Report(
+            generated_at=now,
+            period_days=period_days,
+            period_start=period_start,
+            period_end=now,
+            data=data_json,
+        )
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+        logger.info("Scheduled report generated (id=%d, period=%dd)", report.id, period_days)
+
+        await notifications.dispatch_status(
+            f"📊 <b>BayWatch — Scheduled Report</b>\n"
+            f"A {period_days}-day health report has been generated.\n"
+            f"Open BayWatch → Reports to view it."
+        )
+    except Exception as exc:
+        logger.error("Scheduled report generation failed: %s", exc)
     finally:
         db.close()
 

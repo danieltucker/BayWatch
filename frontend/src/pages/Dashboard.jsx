@@ -318,7 +318,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
       <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 49px)' }}>
 
         {/* Left sidebar */}
-        <div className="w-[260px] shrink-0 flex flex-col overflow-hidden" style={{ background: 'var(--wt-surface)', borderRight: '1px solid var(--wt-border)' }}>
+        <div className="w-[300px] shrink-0 flex flex-col overflow-hidden" style={{ background: 'var(--wt-surface)', borderRight: '1px solid var(--wt-border)' }}>
           <nav className="flex flex-col gap-0.5 px-2 py-3" style={{ borderBottom: '1px solid var(--wt-border)' }}>
             <span className="wt-eyebrow px-2 mb-1">Views</span>
             {[
@@ -759,7 +759,7 @@ export default function Dashboard({ onOpenLog, onOpenSettings, settingsOpen, onC
             )}
           </div>
           </>}
-          {activeView === 'drives' && <DrivesPage drives={drives} profiles={profiles} enclosures={enclosures} baysMap={baysMap} />}
+          {activeView === 'drives' && <DrivesPage drives={drives} profiles={profiles} enclosures={enclosures} baysMap={baysMap} onSaved={loadAll} />}
           {activeView === 'reports' && <Reports />}
         </div>
 
