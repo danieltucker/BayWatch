@@ -347,7 +347,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
               })}
             </nav>
             <div className="px-4 py-3" style={{ borderTop: '1px solid var(--wt-border)' }}>
-              <p className="wt-mono text-[10px]" style={{ color: 'var(--wt-text-faint)' }}>BayWatch v2.3.0</p>
+              <p className="wt-mono text-[10px]" style={{ color: 'var(--wt-text-faint)' }}>BayWatch v2.3.3</p>
             </div>
           </div>
 

@@ -106,6 +106,16 @@ def run_scan(db: Session) -> tuple[list[Drive], list[Drive]]:
             or disk_to_errors.get(by_id)
             or (disk_to_errors.get(by_id_base) if by_id_base != by_id else None)
         )
+        # Serial-based fallback: ZFS by-id paths embed the drive serial number
+        # (e.g. /dev/disk/by-id/ata-WDC_..._WD-CA1HLDTK-part9 contains "WD-CA1HLDTK").
+        # This works even in Docker containers where by-id symlinks don't exist.
+        if not disk_entry and info.serial:
+            serial_lower = info.serial.lower()
+            for key, entry in disk_to_errors.items():
+                if serial_lower in key.lower():
+                    disk_entry = entry
+                    logger.debug("ZFS errors for %s matched by serial in path %s", info.serial, key)
+                    break
         if disk_entry:
             drive.zfs_read_errors = disk_entry.read_errors
             drive.zfs_write_errors = disk_entry.write_errors
