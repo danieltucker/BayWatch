@@ -58,8 +58,10 @@ async def _scan_and_check() -> None:
     try:
         config = db.query(NotificationConfig).filter_by(channel="telegram").first()
         temp_threshold = config.temp_alert_threshold_c if config else 55
+        zfs_warn = config.zfs_warn_threshold if config else 1
+        zfs_critical = config.zfs_critical_threshold if config else 50
         connected_drives, newly_disconnected = scanner.run_scan(db)
-        await _check_critical_conditions(connected_drives, temp_threshold)
+        await _check_critical_conditions(connected_drives, temp_threshold, zfs_warn, zfs_critical)
         await _check_disconnected(newly_disconnected)
     finally:
         db.close()
@@ -69,7 +71,7 @@ async def _scan_and_check() -> None:
     await loop.run_in_executor(None, federation.poll_due_targets)
 
 
-async def _check_critical_conditions(drives: list[Drive], temp_threshold: int) -> None:
+async def _check_critical_conditions(drives: list[Drive], temp_threshold: int, zfs_warn_threshold: int = 1, zfs_critical_threshold: int = 50) -> None:
     for drive in drives:
         if drive.smart_status == "FAILED":
             await notifications.dispatch_critical(
@@ -89,6 +91,20 @@ async def _check_critical_conditions(drives: list[Drive], temp_threshold: int) -
             await notifications.dispatch_critical(
                 f"Drive <b>{drive.serial}</b> ({drive.model or 'unknown'}) "
                 f"has {drive.reallocated_sectors} reallocated sectors.",
+                drive_serial=drive.serial,
+            )
+
+        cksum = drive.zfs_checksum_errors or 0
+        if cksum >= zfs_critical_threshold:
+            await notifications.dispatch_critical(
+                f"Drive <b>{drive.serial}</b> ({drive.model or 'unknown'}) "
+                f"has {cksum} ZFS checksum errors — drive may be failing.",
+                drive_serial=drive.serial,
+            )
+        elif cksum >= zfs_warn_threshold:
+            await notifications.dispatch_critical(
+                f"⚠️ Drive <b>{drive.serial}</b> ({drive.model or 'unknown'}) "
+                f"has {cksum} ZFS checksum error(s) — check cable and reseat drive.",
                 drive_serial=drive.serial,
             )
 

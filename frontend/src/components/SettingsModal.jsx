@@ -49,6 +49,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
     bot_token: '', chat_id: '', status_frequency: 'disabled',
     critical_enabled: true, warranty_warning_days: 90,
     temp_warn_threshold_c: 55, temp_alert_threshold_c: 60, log_level: 'INFO',
+    zfs_warn_threshold: 1, zfs_critical_threshold: 50,
   })
   const [alertSaved, setAlertSaved] = useState(false)
   const [editingArray, setEditingArray] = useState(null)
@@ -87,6 +88,8 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
       temp_warn_threshold_c: cfg.temp_warn_threshold_c ?? 55,
       temp_alert_threshold_c: cfg.temp_alert_threshold_c ?? 60,
       log_level: cfg.log_level ?? 'INFO',
+      zfs_warn_threshold: cfg.zfs_warn_threshold ?? 1,
+      zfs_critical_threshold: cfg.zfs_critical_threshold ?? 50,
     }))
   }
 
@@ -344,7 +347,7 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
               })}
             </nav>
             <div className="px-4 py-3" style={{ borderTop: '1px solid var(--wt-border)' }}>
-              <p className="wt-mono text-[10px]" style={{ color: 'var(--wt-text-faint)' }}>BayWatch v2.2.0</p>
+              <p className="wt-mono text-[10px]" style={{ color: 'var(--wt-text-faint)' }}>BayWatch v2.3.0</p>
             </div>
           </div>
 
@@ -632,6 +635,12 @@ export default function SettingsModal({ open, onClose, onUpdate }) {
                     <Field label="Temperature danger threshold (°C) — red" type="number"
                       value={alertForm.temp_alert_threshold_c}
                       onChange={v => setAlertForm(f => ({ ...f, temp_alert_threshold_c: parseInt(v) || 60 }))} />
+                    <Field label="ZFS checksum errors — warn threshold" type="number"
+                      value={alertForm.zfs_warn_threshold}
+                      onChange={v => setAlertForm(f => ({ ...f, zfs_warn_threshold: parseInt(v) || 1 }))} />
+                    <Field label="ZFS checksum errors — critical threshold" type="number"
+                      value={alertForm.zfs_critical_threshold}
+                      onChange={v => setAlertForm(f => ({ ...f, zfs_critical_threshold: parseInt(v) || 50 }))} />
                     <div className="wt-field">
                       <label className="wt-label">Log Level</label>
                       <div className="flex gap-2">

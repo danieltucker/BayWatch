@@ -69,6 +69,10 @@ def update_config(body: NotificationConfigUpdate, db: Session = Depends(get_db))
             raise HTTPException(status_code=422, detail=f"log_level must be one of {allowed_levels}")
         config.log_level = body.log_level.upper()
         log_buffer.set_level(getattr(logging, config.log_level, logging.INFO))
+    if body.zfs_warn_threshold is not None:
+        config.zfs_warn_threshold = body.zfs_warn_threshold
+    if body.zfs_critical_threshold is not None:
+        config.zfs_critical_threshold = body.zfs_critical_threshold
 
     db.commit()
     db.refresh(config)

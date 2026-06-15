@@ -20,3 +20,5 @@ class NotificationConfig(Base):
     temp_warn_threshold_c: Mapped[int] = mapped_column(default=55)
     temp_alert_threshold_c: Mapped[int] = mapped_column(default=60)
     log_level: Mapped[str] = mapped_column(String(16), default="INFO")
+    zfs_warn_threshold: Mapped[int] = mapped_column(default=1)
+    zfs_critical_threshold: Mapped[int] = mapped_column(default=50)

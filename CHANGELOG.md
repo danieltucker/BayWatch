@@ -4,6 +4,25 @@ All notable changes to BayWatch are documented here. Follows [Keep a Changelog](
 
 ---
 
+## [2.3.0] — 2026-06-10
+
+### Added
+- **ZFS checksum error health integration** — ZFS read/write/checksum error counts are now collected from `zpool status` on every scan and stored per-drive; drives with checksum errors are flagged warn (amber) or critical (red) independent of SMART status, since ZFS catches block-level corruption that SMART misses
+- **ZFS error warning banner** — the drive card shows an inline warning banner when any ZFS errors are present, citing the specific counts and recommending action (check cable for low counts; consider replacement for 50+ checksum or any write errors)
+- **ZFS errors column in Drives table** — new "ZFS Errors" column shows a colored pill with counts (C=checksum, R=read, W=write); amber for warn-level, red for critical; the "Errors" filter now includes ZFS errors
+- **ZFS health score penalty** — checksum errors deduct from the composite health score: −10 for any, −20 for 10+, −40 for 50+; write errors deduct an additional −30
+- **ZFS alert notifications** — scanner triggers a critical alert when checksum errors cross the configured thresholds; warn-level alerts include cable-check guidance, critical-level alerts recommend drive replacement
+- **ZFS threshold settings** — two new fields in Settings → Notifications: "ZFS checksum errors — warn threshold" (default 1) and "ZFS checksum errors — critical threshold" (default 50)
+
+### Backend
+- `Drive` model: `zfs_read_errors`, `zfs_write_errors`, `zfs_checksum_errors` columns added
+- `NotificationConfig` model: `zfs_warn_threshold` (default 1), `zfs_critical_threshold` (default 50) columns added
+- `services/zpool.py`: `build_disk_error_map()` helper indexes all path forms per disk
+- `services/scanner.py`: populates ZFS error counts from pool topology on each scan
+- `services/scheduler.py`: checks ZFS error counts against thresholds and dispatches alerts
+
+---
+
 ## [2.2.0] — 2026-06-09
 
 ### Added

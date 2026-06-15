@@ -237,6 +237,23 @@ def _partuuid_to_parent_dev(partuuid_path: str) -> str | None:
     return None
 
 
+def build_disk_error_map(topology: list[PoolTopology]) -> dict[str, VdevDisk]:
+    """Return {device_path: VdevDisk} for all disks, indexed by all known path forms."""
+    mapping: dict[str, VdevDisk] = {}
+    for pool in topology:
+        for vdev in pool.vdevs:
+            for disk in vdev.disks:
+                mapping[disk.path] = disk
+                base = re.sub(r"-part\d+$", "", disk.path)
+                if base != disk.path:
+                    mapping[base] = disk
+                if disk.path.startswith("/dev/disk/by-partuuid/"):
+                    parent = _partuuid_to_parent_dev(disk.path)
+                    if parent:
+                        mapping[parent] = disk
+    return mapping
+
+
 def build_disk_to_vdev_map(topology: list[PoolTopology]) -> dict[str, str]:
     """Return {device_path: vdev_name} for all disks in the topology.
 

@@ -36,6 +36,9 @@ class Drive(Base):
     vdev_name: Mapped[str | None] = mapped_column(String(32), nullable=True)
     is_connected: Mapped[bool] = mapped_column(default=True, server_default="1")
     drive_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    zfs_read_errors: Mapped[int | None] = mapped_column(nullable=True)
+    zfs_write_errors: Mapped[int | None] = mapped_column(nullable=True)
+    zfs_checksum_errors: Mapped[int | None] = mapped_column(nullable=True)
 
     bay: Mapped[Bay | None] = relationship("Bay", back_populates="drive", uselist=False)
     profile: Mapped[DriveProfile | None] = relationship(

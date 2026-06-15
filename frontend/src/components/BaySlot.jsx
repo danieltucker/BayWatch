@@ -49,10 +49,12 @@ const BAY_STATUS_STYLE = {
 function healthDotStyle(drive) {
   if (!drive) return { background: 'var(--wt-n-300)' }
   if (drive.smart_status === 'FAILED') return { background: 'var(--wt-down-500)' }
+  if ((drive.zfs_checksum_errors ?? 0) >= 50 || (drive.zfs_write_errors ?? 0) > 0) return { background: 'var(--wt-down-500)' }
   if (drive.smart_status === 'PASSED') {
     const hasErrors = (drive.reallocated_sectors ?? 0) > 0
       || (drive.pending_sectors ?? 0) > 0
       || (drive.uncorrectable_errors ?? 0) > 0
+      || (drive.zfs_checksum_errors ?? 0) > 0
     return { background: hasErrors ? 'var(--wt-warn-500)' : 'var(--wt-up-500)' }
   }
   return { background: 'var(--wt-n-400)' }

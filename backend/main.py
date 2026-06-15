@@ -31,6 +31,11 @@ _MIGRATIONS = [
     "ALTER TABLE drives ADD COLUMN drive_type VARCHAR(32)",
     "ALTER TABLE drive_profiles ADD COLUMN rated_tbw INTEGER",
     "CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, generated_at DATETIME NOT NULL, period_days INTEGER NOT NULL, period_start DATETIME NOT NULL, period_end DATETIME NOT NULL, data TEXT NOT NULL)",
+    "ALTER TABLE drives ADD COLUMN zfs_read_errors INTEGER",
+    "ALTER TABLE drives ADD COLUMN zfs_write_errors INTEGER",
+    "ALTER TABLE drives ADD COLUMN zfs_checksum_errors INTEGER",
+    "ALTER TABLE notification_configs ADD COLUMN zfs_warn_threshold INTEGER DEFAULT 1",
+    "ALTER TABLE notification_configs ADD COLUMN zfs_critical_threshold INTEGER DEFAULT 50",
 ]
 
 
@@ -68,7 +73,7 @@ async def lifespan(app: FastAPI):
     scheduler.stop()
 
 
-app = FastAPI(title="BayWatch API", version="2.2.0", lifespan=lifespan)
+app = FastAPI(title="BayWatch API", version="2.3.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -93,4 +98,4 @@ app.include_router(external.router, prefix="", tags=["external-api"])
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "version": "2.2.0"}
+    return {"status": "ok", "version": "2.3.0"}

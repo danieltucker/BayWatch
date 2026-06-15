@@ -27,6 +27,7 @@ const COLS = [
   { key: 'serial', label: 'Serial' },
   { key: 'drive_type', label: 'Type' },
   { key: 'smart_status', label: 'SMART' },
+  { key: 'zfs_checksum_errors', label: 'ZFS Errors' },
   { key: 'temperature_c', label: 'Temp' },
   { key: 'power_on_hours', label: 'Age' },
   { key: 'capacity_bytes', label: 'Capacity' },
@@ -74,7 +75,7 @@ export default function DrivesPage({ drives = [], profiles = [], enclosures = []
     return drives.filter(d => {
       if (statusFilter === 'passed' && d.smart_status !== 'PASSED') return false
       if (statusFilter === 'failed' && d.smart_status !== 'FAILED') return false
-      if (statusFilter === 'errors' && !((d.reallocated_sectors || 0) > 0 || (d.uncorrectable_errors || 0) > 0)) return false
+      if (statusFilter === 'errors' && !((d.reallocated_sectors || 0) > 0 || (d.uncorrectable_errors || 0) > 0 || (d.zfs_checksum_errors || 0) > 0 || (d.zfs_write_errors || 0) > 0)) return false
       if (!q) return true
       return (
         d.serial.toLowerCase().includes(q) ||
@@ -205,6 +206,26 @@ export default function DrivesPage({ drives = [], profiles = [], enclosures = []
                         }>
                         {d.smart_status}
                       </span>
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      {(() => {
+                        const cksum = d.zfs_checksum_errors ?? 0
+                        const wrerr = d.zfs_write_errors ?? 0
+                        const rderr = d.zfs_read_errors ?? 0
+                        const total = cksum + wrerr + rderr
+                        if (total === 0) return <span className="wt-mono text-xs" style={{ color: 'var(--wt-text-faint)' }}>—</span>
+                        const isCrit = cksum >= 50 || wrerr > 0
+                        return (
+                          <span className="wt-mono text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                            style={isCrit
+                              ? { background: 'var(--wt-down-50)', border: '1px solid var(--wt-down-100)', color: 'var(--wt-down-700)' }
+                              : { background: 'var(--wt-warn-50)', border: '1px solid var(--wt-warn-200)', color: 'var(--wt-warn-700)' }
+                            }
+                            title={`Checksum: ${cksum} · Read: ${rderr} · Write: ${wrerr}`}>
+                            {cksum > 0 ? `${cksum}C` : ''}{wrerr > 0 ? ` ${wrerr}W` : ''}{rderr > 0 ? ` ${rderr}R` : ''}
+                          </span>
+                        )
+                      })()}
                     </td>
                     <td className="px-4 py-2.5 wt-mono text-xs whitespace-nowrap"
                       style={{ color: (d.temperature_c >= 65) ? 'var(--wt-down-500)' : (d.temperature_c >= 55) ? 'var(--wt-warn-500)' : 'var(--wt-text-muted)' }}>

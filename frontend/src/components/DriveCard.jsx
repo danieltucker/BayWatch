@@ -76,10 +76,12 @@ function fstypeLabel(fstype) {
 
 function healthState(drive) {
   if (drive.smart_status === 'FAILED') return 'failed'
+  if ((drive.zfs_checksum_errors ?? 0) >= 50 || (drive.zfs_write_errors ?? 0) > 0) return 'failed'
   if (drive.smart_status === 'PASSED') {
     const hasErrors = (drive.reallocated_sectors ?? 0) > 0
       || (drive.pending_sectors ?? 0) > 0
       || (drive.uncorrectable_errors ?? 0) > 0
+      || (drive.zfs_checksum_errors ?? 0) > 0
     return hasErrors ? 'warn' : 'ok'
   }
   return 'unknown'
@@ -168,6 +170,16 @@ function computeHealthScore(drive, history = [], ratedTbw = null, warnC = 55, da
   if (uncorr > 0) {
     const d = -Math.min(35, uncorr * 10)
     score += d; breakdown.push({ factor: 'Uncorrectable errors', detail: String(uncorr), delta: d })
+  }
+
+  const cksum = drive.zfs_checksum_errors ?? 0
+  if (cksum > 0) {
+    const d = cksum >= 50 ? -40 : cksum >= 10 ? -20 : -10
+    score += d; breakdown.push({ factor: 'ZFS checksum errors', detail: String(cksum), delta: d })
+  }
+  if ((drive.zfs_write_errors ?? 0) > 0) {
+    const d = -30
+    score += d; breakdown.push({ factor: 'ZFS write errors', detail: String(drive.zfs_write_errors), delta: d })
   }
 
   // Drive-type-aware age penalty — two-phase curve
@@ -443,6 +455,31 @@ export default function DriveCard({ drive, profile, bay, poolStats = [], onClose
             onClick={() => setConfirmDelete(false)}
             className="wt-btn wt-btn--secondary wt-btn--sm"
           >Cancel</button>
+        </div>
+      )}
+
+      {/* ── ZFS error warning ── */}
+      {((drive.zfs_checksum_errors ?? 0) > 0 || (drive.zfs_write_errors ?? 0) > 0 || (drive.zfs_read_errors ?? 0) > 0) && (
+        <div className="mx-4 mb-1 rounded-lg border px-3 py-2 flex items-start gap-2"
+          style={(drive.zfs_checksum_errors ?? 0) >= 50 || (drive.zfs_write_errors ?? 0) > 0
+            ? { background: 'var(--wt-down-50)', borderColor: 'var(--wt-down-100)' }
+            : { background: 'var(--wt-warn-50)', borderColor: 'var(--wt-warn-200)' }}>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold"
+              style={{ color: (drive.zfs_checksum_errors ?? 0) >= 50 || (drive.zfs_write_errors ?? 0) > 0 ? 'var(--wt-down-700)' : 'var(--wt-warn-700)' }}>
+              ZFS Errors Detected
+            </p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--wt-text-muted)' }}>
+              {[
+                (drive.zfs_checksum_errors ?? 0) > 0 && `${drive.zfs_checksum_errors} checksum`,
+                (drive.zfs_read_errors ?? 0) > 0 && `${drive.zfs_read_errors} read`,
+                (drive.zfs_write_errors ?? 0) > 0 && `${drive.zfs_write_errors} write`,
+              ].filter(Boolean).join(' · ')}
+              {' '}— {(drive.zfs_checksum_errors ?? 0) >= 50 || (drive.zfs_write_errors ?? 0) > 0
+                ? 'drive may be failing; consider replacement'
+                : 'check cable and reseat drive'}
+            </p>
+          </div>
         </div>
       )}
 

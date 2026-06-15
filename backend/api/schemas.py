@@ -109,6 +109,9 @@ class DriveRead(BaseModel):
     vdev_name: Optional[str] = None
     is_connected: bool = True
     drive_type: Optional[str] = None
+    zfs_read_errors: Optional[int] = None
+    zfs_write_errors: Optional[int] = None
+    zfs_checksum_errors: Optional[int] = None
 
 
 # ── Pool ──────────────────────────────────────────────────────────────────────
@@ -183,6 +186,8 @@ class NotificationConfigRead(BaseModel):
     temp_warn_threshold_c: int
     temp_alert_threshold_c: int
     log_level: str
+    zfs_warn_threshold: int = 1
+    zfs_critical_threshold: int = 50
 
 class NotificationConfigUpdate(BaseModel):
     bot_token: Optional[str] = None
@@ -193,6 +198,8 @@ class NotificationConfigUpdate(BaseModel):
     temp_warn_threshold_c: Optional[int] = None
     temp_alert_threshold_c: Optional[int] = None
     log_level: Optional[str] = None
+    zfs_warn_threshold: Optional[int] = None
+    zfs_critical_threshold: Optional[int] = None
 
 
 # ── Partitions ────────────────────────────────────────────────────────────────
