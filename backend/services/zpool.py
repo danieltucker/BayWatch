@@ -184,7 +184,17 @@ def _parse_zpool_status(output: str) -> list[PoolTopology]:
             try:
                 return int(val)
             except (ValueError, TypeError):
-                return 0
+                pass
+            # zpool formats large error counters with a K/M/G/T suffix once
+            # they cross 1000 (e.g. "1.83K" for ~1830), rather than a raw int.
+            m = re.match(r"^([\d.]+)([KMGT])$", val.strip())
+            if m:
+                multiplier = {"K": 1_000, "M": 1_000_000, "G": 1_000_000_000, "T": 1_000_000_000_000}[m.group(2)]
+                try:
+                    return int(float(m.group(1)) * multiplier)
+                except ValueError:
+                    return 0
+            return 0
 
         read_err  = _safe_int(parts[2]) if len(parts) > 2 else 0
         write_err = _safe_int(parts[3]) if len(parts) > 3 else 0
