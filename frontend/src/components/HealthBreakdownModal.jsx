@@ -3,15 +3,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine,
 } from 'recharts'
 import { useTempThresholds } from '../context/TempThresholdContext'
-
-function scoreLabel(score) {
-  if (score == null) return { label: 'Unknown',  color: 'var(--wt-text-faint)' }
-  if (score >= 90)   return { label: 'Excellent', color: 'var(--wt-up-600)' }
-  if (score >= 75)   return { label: 'Good',      color: 'var(--wt-up-500)' }
-  if (score >= 60)   return { label: 'Fair',      color: 'var(--wt-warn-600)' }
-  if (score >= 40)   return { label: 'Poor',      color: 'var(--wt-warn-500)' }
-  return               { label: 'Critical',   color: 'var(--wt-down-500)' }
-}
+import { scoreLabel } from '../lib/health'
 
 function recommendation(score, breakdown) {
   if (score === 0 || breakdown.some(b => b.factor === 'SMART failure'))

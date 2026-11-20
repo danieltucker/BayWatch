@@ -1,119 +1,137 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save } from 'lucide-react'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, ChevronDown } from 'lucide-react'
+import AppHeader from '../components/shell/AppHeader'
+import { DriveStats, DriveTags, HealthBlock, TempHistory, useDriveHistory } from '../components/bays/DrivePanel'
+import EditBayDriveSheet from '../components/EditBayDriveSheet'
+import DriveHistoryModal from '../components/DriveHistoryModal'
 import DriveCard from '../components/DriveCard'
-import { getDrive, getProfile, upsertProfile } from '../api/client'
+import { Kv, Spinner, StatusPill } from '../components/ui/bits'
+import { useFleet } from '../context/FleetContext'
+import { deleteDrive } from '../api/client'
+import { bayLabel, isSpare } from '../lib/fleet'
+import { driveKind, driveName, fmtCap, fmtDate, fmtTB, formFactorLabel } from '../lib/format'
+
+function warrantyText(p) {
+  if (!p?.warranty_months) return '—'
+  const yrs = p.warranty_months / 12
+  const len = Number.isInteger(yrs) ? `${yrs} ${yrs === 1 ? 'year' : 'years'}` : `${p.warranty_months} months`
+  if (!p.warranty_expiry) return len
+  const left = p.warranty_days_remaining
+  return `${len}, to ${fmtDate(p.warranty_expiry)}${left != null && left < 0 ? ' (expired)' : ''}`
+}
 
 export default function DriveDetail() {
   const { serial } = useParams()
   const navigate = useNavigate()
-  const [drive, setDrive] = useState(null)
-  const [profile, setProfile] = useState(null)
-  const [form, setForm] = useState({
-    purchase_date: '', warranty_years: '', purchase_price: '', vendor: '', notes: '',
-  })
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const fleet = useFleet()
+  const [editing, setEditing] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const drive = fleet.driveMap[serial]
+  const history = useDriveHistory(drive ? serial : null)
 
-  useEffect(() => {
-    getDrive(serial).then(setDrive).catch(() => navigate('/'))
-    getProfile(serial).then(p => {
-      setProfile(p)
-      setForm({
-        purchase_date: p.purchase_date || '',
-        warranty_years: p.warranty_months != null ? String(p.warranty_months / 12) : '',
-        purchase_price: p.purchase_price ?? '',
-        vendor: p.vendor || '',
-        notes: p.notes || '',
-      })
-    }).catch(() => {})
-  }, [serial, navigate])
-
-  async function handleSave(e) {
-    e.preventDefault()
-    setSaving(true)
-    try {
-      const payload = {
-        purchase_date: form.purchase_date || null,
-        warranty_months: form.warranty_years ? Math.round(parseFloat(form.warranty_years) * 12) : null,
-        purchase_price: form.purchase_price ? parseFloat(form.purchase_price) : null,
-        vendor: form.vendor || null,
-        notes: form.notes || null,
-      }
-      const updated = await upsertProfile(serial, payload)
-      setProfile(updated)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    } finally {
-      setSaving(false)
-    }
+  if (fleet.loading) return <div className="bw-page"><AppHeader /><Spinner /></div>
+  if (!drive) {
+    return (
+      <div className="bw-page">
+        <AppHeader />
+        <section className="bw-card bw-card--pad text-center flex flex-col items-center gap-3 py-12">
+          <h1 className="bw-h2">Drive not found</h1>
+          <p className="bw-sub">No drive with serial <span className="wt-mono">{serial}</span> is known to BayWatch.</p>
+          <Link to="/drives" className="wt-btn wt-btn--secondary">All drives</Link>
+        </section>
+      </div>
+    )
   }
 
-  if (!drive) return <div className="p-8 text-slate-500 dark:text-gray-500">Loading…</div>
+  const place = fleet.placement[drive.serial]
+  const profile = fleet.profileMap[drive.serial]
+  const pool = fleet.pools.find(p => p.name === drive.zfs_pool)
+  const backTo = place ? `/?loc=${place.location.id}&bay=${place.bay.id}` : '/drives'
+  const where = place ? `${place.location.name}, Bay ${bayLabel(place.bay)}` : 'Not in a bay'
 
   return (
-    <div className="max-w-2xl mx-auto p-4 lg:p-8 flex flex-col gap-6">
-      <button
-        onClick={() => navigate('/')}
-        className="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition-colors w-fit"
-      >
-        <ArrowLeft size={16} /> Back to map
-      </button>
-
-      <DriveCard drive={drive} profile={profile} />
-
-      <form onSubmit={handleSave} className="rounded-xl bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 p-5 flex flex-col gap-4">
-        <h2 className="font-semibold text-slate-900 dark:text-white">Drive Profile</h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Purchase Date" type="date" value={form.purchase_date}
-            onChange={v => setForm(f => ({ ...f, purchase_date: v }))} />
-          <Field label="Warranty (years)" type="number" step="0.5" value={form.warranty_years}
-            onChange={v => setForm(f => ({ ...f, warranty_years: v }))} placeholder="e.g. 3" />
-          <Field label="Purchase Price ($)" type="number" step="0.01" value={form.purchase_price}
-            onChange={v => setForm(f => ({ ...f, purchase_price: v }))} />
-          <Field label="Vendor" type="text" value={form.vendor}
-            onChange={v => setForm(f => ({ ...f, vendor: v }))} />
+    <div className="bw-page" data-screen-label="Drive detail" style={{ maxWidth: 880 }}>
+      <AppHeader />
+      <div className="flex items-center gap-3">
+        <Link to={backTo} className="bw-iconbtn" aria-label={place ? 'Back to bays' : 'Back to drives'}>
+          <ArrowLeft size={18} aria-hidden="true" />
+        </Link>
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-semibold" style={{ color: 'var(--wt-text-muted)' }}>{where}</div>
+          <h1 className="bw-h1 truncate" style={{ fontSize: 'var(--wt-text-xl)' }}>{driveName(drive)}</h1>
         </div>
+        {place && isSpare(drive, place.bay) && <span className="wt-chip wt-chip--plain">Spare</span>}
+        <StatusPill drive={drive} />
+      </div>
 
-        <div className="flex flex-col gap-1">
-          <label className="text-sm text-slate-500 dark:text-gray-400">Notes</label>
-          <textarea
-            rows={3}
-            value={form.notes}
-            onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-            className="rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-3 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
-          />
+      <section className="bw-card bw-card--pad flex flex-col gap-4">
+        <HealthBlock drive={drive} history={history} size={76} />
+        <DriveTags drive={drive} />
+      </section>
+
+      <DriveStats drive={drive} history={history} />
+
+      <section className="bw-card bw-card--pad"><TempHistory history={history} /></section>
+
+      {pool && (
+        <section className="bw-card bw-card--pad flex flex-col gap-2" style={{ background: 'color-mix(in oklch, var(--wt-viz-1) 7%, var(--wt-surface))' }}>
+          <div className="flex justify-between items-center">
+            <span className="font-semibold">{pool.name}</span>
+            <span className="wt-mono text-xs" style={{ color: 'var(--wt-text-muted)' }}>{drive.vdev_name || 'pool member'}</span>
+          </div>
+          <div className="wt-meter" style={{ height: 6 }}>
+            <div className="wt-meter__fill" style={{ width: `${pool.capacity_pct}%`, background: pool.capacity_pct >= 90 ? 'var(--wt-down-500)' : pool.capacity_pct >= 80 ? 'var(--wt-warn-500)' : 'var(--wt-viz-1)' }} />
+          </div>
+          <div className="wt-mono text-xs" style={{ color: 'var(--wt-text-muted)' }}>
+            {pool.capacity_pct}% used, {fmtTB(pool.alloc_bytes)} of {fmtTB(pool.size_bytes)}
+          </div>
+        </section>
+      )}
+
+      <section className="bw-card" style={{ padding: '4px 20px' }} aria-label="Drive details">
+        <div style={{ marginTop: -1 }}>
+          <Kv k="Serial" v={drive.serial} mono />
+          <Kv k="Device" v={drive.device_path || '—'} mono />
+          <Kv k="Type" v={[fmtCap(drive.capacity_bytes), driveKind(drive), formFactorLabel(drive.form_factor)].filter(Boolean).join(', ')} />
+          <Kv k="Firmware" v={drive.firmware_version || '—'} mono />
+          <Kv k="Purchased" v={fmtDate(profile?.purchase_date)} />
+          <Kv k="Warranty" v={warrantyText(profile)} />
+          {profile?.vendor && <Kv k="Vendor" v={profile.vendor} />}
+          <div className="py-3" style={{ borderTop: '1px solid var(--wt-border)' }}>
+            <div className="text-[13px]" style={{ color: 'var(--wt-text-muted)' }}>Notes</div>
+            <div className="mt-0.5 text-sm">{profile?.notes || <span style={{ color: 'var(--wt-text-faint)' }}>None</span>}</div>
+          </div>
         </div>
+      </section>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
-          >
-            <Save size={14} />
-            {saving ? 'Saving…' : 'Save Profile'}
+      <section className="flex flex-col gap-3">
+        <button type="button" className="wt-btn wt-btn--ghost self-start" aria-expanded={moreOpen} onClick={() => setMoreOpen(o => !o)}>
+          <ChevronDown size={15} aria-hidden="true" style={{ transform: moreOpen ? 'rotate(180deg)' : undefined, transition: 'transform var(--wt-dur) var(--wt-ease)' }} />
+          SMART, partitions and I/O
+        </button>
+        {moreOpen && (
+          <DriveCard drive={drive} profile={profile} bay={place?.bay} poolStats={fleet.pools}
+            onDelete={async s => { await deleteDrive(s); await fleet.refresh(); navigate('/drives') }} />
+        )}
+      </section>
+
+      <div className="bw-actionbar">
+        <div className="bw-card flex gap-2.5 w-full" style={{ padding: 10, boxShadow: 'var(--wt-shadow-lg)' }}>
+          <button type="button" className="wt-btn wt-btn--secondary bw-btn-lg flex-1 justify-center" onClick={() => setHistoryOpen(true)}>History</button>
+          <button type="button" className="wt-btn wt-btn--primary bw-btn-lg justify-center disabled:opacity-60" style={{ flex: 1.6 }}
+            onClick={() => setEditing(true)}>
+            {place ? 'Edit bay and drive' : 'Edit drive'}
           </button>
-          {saved && <span className="text-sm text-green-600 dark:text-green-400">Saved!</span>}
         </div>
-      </form>
-    </div>
-  )
-}
+      </div>
 
-function Field({ label, type, value, onChange, step, placeholder }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm text-slate-500 dark:text-gray-400">{label}</label>
-      <input
-        type={type}
-        step={step}
-        value={value}
-        placeholder={placeholder}
-        onChange={e => onChange(e.target.value)}
-        className="rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 px-3 py-2 text-sm text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-      />
+      {editing && (
+        <EditBayDriveSheet bay={place?.bay ?? null} drive={drive} profile={profile} location={place?.location} array={place?.array}
+          locations={fleet.locations} onClose={() => setEditing(false)} onSaved={fleet.refresh} />
+      )}
+      {historyOpen && <DriveHistoryModal serial={drive.serial} make={drive.make} model={drive.model} onClose={() => setHistoryOpen(false)} />}
     </div>
   )
 }
