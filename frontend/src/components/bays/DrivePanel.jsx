@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, Check, ChevronRight } from 'lucide-react'
 import { getDriveHistory } from '../../api/client'
@@ -7,7 +7,7 @@ import { bayLabel, counterDelta, isSpare, tempTrend } from '../../lib/fleet'
 import { driveKind, driveName, fmtCap, fmtInt, fmtIO, fmtShortDate, formFactorLabel } from '../../lib/format'
 import { useTempThresholds } from '../../context/TempThresholdContext'
 import { HealthRing, Sparkline, StatusPill } from '../ui/bits'
-import HealthBreakdownModal from '../HealthBreakdownModal'
+import { HealthBreakdownModal } from '../../lazy'
 
 /** 30-day history for a drive (local only). */
 export function useDriveHistory(serial, days = 30) {
@@ -67,7 +67,11 @@ export function HealthBlock({ drive, history, size = 84 }) {
           <span className="wt-pill wt-pill--up mt-2"><Check size={12} aria-hidden="true" />No SMART errors</span>
         )}
       </div>
-      {open && <HealthBreakdownModal drive={drive} score={score} breakdown={breakdown} history={history} onClose={() => setOpen(false)} />}
+      {open && (
+        <Suspense fallback={null}>
+          <HealthBreakdownModal drive={drive} score={score} breakdown={breakdown} history={history} onClose={() => setOpen(false)} />
+        </Suspense>
+      )}
     </div>
   )
 }

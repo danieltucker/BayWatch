@@ -1,12 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import BaysPage from './pages/BaysPage'
-import DriveDetail from './pages/DriveDetail'
-import DrivesPage from './pages/DrivesPage'
-import Reports from './pages/Reports'
-import SearchPage from './pages/SearchPage'
+import { SettingsModal } from './lazy'
+import { Spinner } from './components/ui/bits'
 import LogConsole from './components/LogConsole'
-import SettingsModal from './components/SettingsModal'
 import TabBar from './components/shell/TabBar'
 import Toasts from './components/shell/Toasts'
 import { ThemeProvider } from './context/ThemeContext'
@@ -14,6 +11,12 @@ import { TempThresholdProvider } from './context/TempThresholdContext'
 import { FleetProvider, useFleet } from './context/FleetContext'
 import { ShellContext } from './context/ShellContext'
 import { getAlerts, triggerScan } from './api/client'
+
+// Bays is the landing page and ships in the main bundle; the other routes load on first visit.
+const DriveDetail = lazy(() => import('./pages/DriveDetail'))
+const DrivesPage = lazy(() => import('./pages/DrivesPage'))
+const Reports = lazy(() => import('./pages/Reports'))
+const SearchPage = lazy(() => import('./pages/SearchPage'))
 
 function loadDismissed() {
   try { return new Set(JSON.parse(localStorage.getItem('dismissed-alerts') || '[]')) }
@@ -87,6 +90,7 @@ function Shell() {
     <ShellContext.Provider value={shell}>
       {logOpen && <div className="fixed inset-0 z-[45]" onClick={() => setLogOpen(false)} />}
       <LogConsole open={logOpen} alerts={undismissed} onDismissAlert={dismissAlert} />
+      <Suspense fallback={<div className="bw-page"><Spinner /></div>}>
       <Routes>
         <Route path="/" element={<BaysPage />} />
         <Route path="/bays" element={<BaysPage />} />
@@ -96,9 +100,14 @@ function Shell() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
       <TabBar />
       <Toasts />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} onUpdate={refresh} />
+      {settingsOpen && (
+        <Suspense fallback={null}>
+          <SettingsModal open onClose={() => setSettingsOpen(false)} onUpdate={refresh} />
+        </Suspense>
+      )}
     </ShellContext.Provider>
   )
 }

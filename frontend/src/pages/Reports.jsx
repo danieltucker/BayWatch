@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { BarChart3, Check, ChevronRight, Clock, Download, Trash2 } from 'lucide-react'
-import * as XLSX from 'xlsx'
 import AppHeader from '../components/shell/AppHeader'
 import { SmartPill, Spinner } from '../components/ui/bits'
 import { useTempThresholds } from '../context/TempThresholdContext'
@@ -45,7 +44,9 @@ function exportCSV(report) {
   const cell = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s }
   downloadText([headers.join(','), ...rows.map(r => headers.map(h => cell(r[h])).join(','))].join('\n'), `${fileStem(report)}.csv`)
 }
-function exportXLSX(report) {
+// xlsx is ~400 KB, so it loads only when someone exports.
+async function exportXLSX(report) {
+  const XLSX = await import('xlsx')
   const wb = XLSX.utils.book_new()
   for (const [name, rows] of [
     ['Inventory', buildInventoryRows(report.data.inventory)], ['SMART Events', buildSmartRows(report.data.smart_events)],

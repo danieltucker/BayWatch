@@ -1,7 +1,7 @@
 # Project Structure
 
-> Last updated: 2026-05-24
-> Status: v1.5.0 — hover-to-preview vdev peers, drive deletion, widget persistence, larger LG bays
+> Last updated: 2026-11-20
+> Status: UI redesign (ui-redesign branch) — new Bays/Drives/Reports/Search pages, shared fleet model, mobile layout
 
 ## Current Layout
 
@@ -69,42 +69,71 @@ drive-position/
 │   │   └── base.py                 # SQLAlchemy engine + SessionLocal + Base
 │   └── tests/
 │
-└── frontend/                       # React + Tailwind SPA
+└── frontend/                       # React SPA (Vite, Tailwind for layout, Watchtower tokens for style)
     ├── Dockerfile                  # Multi-stage: node build + nginx serve
     ├── Dockerfile.dev              # Dev: vite dev server with hot reload
     ├── .dockerignore
     ├── nginx.conf                  # nginx: serves static + proxies /api to backend
-    ├── package.json                # React 18, react-router, axios, dnd-kit, lucide
-    ├── vite.config.js              # Vite + dev proxy for /api
+    ├── package.json                # React 18, react-router 7, axios, dnd-kit, lucide, recharts, xlsx (SheetJS CDN); Vitest
+    ├── vite.config.js              # Vite + dev proxy for /api (VITE_API_TARGET)
     ├── tailwind.config.js
     ├── postcss.config.js
-    ├── index.html
+    ├── index.html                  # Loads Hanken Grotesk + JetBrains Mono; data-theme on <html>
+    ├── dev/                        # Dev-only, never bundled
+    │   ├── mock-api.mjs            # In-memory mock of /api with invented data (issues / --clear scenarios)
+    │   └── dev-mock.mjs            # `npm run dev:mock`: starts mock (:8010) + vite pointed at it
     └── src/
-        ├── index.css               # Tailwind directives
+        ├── watchtower.css          # Family design tokens + wt-* reference components (source of truth)
+        ├── index.css               # BayWatch ink (--bw-*), bw-* app classes, mobile breakpoint (767px), 1180px column collapse
         ├── main.jsx                # React root
-        ├── App.jsx                 # Router shell
+        ├── App.jsx                 # Providers, routes (/, /bays, /drives, /drives/:serial, /reports, /search), log console, settings, scan
+        ├── lazy.js                 # React.lazy entry points for chart-heavy / on-demand components
         ├── api/
-        │   └── client.js           # Axios instance (baseURL: /api)
+        │   └── client.js           # Axios instance (baseURL: /api) + one function per endpoint
         ├── context/
+        │   ├── FleetContext.jsx          # Loads enclosures, bays, drives, profiles, pools, topology, federation once; derives locations/placement; 5-min refresh; disconnect toasts
+        │   ├── ShellContext.jsx          # scan(), openLog(), openSettings(), alert count/severity
         │   ├── ThemeContext.jsx          # Dark/light/auto theme provider
-        │   └── TempThresholdContext.jsx  # warnC/dangerC from alert config; avoids prop drilling
+        │   └── TempThresholdContext.jsx  # warnC/dangerC from alert config (drives temperature colours everywhere)
+        ├── hooks/
+        │   └── useMediaQuery.js    # useIsMobile() — matches the CSS breakpoint
+        ├── lib/                    # Pure logic, no React — unit tested
+        │   ├── fleet.js            # Status mapping (up/warn/down/muted), temp bands, bay state, pool groups, locations, attention items, gauge, temp spread
+        │   ├── fleet.test.js       # Vitest suite for lib/
+        │   ├── widgets.js          # Widget registry (IDs are persisted — never rename) + compute()
+        │   ├── health.js           # Health score + healthState (shared by DriveCard and the new panels)
+        │   ├── format.js           # Capacity/age/date/temperature formatters
+        │   └── export.js           # Drive inventory CSV export + download helper
         ├── components/
-        │   ├── BayGrid.jsx              # Bay array grid with S/M/L size toggle (localStorage per array)
-        │   ├── BayModal.jsx             # Unified bay+drive modal: status, label, assign, create, edit, remove
-        │   ├── BaySlot.jsx              # Individual bay slot; health dot; status tile colors; three size variants
-        │   ├── DriveCard.jsx            # Drive details card; form-factor icon; warranty expiry display
-        │   ├── DriveList.jsx            # Sidebar list; search; hide-assigned toggle; form-factor icon
-        │   ├── LogConsole.jsx           # Slide-down console: log level filters + terminal REPL; pinned alerts with Clear All
-        │   ├── PoolTopologyPanel.jsx    # Collapsible ZFS pool topology panel; vdev rows + drive chips; onDriveSelect
-        │   ├── ScanButton.jsx
+        │   ├── shell/
+        │   │   ├── AppHeader.jsx        # Dark header band: brand, nav, search (dims bays on Bays page), scan, alerts, settings
+        │   │   ├── TabBar.jsx           # Mobile bottom tab bar
+        │   │   └── Toasts.jsx           # Disconnect toasts
+        │   ├── bays/
+        │   │   ├── Hero.jsx             # Hero copy + per-drive health gauge
+        │   │   ├── Widgets.jsx          # Widget grid: popover/sheet details, add, remove, reorder; persisted to /api/config/widgets
+        │   │   ├── Chassis.jsx          # Location switcher, bay tiles (3 colour modes), small-array chips, offline shelf list, legend
+        │   │   ├── Panels.jsx           # Temperature spread, Needs attention (+ mobile banner), Pool capacity
+        │   │   └── DrivePanel.jsx       # Selected-drive panel + reusable HealthBlock/DriveStats/TempHistory; useDriveHistory
+        │   ├── ui/
+        │   │   ├── Dialog.jsx           # Modal: centred card on desktop, bottom sheet on mobile; focus trap, Escape
+        │   │   └── bits.jsx             # StatusPill, SmartPill, Led, Sparkline, HealthRing, Kv, Stat, Spinner
+        │   ├── EditBayDriveSheet.jsx    # Bay label/status/role, purchase/warranty/notes/vendor/price, move drive
+        │   ├── EmptyBayModal.jsx        # Empty bay: create a manual drive or assign a detected one; bay status
+        │   ├── DriveCard.jsx            # Full drive card (SMART, partitions, lifetime I/O, delete); also used for remote drives
+        │   ├── DriveHistoryModal.jsx    # 90-day history charts
+        │   ├── HealthBreakdownModal.jsx # Per-factor health score breakdown
+        │   ├── PoolTopologyPanel.jsx    # Collapsible ZFS pool topology; vdev rows + drive chips; onDriveSelect
+        │   ├── LogConsole.jsx           # Slide-down console: log level filters + terminal REPL; pinned alerts
         │   ├── SettingsModal.jsx        # Tabbed modal (General / Enclosures / Notifications / API Keys / Federation / Import / Appearance)
-        │   ├── WarningBadge.jsx
-        │   ├── WidgetBar.jsx            # Draggable widget bar; 13 widget types; fixed h-72px; localStorage config
-        │   ├── WidgetDetailModal.jsx    # Per-widget detail modal (hottest, oldest, failed, warranty, reallocated)
-        │   └── WidgetPickerModal.jsx    # Widget picker modal
+        │   └── WarningBadge.jsx
         ├── pages/
-        │   ├── Dashboard.jsx            # DnD context, WidgetBar, bay grid, topology panel, Remote Instances panel, drive sidebar; 5-min auto-refresh
-        │   └── DriveDetail.jsx          # Drive detail + profile edit page
+        │   ├── BaysPage.jsx             # Landing page: hero, widgets, chassis map, drive panel, attention, temp spread, pool capacity; ?loc= & ?bay=
+        │   ├── DriveDetail.jsx          # /drives/:serial — mobile drive screen, also used on desktop
+        │   ├── DrivesPage.jsx           # Sortable/filterable table (?q= ?status= ?sort= ?dir=), bulk edit, export; card list on mobile
+        │   ├── Reports.jsx              # Generate/schedule/export reports; tabs synced to ?tab=
+        │   ├── SearchPage.jsx           # /search?q= — grouped results + "where they are" mini map
+        │   └── Settings.jsx             # (legacy, not routed)
         └── utils/
             └── driveIcon.js             # getDriveIcon(formFactor, rpm) → lucide icon
 ```

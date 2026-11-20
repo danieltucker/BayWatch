@@ -1,11 +1,10 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronDown } from 'lucide-react'
 import AppHeader from '../components/shell/AppHeader'
 import { DriveStats, DriveTags, HealthBlock, TempHistory, useDriveHistory } from '../components/bays/DrivePanel'
 import EditBayDriveSheet from '../components/EditBayDriveSheet'
-import DriveHistoryModal from '../components/DriveHistoryModal'
-import DriveCard from '../components/DriveCard'
+import { DriveCard, DriveHistoryModal } from '../lazy'
 import { Kv, Spinner, StatusPill } from '../components/ui/bits'
 import { useFleet } from '../context/FleetContext'
 import { deleteDrive } from '../api/client'
@@ -112,8 +111,10 @@ export default function DriveDetail() {
           SMART, partitions and I/O
         </button>
         {moreOpen && (
+          <Suspense fallback={<Spinner />}>
           <DriveCard drive={drive} profile={profile} bay={place?.bay} poolStats={fleet.pools}
             onDelete={async s => { await deleteDrive(s); await fleet.refresh(); navigate('/drives') }} />
+          </Suspense>
         )}
       </section>
 
@@ -131,7 +132,11 @@ export default function DriveDetail() {
         <EditBayDriveSheet bay={place?.bay ?? null} drive={drive} profile={profile} location={place?.location} array={place?.array}
           locations={fleet.locations} onClose={() => setEditing(false)} onSaved={fleet.refresh} />
       )}
-      {historyOpen && <DriveHistoryModal serial={drive.serial} make={drive.make} model={drive.model} onClose={() => setHistoryOpen(false)} />}
+      {historyOpen && (
+        <Suspense fallback={null}>
+          <DriveHistoryModal serial={drive.serial} make={drive.make} model={drive.model} onClose={() => setHistoryOpen(false)} />
+        </Suspense>
+      )}
     </div>
   )
 }

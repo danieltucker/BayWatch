@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronDown, HardDrive } from 'lucide-react'
+import { HardDrive } from 'lucide-react'
 import AppHeader from '../components/shell/AppHeader'
 import Hero from '../components/bays/Hero'
 import Widgets from '../components/bays/Widgets'
@@ -10,10 +10,7 @@ import {
 import { AttentionBanner, NeedsAttention, PoolCapacity, TempSpread } from '../components/bays/Panels'
 import DrivePanel from '../components/bays/DrivePanel'
 import EditBayDriveSheet from '../components/EditBayDriveSheet'
-import EmptyBayModal from '../components/EmptyBayModal'
-import DriveHistoryModal from '../components/DriveHistoryModal'
-import DriveCard from '../components/DriveCard'
-import PoolTopologyPanel from '../components/PoolTopologyPanel'
+import { DriveCard, DriveHistoryModal, EmptyBayModal, PoolTopologyPanel } from '../lazy'
 import { Spinner, StatusPill } from '../components/ui/bits'
 import { useFleet } from '../context/FleetContext'
 import { useShell } from '../context/ShellContext'
@@ -84,7 +81,6 @@ export default function BaysPage() {
   const [emptyBay, setEmptyBay] = useState(null)
   const [remoteSel, setRemoteSel] = useState(null)
   const [remoteHistory, setRemoteHistory] = useState(null)
-  const [topologyOpen, setTopologyOpen] = useState(false)
 
   const { drives, driveMap, profileMap, locations, placement, bayBySerial, pools, topology, lastRefreshed } = fleet
 
@@ -207,25 +203,23 @@ export default function BaysPage() {
     </section>
   )
 
+  // PoolTopologyPanel has its own collapsible header (state remembered in localStorage).
   const topologySection = topology.length > 0 && (
-    <section className="flex flex-col gap-3">
-      <button type="button" className="wt-btn wt-btn--ghost self-start" aria-expanded={topologyOpen} onClick={() => setTopologyOpen(o => !o)}>
-        <ChevronDown size={15} aria-hidden="true" style={{ transform: topologyOpen ? 'rotate(180deg)' : undefined, transition: 'transform var(--wt-dur) var(--wt-ease)' }} />
-        Pool topology and vdev errors
-      </button>
-      {topologyOpen && (
-        <PoolTopologyPanel poolTopology={topology} poolStats={pools} driveMap={driveMap}
-          onDriveSelect={serial => {
-            const p = placement[serial]
-            if (p) { pickLocation(p.location.id); setParams(x => { const n = new URLSearchParams(x); n.set('loc', p.location.id); n.set('bay', String(p.bay.id)); return n }, { replace: true }); scrollToChassis() }
-            else navigate(`/drives/${encodeURIComponent(serial)}`)
-          }} />
-      )}
-    </section>
+    <Suspense fallback={null}>
+      <PoolTopologyPanel poolTopology={topology} poolStats={pools} driveMap={driveMap}
+        onDriveSelect={serial => {
+          const p = placement[serial]
+          if (p) {
+            setStoredLoc(p.location.id)
+            setParams(x => { const n = new URLSearchParams(x); n.set('loc', p.location.id); n.set('bay', String(p.bay.id)); return n }, { replace: true })
+            scrollToChassis()
+          } else navigate(`/drives/${encodeURIComponent(serial)}`)
+        }} />
+    </Suspense>
   )
 
   const modals = (
-    <>
+    <Suspense fallback={null}>
       {editing && (
         <EditBayDriveSheet bay={editing.bay} drive={editing.drive} profile={editing.drive ? profileMap[editing.drive.serial] : null}
           location={location} array={editing.array} locations={locations}
@@ -251,7 +245,7 @@ export default function BaysPage() {
           </div>
         </div>
       )}
-    </>
+    </Suspense>
   )
 
   if (isMobile) {
