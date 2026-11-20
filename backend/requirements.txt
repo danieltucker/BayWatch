@@ -1,4 +1,4 @@
-fastapi==0.115.5
+fastapi==0.162.0
 uvicorn[standard]==0.32.1
 sqlalchemy==2.0.36
 pydantic==2.10.3
@@ -8,3 +8,11 @@ httpx==0.28.1
 apscheduler==3.10.4
 python-telegram-bot==21.7
 python-multipart==0.0.31
+
+# Security floors for transitive dependencies (not imported directly).
+# fastapi 0.115 capped starlette below 0.42, which has known DoS/SSRF/Host-header advisories.
+starlette==1.9.0
+h11>=0.16.0
+anyio>=4.14.2
+idna>=3.15
+certifi>=2026.10.18
