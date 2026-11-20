@@ -22,7 +22,7 @@ When managing a NAS with many drives, identifying which physical bay holds a spe
 | Layer | Technology | Rationale |
 |---|---|---|
 | Backend | Python + FastAPI | Async, easy subprocess calls, rich ecosystem |
-| Frontend | React + Tailwind CSS | Component-based UI, good for interactive bay grid |
+| Frontend | React 18 + React Router 7 + Vite; Tailwind for layout, Watchtower tokens (`watchtower.css`) for all colour/type/shape | Component-based UI, good for interactive bay grid; Watchtower keeps BayWatch consistent with the *Watch family |
 | Database | SQLite (via SQLAlchemy) | Zero-dependency, single-file, fits Docker volume |
 | SMART Data | smartmontools (`smartctl`) | Industry standard for disk health |
 | Disk Enumeration | `lsblk`, `udevadm`, `/dev/disk/by-id` | Stable device references across reboots |
@@ -174,3 +174,10 @@ Additional channels (email, Slack, etc.) are a future extension — architecture
 | 21 | ZFS pool detection via lsblk FSTYPE/LABEL | `lsblk` extended with `FSTYPE` and `LABEL` columns; drives with `fstype: zfs_member` (disk or partition) get `zfs_pool` populated. `zpool list -Hp` provides pool usage stats. Graceful degradation when ZFS not loaded. |
 | 22 | Bay status field | Bays have `status: normal \| damaged \| hot_spare \| cold_spare`. Set via Bay Status tab in click modal. Visual badges in BaySlot (all 3 sizes). Status banner in DriveCard for non-normal occupied bays. |
 | 23 | Pool stats endpoint | `GET /api/pools` returns `list[PoolRead]` from `zpool list`. Called from Dashboard on load. Pool usage bar shown in DriveCard when drive's pool is identified. |
+| 24 | Watchtower design language over the handoff's palette | The 2026-11 redesign handoff specified Plus Jakarta Sans, a violet accent, hex colours and glowing gradients. CLAUDE.md requires the Watchtower family style, so the redesign ports the handoff's layout, copy and behaviour onto Watchtower tokens (Hanken Grotesk, `--bw-ink` cyan-teal, console-surface header band, `--wt-viz-*` for pool groups). |
+| 25 | Temperature colours follow the alert thresholds | Bands are cool (≤ warn−25°C, teal), normal (green), warn (≥ warnC, amber) and down (≥ dangerC, red) using `temp_warn_threshold_c`/`temp_alert_threshold_c`, instead of fixed 30/35/39°C. A drive only looks hot when it would alert. |
+| 26 | Four-state status vocabulary | Healthy (up), Degraded (warn: SMART passed with error counters/ZFS errors), Failing (down), Unknown/Offline (muted). Defined once in `lib/fleet.js`; tiles, pills, gauge and attention list all use it. |
+| 27 | Federated instances are read-only locations | Remote snapshots appear in the Bays location switcher tagged "Remote" with their own grid; they are excluded from local widgets, gauge and attention so local numbers stay about local hardware. |
+| 28 | One shared fleet model | `FleetContext` loads all data once and derives locations, placements and pool groups; pages render from it instead of each fetching. Pure logic lives in `frontend/src/lib/` and is unit-tested with Vitest. |
+| 29 | Drives placed by clicking, not drag-and-drop | The sidebar drive list and drag-to-bay were removed with the old Dashboard. Empty bays open the assign/create dialog; "Edit bay and drive → Move drive" relocates a drive. |
+| 30 | Routes per view | `/` (Bays), `/drives`, `/drives/:serial`, `/reports`, `/search`; view state (location, bay, filters, sort, report tab) lives in the query string so it survives reload and back/forward. Non-landing routes and chart-heavy components are lazy-loaded. |

@@ -6,7 +6,10 @@ No more pulling drives to figure out which one is which.
 
 ## Features
 
-- **Visual bay grid** — drag-and-drop drives into slots across one or more enclosures
+- **Visual bay map** — every chassis, disk shelf and remote instance as a bay grid in its real row × column shape; colour by health, temperature or ZFS pool group; click an empty bay to place a drive
+- **Fleet health at a glance** — one gauge segment per drive, a "Needs attention" list (damaged bays, failing or degraded drives, reallocated sectors, hot or disconnected drives) and an all-clear state when nothing does
+- **Search** — find drives by serial, model, bay or pool, with matches highlighted on a mini bay map
+- **Phone-friendly** — the same app reflows to a single-column layout with a bottom tab bar on small screens
 - **SMART monitoring** — automated temperature, power-on hours, reallocated/pending sectors, and uncorrectable error collection
 - **Drive health score** — drive-type-aware composite 0–100 score with ring gauge; click the ring for a per-factor breakdown modal with temperature history chart
 - **Drive classification** — tag each drive as Consumer HDD, NAS HDD, Enterprise HDD, Consumer/Enterprise SSD, NVMe, or Optane; shapes the age curve and heat exposure scoring
@@ -15,13 +18,13 @@ No more pulling drives to figure out which one is which.
 - **ZFS pool integration** — pool topology panel with vdev tree, pool capacity widgets, and per-drive pool labels
 - **Disconnected drive detection** — drives no longer found by the scanner are flagged in the bay grid and Drive Details panel; a toast and Telegram notification fire on disconnect
 - **Drive history modal** — 90-day charts for temperature, used space, I/O activity, and reallocated sectors, accessible from any drive's details panel
-- **Customizable widget bar** — drag-to-reorder: Total Drives, Health %, Avg Temp, Hottest Drive, Total Capacity, Oldest Drive, and more
+- **Customizable widgets** — add, remove and drag to reorder: Avg Temp, Hottest Drive, Oldest Drive, Total Capacity, ZFS Pools, Warranty, Reallocated and more; tap one for details
 - **Terminal console** — press `` ` `` for live log streaming with level filters and a full command interface
 - **Warranty tracking** — expiry alerts and warnings configurable in advance
 - **Telegram notifications** — SMART failures, overtemp, disconnect events, warranty warnings, scheduled status reports
 - **CSV bulk import** — import existing drive inventories from a spreadsheet
 - **REST API** — `/v1/` endpoints with API key auth for Grafana, Home Assistant, scripts, and integrations
-- **Federation** — aggregate drive data from multiple remote BayWatch instances; remote instances show as a bay grid (matching the remote layout) with hover-to-preview and click-to-detail; toggle to flat list per instance
+- **Federation** — aggregate drive data from multiple remote BayWatch instances; each remote instance appears as a read-only location in the bay map, with click-to-detail
 - Works on **TrueNAS Scale**, **Unraid**, or any Linux-based Docker host
 
 ![Dashboard overview with bay grid, widget bar, and drive sidebar](screenshots/hero.png)
@@ -157,8 +160,8 @@ http://<host-ip>:8585
 1. Go to **Settings** (top-right gear icon) and open the **Enclosures** tab
 2. Add an enclosure (e.g. "TrueNAS Main", type: Server)
 3. Add a bay array with the correct row × column layout for your chassis
-4. Click **Scan** on the Dashboard to detect all connected drives
-5. Drag drives from the sidebar into the correct bay slots
+4. Click **Scan drives** on the Bays page to detect all connected drives
+5. Click each empty bay and assign the drive that sits in it (or use **Edit bay and drive → Move drive** to fix a placement)
 
 ![Settings: Enclosures tab for managing enclosures and bay arrays](screenshots/settings-enclosures.png)
 
@@ -653,6 +656,22 @@ The **Remote Instances** panel appears in the Dashboard automatically once at le
 - Federation target API keys are stored in plaintext in the local SQLite database — the same threat model as the Telegram bot token. This is appropriate for LAN-only deployments on a trusted host.
 - If a sync fails, the last error is shown in the Federation tab. The hub continues serving the last successful snapshot until the next successful poll.
 - Before exposing any BayWatch instance to the internet, restrict CORS origins and place the app behind a reverse proxy with TLS and authentication.
+
+---
+
+## Development
+
+The UI can be worked on without drives, `smartctl` or Python, using a mock of the API with invented sample data:
+
+```bash
+cd frontend
+npm install
+npm run dev:mock             # http://localhost:5173 — a fleet with a few issues to look at
+npm run dev:mock -- --clear  # the all-clear state
+npm test                     # unit tests for the fleet/widget logic (Vitest)
+```
+
+Against a real backend, use `npm run dev` (proxies `/api` to `VITE_API_TARGET`, default `http://localhost:8000`) or `docker compose -f docker-compose.yml -f docker-compose.dev.yml up`.
 
 ---
 

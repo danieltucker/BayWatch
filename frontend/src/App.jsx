@@ -1,81 +1,38 @@
-import { useEffect, useState, useCallback } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { HardDrive, Settings as SettingsIcon, Bell } from 'lucide-react'
-import Dashboard from './pages/Dashboard'
-import DriveDetail from './pages/DriveDetail'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import BaysPage from './pages/BaysPage'
+import { SettingsModal } from './lazy'
+import { Spinner } from './components/ui/bits'
 import LogConsole from './components/LogConsole'
+import TabBar from './components/shell/TabBar'
+import Toasts from './components/shell/Toasts'
 import { ThemeProvider } from './context/ThemeContext'
 import { TempThresholdProvider } from './context/TempThresholdContext'
-import { getAlerts } from './api/client'
+import { FleetProvider, useFleet } from './context/FleetContext'
+import { ShellContext } from './context/ShellContext'
+import { getAlerts, triggerScan } from './api/client'
 
-const APP_VERSION = '2.3.4'
-const REPO_URL = 'https://github.com/danieltucker/BayWatch'
-
-function Nav({ onSettings, onBell, alertCount, alertSeverity }) {
-  const bellColor =
-    alertSeverity === 'critical' ? 'text-[--wt-down-500]' :
-    alertSeverity === 'status'   ? 'text-[--wt-warn-500]' :
-    'text-[--wt-text-faint]'
-
-  const badgeColor =
-    alertSeverity === 'critical' ? 'bg-[--wt-down-500]' :
-    alertSeverity === 'status'   ? 'bg-[--wt-warn-500]' :
-    'bg-[--wt-brand-500]'
-
-  return (
-    <nav className="wt-appbar sticky top-0 z-40 justify-between">
-      <div className="flex items-center gap-2.5">
-        <span
-          className="wt-appicon"
-          style={{ '--ai-size': '30px', '--ai-from': 'var(--bw-from)', '--ai-to': 'var(--bw-to)' }}
-        >
-          <HardDrive size={14} strokeWidth={2.5} />
-        </span>
-        <span className="font-bold tracking-tight" style={{ color: 'var(--wt-text)', fontSize: 'var(--wt-text-md)' }}>
-          Bay<span style={{ color: 'var(--bw-ink)' }}>Watch</span>
-        </span>
-        <a
-          href={REPO_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="wt-chip wt-chip--plain"
-          style={{ textDecoration: 'none' }}
-        >
-          v{APP_VERSION}
-        </a>
-      </div>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={onBell}
-          className="wt-btn wt-btn--ghost relative"
-          title="Notifications"
-        >
-          <Bell size={15} className={bellColor} />
-          {alertCount > 0 && (
-            <span className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${badgeColor}`} />
-          )}
-        </button>
-        <button onClick={onSettings} className="wt-btn wt-btn--ghost">
-          <SettingsIcon size={15} /> Settings
-        </button>
-      </div>
-    </nav>
-  )
-}
+// Bays is the landing page and ships in the main bundle; the other routes load on first visit.
+const DriveDetail = lazy(() => import('./pages/DriveDetail'))
+const DrivesPage = lazy(() => import('./pages/DrivesPage'))
+const Reports = lazy(() => import('./pages/Reports'))
+const SearchPage = lazy(() => import('./pages/SearchPage'))
 
 function loadDismissed() {
   try { return new Set(JSON.parse(localStorage.getItem('dismissed-alerts') || '[]')) }
   catch { return new Set() }
 }
 
-export default function App() {
+function Shell() {
+  const { refresh } = useFleet()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [logOpen, setLogOpen] = useState(false)
+  const [scanning, setScanning] = useState(false)
   const [alerts, setAlerts] = useState([])
   const [dismissedIds, setDismissedIds] = useState(loadDismissed)
 
   const fetchAlerts = useCallback(async () => {
-    try { setAlerts(await getAlerts(50)) } catch {}
+    try { setAlerts(await getAlerts(50)) } catch { /* API offline: keep last alerts */ }
   }, [])
 
   useEffect(() => {
@@ -84,6 +41,7 @@ export default function App() {
     return () => clearInterval(id)
   }, [fetchAlerts])
 
+  // Backtick toggles the log console (existing shortcut).
   useEffect(() => {
     function onKey(e) {
       if (e.key === '`' && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -98,6 +56,17 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const scan = useCallback(async () => {
+    setScanning(true)
+    setLogOpen(true)
+    try {
+      await triggerScan()
+      setTimeout(() => { setScanning(false); refresh() }, 3000)
+    } catch {
+      setScanning(false)
+    }
+  }, [refresh])
+
   function dismissAlert(id) {
     setDismissedIds(prev => {
       const next = new Set(prev)
@@ -108,45 +77,50 @@ export default function App() {
   }
 
   const undismissed = alerts.filter(a => !dismissedIds.has(a.id))
-  const alertSeverity =
-    undismissed.some(a => a.type === 'critical') ? 'critical' :
-    undismissed.length > 0 ? 'status' : null
+  const alertSeverity = undismissed.some(a => a.type === 'critical') ? 'critical' : undismissed.length ? 'status' : null
 
+  const shell = useMemo(() => ({
+    scan, scanning,
+    openLog: () => setLogOpen(true),
+    openSettings: () => setSettingsOpen(true),
+    alertCount: undismissed.length, alertSeverity,
+  }), [scan, scanning, undismissed.length, alertSeverity])
+
+  return (
+    <ShellContext.Provider value={shell}>
+      {logOpen && <div className="fixed inset-0 z-[45]" onClick={() => setLogOpen(false)} />}
+      <LogConsole open={logOpen} alerts={undismissed} onDismissAlert={dismissAlert} />
+      <Suspense fallback={<div className="bw-page"><Spinner /></div>}>
+      <Routes>
+        <Route path="/" element={<BaysPage />} />
+        <Route path="/bays" element={<BaysPage />} />
+        <Route path="/drives" element={<DrivesPage />} />
+        <Route path="/drives/:serial" element={<DriveDetail />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/search" element={<SearchPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      </Suspense>
+      <TabBar />
+      <Toasts />
+      {settingsOpen && (
+        <Suspense fallback={null}>
+          <SettingsModal open onClose={() => setSettingsOpen(false)} onUpdate={refresh} />
+        </Suspense>
+      )}
+    </ShellContext.Provider>
+  )
+}
+
+export default function App() {
   return (
     <ThemeProvider>
       <TempThresholdProvider>
-      <BrowserRouter>
-        <div className="min-h-screen">
-          {logOpen && (
-            <div
-              className="fixed inset-0 z-[45]"
-              onClick={() => setLogOpen(false)}
-            />
-          )}
-          <LogConsole
-            open={logOpen}
-            alerts={undismissed}
-            onDismissAlert={dismissAlert}
-          />
-          <Nav
-            onSettings={() => setSettingsOpen(true)}
-            onBell={() => setLogOpen(true)}
-            alertCount={undismissed.length}
-            alertSeverity={alertSeverity}
-          />
-          <Routes>
-            <Route path="/" element={
-              <Dashboard
-                onOpenLog={() => setLogOpen(true)}
-                onOpenSettings={() => setSettingsOpen(true)}
-                settingsOpen={settingsOpen}
-                onCloseSettings={() => setSettingsOpen(false)}
-              />
-            } />
-            <Route path="/drives/:serial" element={<DriveDetail />} />
-          </Routes>
-        </div>
-      </BrowserRouter>
+        <FleetProvider>
+          <BrowserRouter>
+            <Shell />
+          </BrowserRouter>
+        </FleetProvider>
       </TempThresholdProvider>
     </ThemeProvider>
   )

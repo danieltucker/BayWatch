@@ -4,6 +4,44 @@ All notable changes to BayWatch are documented here. Follows [Keep a Changelog](
 
 ---
 
+## [Unreleased]
+
+### Changed — UI redesign
+- **New layout** — the sidebar dashboard is replaced by four pages with their own URLs: **Bays** (`/`), **Drives** (`/drives`), **Reports** (`/reports`) and **Search** (`/search`). `/drives/:serial` still opens a drive. Location, selected bay, filters, sort order and report tab are kept in the URL
+- **Header band** — brand, navigation, search, scan, alerts and settings in one dark band on every page; on the Bays page it also holds a fleet summary and a health gauge with one segment per drive
+- **Bays page** — widgets, a location switcher (servers, disk shelves and remote instances), the chassis map in its true row × column shape, the selected drive's details, a "Needs attention" list with an all-clear state, a clickable temperature spread chart and pool capacity
+- **Colour by** health, temperature or ZFS pool group; compact/comfortable tile sizes; header search dims bays that don't match
+- **Edit bay and drive** — one sheet for bay label, status (operational, damaged, empty), spare role, purchase date, warranty, notes, vendor and price, and moving the drive to another bay or shelf
+- **Offline shelves** — a location whose drives are all disconnected shows a list of each slot's last known details
+- **Drive detail** — health score, 30-day temperature, read and written totals, pool usage and details; the full SMART/partition/I/O card is one click away
+- **Drives page** — sortable table with status filters (Passed, Errors, Unknown, Disconnected, Failed), bulk edit and CSV export
+- **Reports** — KPIs and Inventory / SMART events / Temperature / Pools tabs; the newest report opens automatically; Temperature shows per-pool ranges against the warning threshold
+- **Search** — matches across drives, bays and pools with highlighting and a mini map of where they are
+- **Phone layout** — below 768px the same pages reflow to one column with a bottom tab bar, bottom sheets and a selected-drive card
+- **Temperature colours** now follow the warn/alert thresholds from Settings → Notifications instead of fixed values
+- **Remote instances** appear as read-only locations in the Bays switcher and no longer count toward local stats
+- Drives are placed by clicking an empty bay (assign or create) instead of dragging from the sidebar
+- Default widget set is now Avg temp, Hottest drive, Oldest drive, Total capacity, ZFS pools, SSDs, Warranty, Reallocated and Drive health; saved widget choices are kept
+
+### Security
+- `react-router-dom` 6.30 → 7.18.5 (GHSA-wrjc-x8rr-h8h6, GHSA-337j-9hxr-rhxg)
+- `xlsx` 0.18.5 → 0.20.3 from the SheetJS CDN (GHSA-4r6h-8v6p-xvw6, GHSA-5pgg-2g8v-p4x9)
+- `fastapi` 0.115.5 → 0.162.0 with `starlette` pinned at 1.9.0; FastAPI 0.115 held Starlette below 0.42, which has DoS, Host-header and StaticFiles SSRF advisories
+- Minimum versions for `h11`, `anyio`, `idna` and `certifi`
+- `@remix-run/router`, `browserslist` and `baseline-browser-mapping` patch updates
+
+### Fixed
+- `npm ci` failed after the Vite 8 update (`@vitejs/plugin-react` 6.2.1)
+- The report schedule toggle had no visible track
+
+### Developer
+- `npm run dev:mock` runs the UI against an in-memory mock API with sample data (`-- --clear` for the all-clear state)
+- `npm test` runs Vitest unit tests for the fleet and widget logic
+- Routes and chart-heavy components are lazy-loaded; the main bundle is 334 kB (was 1.2 MB)
+- Removed the old Dashboard and unused components (BayGrid, BaySlot, BayModal, DriveList, WidgetBar, WidgetDetailModal, WidgetPickerModal, ScanButton, DriveEditModal, RemoteDriveModal)
+
+---
+
 ## [2.3.0] — 2026-06-10
 
 ### Added
