@@ -19,8 +19,7 @@ drive-position/
 │   └── supervisord.conf            # supervisord: manages nginx + uvicorn processes
 ├── project/
 │   ├── info.md                     # LLM context: data model, tech stack, decisions
-│   ├── structure.md                # This file
-│   └── changelog.md                # Version history
+│   └── structure.md                # This file
 │
 ├── backend/                        # Python FastAPI service
 │   ├── Dockerfile                  # Multi-stage: builder + slim runtime
@@ -119,6 +118,7 @@ drive-position/
         │   │   ├── Dialog.jsx           # Modal: centred card on desktop, bottom sheet on mobile; focus trap, Escape
         │   │   └── bits.jsx             # StatusPill, SmartPill, Led, Sparkline, HealthRing, Kv, Stat, Spinner
         │   ├── EditBayDriveSheet.jsx    # Bay label/status/role, purchase/warranty/notes/vendor/price, move drive
+        │   ├── PlaceDrivesSheet.jsx     # Guided placement: walk empty bays, match each to an unplaced drive by serial; skip/undo
         │   ├── EmptyBayModal.jsx        # Empty bay: create a manual drive or assign a detected one; bay status
         │   ├── DriveCard.jsx            # Full drive card (SMART, partitions, lifetime I/O, delete); also used for remote drives
         │   ├── DriveHistoryModal.jsx    # 90-day history charts
@@ -142,5 +142,5 @@ drive-position/
 
 When adding, renaming, or deleting any file or directory:
 1. Update this file to reflect the change
-2. Update `project/changelog.md` if the change is part of a versioned release
+2. Update `CHANGELOG.md` (under `[Unreleased]` until a version is tagged)
 3. Update `project/info.md` if the change affects the data model or tech stack

@@ -200,6 +200,26 @@ export function placementIndex(locations) {
   return idx
 }
 
+/** Empty, usable bays of a local location in reading order (array by array, row-major). */
+export function placeableBays(location) {
+  if (!location || location.remote) return []
+  const out = []
+  for (const { array, bays } of location.arrays) {
+    for (const bay of [...bays].sort((a, b) => a.row - b.row || a.col - b.col)) {
+      if (!bay.drive_serial && bay.status !== 'damaged') out.push({ array, bay })
+    }
+  }
+  return out
+}
+
+/** Local drives that aren't in any bay: connected first, then by name. */
+export function unplacedDrives(drives, placement) {
+  return drives
+    .filter(d => !placement[d.serial])
+    .sort((a, b) => Number(a.is_connected === false) - Number(b.is_connected === false) ||
+      driveName(a).localeCompare(driveName(b)) || a.serial.localeCompare(b.serial))
+}
+
 export function placementLabel(p) {
   if (!p) return null
   return `${p.location.name} · ${bayLabel(p.bay)}`
@@ -272,6 +292,20 @@ export function attentionItems({ drives = [], locations = [], thresholds = {} })
       detail: `Hottest at ${hottest}°C`,
       to: { kind: 'colorBy', value: 'temp' },
     })
+  }
+
+  if (local.length) {
+    const placement = placementIndex(local)
+    const unplaced = drives.filter(d => !placement[d.serial])
+    if (unplaced.length) {
+      const free = local.reduce((n, l) => n + placeableBays(l).length, 0)
+      items.push({
+        id: 'unplaced', tone: 'muted',
+        title: `${plural(unplaced.length, 'drive')} not in a bay`,
+        detail: free ? `${plural(free, 'empty bay')} available` : 'No empty bays. Add a computer or shelf in Settings',
+        to: free ? { kind: 'place' } : { kind: 'settings' },
+      })
+    }
   }
 
   const offline = drives.filter(d => d.is_connected === false)

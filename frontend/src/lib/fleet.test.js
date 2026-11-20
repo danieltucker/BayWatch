@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   attentionItems, bayLabel, bayState, buildLocations, counterDelta, driveStatus, fleetSummary,
-  gaugeSegments, heroCopy, placementIndex, poolGroups, tempBand, tempSpread, tempTrend,
+  gaugeSegments, heroCopy, placeableBays, placementIndex, poolGroups, tempBand, tempSpread, tempTrend, unplacedDrives,
 } from './fleet'
 import { computeWidget, DEFAULT_WIDGET_IDS, isValidWidgetList } from './widgets'
 import { fmtAge, fmtCap, fmtDate } from './format'
@@ -124,9 +124,34 @@ describe('attentionItems', () => {
     const locs = buildLocations({ enclosures: [enclosures[0]], baysMap: { 10: baysMap[10].map(b => ({ ...b, status: 'normal' })) }, driveMap: Object.fromEntries(fine.map(d => [d.serial, d])) })
     expect(attentionItems({ drives: fine, locations: locs, thresholds: T })).toEqual([])
   })
+  it('lists drives that are not in a bay, pointing at the placement flow', () => {
+    const extra = [...drives, drive('loose1'), drive('loose2', { is_connected: false })]
+    const items = attentionItems({ drives: extra, locations, thresholds: T })
+    const it_ = items.find(i => i.id === 'unplaced')
+    expect(it_).toMatchObject({ tone: 'muted', title: '2 drives not in a bay', detail: '1 empty bay available', to: { kind: 'place' } })
+  })
+  it('sends you to Settings when there is nowhere to place a drive', () => {
+    const full = { 10: baysMap[10].map((b, i) => ({ ...b, status: 'normal', drive_serial: b.drive_serial || `f${i}` })) }
+    const ds = [...full[10].map(b => drive(b.drive_serial)), drive('loose')]
+    const locs = buildLocations({ enclosures: [enclosures[0]], baysMap: full, driveMap: Object.fromEntries(ds.map(d => [d.serial, d])) })
+    expect(attentionItems({ drives: ds, locations: locs, thresholds: T }).find(i => i.id === 'unplaced').to).toEqual({ kind: 'settings' })
+  })
   it('flags hot drives using the thresholds', () => {
     const items = attentionItems({ drives: [drive('a', { temperature_c: 61 })], locations: [], thresholds: T })
     expect(items[0]).toMatchObject({ id: 'hot', tone: 'down' })
+  })
+})
+
+describe('placement helpers', () => {
+  const locations = buildLocations({ enclosures, baysMap, driveMap })
+  it('lists empty, usable bays in reading order and skips damaged ones', () => {
+    expect(placeableBays(locations[0]).map(x => bayLabel(x.bay))).toEqual(['2-2'])
+    expect(placeableBays(locations[1])).toEqual([])
+    expect(placeableBays({ remote: true, arrays: [] })).toEqual([])
+  })
+  it('orders unplaced drives connected-first', () => {
+    const ds = [drive('z', { model: 'A', is_connected: false }), drive('y', { model: 'B' }), drive('a')]
+    expect(unplacedDrives(ds, { a: {} }).map(d => d.serial)).toEqual(['y', 'z'])
   })
 })
 

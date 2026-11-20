@@ -62,11 +62,16 @@ for (let r = 0; r < 6; r++) for (let c = 0; c < 4; c++) {
   if (!damaged && !empty) {
     d = mkDrive({ zfs_pool: 'tank', vdev_name: spare ? 'spare-1' : `raidz1-${(vdevN++ % 3) + 1}` })
   }
-  bays[10].push({ id: bayId++, array_id: 10, row: r, col: c, label: null, status: damaged ? 'damaged' : spare ? 'hot_spare' : 'normal', drive_serial: d?.serial ?? null })
+  // Issues scenario: the last two bays' drives were detected but not mapped to a bay yet.
+  const unmapped = !CLEAR && r === 5 && c >= 2
+  bays[10].push({ id: bayId++, array_id: 10, row: r, col: c, label: null, status: damaged ? 'damaged' : spare ? 'hot_spare' : 'normal', drive_serial: unmapped ? null : d?.serial ?? null })
 }
 // One drive with reallocated sectors, one hot one.
 if (!CLEAR) { drives[4].reallocated_sectors = 15; drives[9].temperature_c = 41 }
 drives[9].temperature_c = Math.max(drives[9].temperature_c, 40)
+
+// A brand-new drive the scanner found that isn't in any pool or bay yet.
+if (!CLEAR) mkDrive({ zfs_pool: null, vdev_name: null, power_on_hours: 14, temperature_c: 29 })
 
 // NVMe boot drive
 const nvme = mkDrive({ make: 'Kingston', model: 'SA400S37240G', capacity_bytes: 240e9, rpm: 0, form_factor: 'M.2', device_path: '/dev/nvme0n1', temperature_c: 26, power_on_hours: 25400, zfs_pool: 'boot-pool', vdev_name: null, drive_type: 'consumer_ssd' })
@@ -164,6 +169,16 @@ function makeReport(period) {
 }
 makeReport(7)
 
+const LOGS = [
+  ['INFO', 'scanner', 'Scan started: 31 block devices'],
+  ['DEBUG', 'smartctl', 'smartctl -j -a /dev/sda → PASSED, 32°C'],
+  ['INFO', 'zpool', 'Pool tank: ONLINE, 3 raidz1 vdevs, 1 spare'],
+  ['WARNING', 'scanner', `${drives[4].model} ${drives[4].serial}: 15 reallocated sectors`],
+  ['INFO', 'scanner', 'Cold Storage: 5 drives not detected (shelf offline)'],
+  ['INFO', 'scanner', 'Scan finished in 4.2 s: 28 drives, 1 degraded, 5 disconnected'],
+  ['INFO', 'federation', 'Backup box synced: 6 drives'],
+].map(([level, logger, message], i) => ({ id: i + 1, ts: (now - (7 - i) * 1500) / 1000, level, logger: `baywatch.${logger}`, message }))
+
 // ── Server ─────────────────────────────────────────────────────────────────
 const send = (res, code, body) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(body === undefined ? '' : JSON.stringify(body)) }
 const allBays = () => Object.values(bays).flat()
@@ -178,7 +193,7 @@ http.createServer(async (req, res) => {
   }
   const m = (re) => p.match(re)
   let r
-  if (req.method === 'GET' && p === '/health') return send(res, 200, { status: 'ok', version: 'mock' })
+  if (req.method === 'GET' && p === '/health') return send(res, 200, { status: 'ok', version: '2.3.4', mock: true })
   if (req.method === 'GET' && p === '/enclosures') return send(res, 200, enclosures)
   if (req.method === 'GET' && (r = m(/^\/bays\/array\/(\d+)$/))) return send(res, 200, bays[r[1]] || [])
   if (req.method === 'PUT' && (r = m(/^\/bays\/(\d+)\/assign$/))) {
@@ -189,7 +204,7 @@ http.createServer(async (req, res) => {
   if (req.method === 'PUT' && (r = m(/^\/bays\/(\d+)\/status$/))) { const b = allBays().find(x => x.id === +r[1]); b.status = body.status; return send(res, 200, b) }
   if (req.method === 'PUT' && (r = m(/^\/bays\/(\d+)\/label$/))) { const b = allBays().find(x => x.id === +r[1]); b.label = url.searchParams.get('label') || null; return send(res, 200, { ok: true }) }
   if (req.method === 'GET' && p === '/drives') return send(res, 200, drives)
-  if (req.method === 'GET' && p === '/drives/logs') return send(res, 200, [])
+  if (req.method === 'GET' && p === '/drives/logs') return send(res, 200, +(url.searchParams.get('after') || 0) > 0 ? [] : LOGS)
   if (req.method === 'POST' && p === '/drives/scan') return send(res, 202, { status: 'started' })
   if (req.method === 'GET' && (r = m(/^\/drives\/([^/]+)\/partitions$/))) return send(res, 200, [])
   if (req.method === 'GET' && (r = m(/^\/drives\/([^/]+)$/))) { const d = drives.find(x => x.serial === decodeURIComponent(r[1])); return d ? send(res, 200, d) : send(res, 404, { detail: 'Drive not found' }) }
@@ -210,7 +225,10 @@ http.createServer(async (req, res) => {
   if (req.method === 'GET' && p.startsWith('/history/pools/')) return send(res, 200, [])
   if (req.method === 'GET' && p === '/alerts') return send(res, 200, alerts)
   if (req.method === 'GET' && p === '/alerts/config') return send(res, 200, alertConfig)
-  if (req.method === 'GET' && p === '/api-keys') return send(res, 200, [])
+  if (req.method === 'GET' && p === '/api-keys') return send(res, 200, [
+    { id: 1, name: 'Grafana', key_prefix: 'bw_7Kq2', created_at: iso(now - 40 * 864e5), last_used_at: iso(now - 5 * 60000) },
+    { id: 2, name: 'Home Assistant', key_prefix: 'bw_Xr9p', created_at: iso(now - 12 * 864e5), last_used_at: iso(now - 3600e3) },
+  ])
   if (req.method === 'GET' && (r = m(/^\/config\/(.+)$/))) return config[r[1]] ? send(res, 200, { key: r[1], value: config[r[1]] }) : send(res, 404, { detail: 'Config key not found' })
   if (req.method === 'PUT' && (r = m(/^\/config\/(.+)$/))) { config[r[1]] = body.value; return send(res, 200, { key: r[1], value: body.value }) }
   if (req.method === 'GET' && p === '/reports') return send(res, 200, reports.map(({ data, ...x }) => x))
