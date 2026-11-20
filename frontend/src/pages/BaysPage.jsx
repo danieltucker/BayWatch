@@ -10,6 +10,7 @@ import {
 import { AttentionBanner, NeedsAttention, PoolCapacity, TempSpread } from '../components/bays/Panels'
 import DrivePanel from '../components/bays/DrivePanel'
 import EditBayDriveSheet from '../components/EditBayDriveSheet'
+import PlaceDrivesSheet from '../components/PlaceDrivesSheet'
 import { DriveCard, DriveHistoryModal, EmptyBayModal, PoolTopologyPanel } from '../lazy'
 import { Spinner, StatusPill } from '../components/ui/bits'
 import { useFleet } from '../context/FleetContext'
@@ -18,7 +19,7 @@ import { useTempThresholds } from '../context/TempThresholdContext'
 import { useIsMobile } from '../hooks/useMediaQuery'
 import { getArrayTempHistory, getRemoteDriveHistory } from '../api/client'
 import {
-  attentionItems, bayLabel, fleetSummary, heroCopy, poolGroups, tempSpread,
+  attentionItems, bayLabel, fleetSummary, heroCopy, placeableBays, poolGroups, tempSpread, unplacedDrives,
 } from '../lib/fleet'
 import { driveName, fmtCap } from '../lib/format'
 import { exportDrivesCSV } from '../lib/export'
@@ -77,6 +78,7 @@ export default function BaysPage() {
   const [density, setDensity] = usePersisted('bays-density', 'comfortable', ['compact', 'comfortable'])
   const [storedLoc, setStoredLoc] = usePersisted('bays-location', '')
   const [editing, setEditing] = useState(null)
+  const [placing, setPlacing] = useState(null) // location id the placement flow starts in
   const [historyFor, setHistoryFor] = useState(null)
   const [emptyBay, setEmptyBay] = useState(null)
   const [remoteSel, setRemoteSel] = useState(null)
@@ -142,6 +144,8 @@ export default function BaysPage() {
     if (to.kind === 'bay') { pickLocation(to.locationId); setColorBy('health'); scrollToChassis() }
     else if (to.kind === 'colorBy') { setColorBy(to.value); scrollToChassis() }
     else if (to.kind === 'drives') navigate(`/drives?status=${to.filter}`)
+    else if (to.kind === 'place') setPlacing(location && placeableBays(location).length ? location.id : '')
+    else if (to.kind === 'settings') openSettings()
     else if (to.kind === 'reports') navigate(`/reports?tab=${to.tab}`)
   }
 
@@ -161,6 +165,8 @@ export default function BaysPage() {
   )
 
   const t = location ? locationTitle(location) : null
+  const unplacedCount = unplacedDrives(drives, placement).length
+  const canPlaceHere = !!location && !location.remote && !location.offline && unplacedCount > 0 && placeableBays(location).length > 0
   const chassis = location ? (
     <section ref={chassisRef} aria-label="Chassis" className={isMobile ? 'flex flex-col gap-3' : 'bw-card bw-card--pad flex flex-col gap-5'}
       data-screen-label="Chassis map" style={{ scrollMarginTop: 16 }}>
@@ -177,6 +183,11 @@ export default function BaysPage() {
           <div className="flex flex-wrap gap-2.5 items-center">
             <Seg label="Color by" opts={COLOR_OPTS} value={colorBy} onChange={setColorBy} />
             {!isMobile && <Seg label="Tile size" opts={DENSITY_OPTS} value={density} onChange={setDensity} />}
+            {canPlaceHere && (
+              <button type="button" className="wt-btn wt-btn--secondary" style={{ minHeight: 40 }} onClick={() => setPlacing(location.id)}>
+                Place {unplacedCount} {unplacedCount === 1 ? 'drive' : 'drives'}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -220,6 +231,10 @@ export default function BaysPage() {
 
   const modals = (
     <Suspense fallback={null}>
+      {placing != null && (
+        <PlaceDrivesSheet locations={locations} startLocationId={placing} drives={drives} placement={placement}
+          onClose={() => setPlacing(null)} onSaved={fleet.refresh} />
+      )}
       {editing && (
         <EditBayDriveSheet bay={editing.bay} drive={editing.drive} profile={editing.drive ? profileMap[editing.drive.serial] : null}
           location={location} array={editing.array} locations={locations}

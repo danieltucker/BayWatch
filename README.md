@@ -6,7 +6,7 @@ No more pulling drives to figure out which one is which.
 
 ## Features
 
-- **Visual bay map** — every chassis, disk shelf and remote instance as a bay grid in its real row × column shape; colour by health, temperature or ZFS pool group; click an empty bay to place a drive
+- **Visual bay map** — every chassis, disk shelf and remote instance as a bay grid in its real row × column shape; colour by health, temperature or ZFS pool group; map a new chassis quickly with **Place drives**, which walks the empty bays and matches each to a drive by serial
 - **Fleet health at a glance** — one gauge segment per drive, a "Needs attention" list (damaged bays, failing or degraded drives, reallocated sectors, hot or disconnected drives) and an all-clear state when nothing does
 - **Search** — find drives by serial, model, bay or pool, with matches highlighted on a mini bay map
 - **Phone-friendly** — the same app reflows to a single-column layout with a bottom tab bar on small screens
@@ -27,13 +27,25 @@ No more pulling drives to figure out which one is which.
 - **Federation** — aggregate drive data from multiple remote BayWatch instances; each remote instance appears as a read-only location in the bay map, with click-to-detail
 - Works on **TrueNAS Scale**, **Unraid**, or any Linux-based Docker host
 
-![Dashboard overview with bay grid, widget bar, and drive sidebar](screenshots/hero.png)
+![Bays page: fleet health gauge, widgets, the chassis map and the selected drive](screenshots/hero.png)
 
-![Customizable widget bar with drag-to-reorder and 13 widget types](screenshots/widgets.png)
+![Widgets: tap one for details; add, remove and drag to reorder](screenshots/widgets.png)
+
+![Chassis map coloured by ZFS pool group](screenshots/zfs-pool-groups.png)
 
 ![ZFS vdev topology panel showing pool hierarchy and drive assignments](screenshots/zfs-vdev.png)
 
-![Dashboard in dark mode](screenshots/dark-mode.png)
+![Drives: sortable, filterable inventory with bulk edit and export](screenshots/drives.png)
+
+![Reports: health KPIs with inventory, SMART events, temperature and pool tabs, exportable as CSV, XLS or Markdown](screenshots/reports.png)
+
+![Search with highlighted matches and a map of where they are](screenshots/search.png)
+
+![On a phone: Bays, drive detail and the Edit bay and drive sheet](screenshots/mobile.png)
+
+![Bays page in dark mode](screenshots/dark-mode.png)
+
+*Screenshots use the built-in mock API with invented sample data (`npm run dev:mock`).*
 
 ---
 
@@ -161,7 +173,9 @@ http://<host-ip>:8585
 2. Add an enclosure (e.g. "TrueNAS Main", type: Server)
 3. Add a bay array with the correct row × column layout for your chassis
 4. Click **Scan drives** on the Bays page to detect all connected drives
-5. Click each empty bay and assign the drive that sits in it (or use **Edit bay and drive → Move drive** to fix a placement)
+5. Click **Place drives** above the chassis map. BayWatch walks through the empty bays one at a time: type part of the serial printed on the drive in that bay, press Enter, and it moves on to the next bay. You can skip a bay or undo the last placement. Single bays can also be filled by clicking them, and **Edit bay and drive → Move drive** fixes a placement later
+
+![Place drives: walk the empty bays and match each to a drive by serial](screenshots/place-drives.png)
 
 ![Settings: Enclosures tab for managing enclosures and bay arrays](screenshots/settings-enclosures.png)
 
@@ -309,7 +323,7 @@ If a rated TBW is set for the drive (in Edit Drive → Rated TBW), and cumulativ
 | 40–59 | Poor |
 | 0–39 | Critical |
 
-![Drive details panel showing health score, SMART attributes, and warranty info](screenshots/drive-details.png)
+![Selected drive panel showing health score, temperature, power-on hours, 30-day I/O and temperature history](screenshots/drive-details.png)
 
 ---
 
@@ -630,7 +644,7 @@ for d in drives:
 
 ## Federation
 
-Federation lets you designate one BayWatch instance as a hub that pulls live data from one or more remote BayWatch instances ("targets") and displays them in the Dashboard under **Remote Instances**.
+Federation lets you designate one BayWatch instance as a hub that pulls live data from one or more remote BayWatch instances ("targets") and shows each one as a read-only location on the Bays page.
 
 ### How it works
 
@@ -646,7 +660,7 @@ The hub polls each target's `/v1/` API at a configurable interval (5, 15, 30, or
 2. Enter a name, the target's URL (e.g. `http://192.168.1.51:8585`), the API key from step 1, and a sync interval
 3. Click **Add Target** — the hub will begin polling on the next scheduler tick
 
-The **Remote Instances** panel appears in the Dashboard automatically once at least one target has synced successfully. Each remote instance defaults to a **bay grid view** — a colour-coded layout matching the remote enclosure structure where green = SMART PASSED, red = FAILED, grey = unknown. Hover any bay cell to preview the drive details in the right sidebar. Click to open the full DriveCard with temperature history (fetched live from the remote instance). Use the grid/list toggle button in each instance header to switch to a flat drive list; preference persists per-instance. Click **Sync Now** in Settings → Federation to trigger an immediate poll.
+Once a target has synced, it appears in the Bays page's location switcher, tagged **Remote**, next to your own computers and shelves. Its bay grid matches the remote enclosure layout and supports the same Health, Temperature and Pool group colouring. Click a drive to open its full details with temperature history (fetched live from the remote instance). Remote drives are read-only and don't count toward your local widgets, health gauge or "Needs attention" list. Click **Sync Now** in Settings → Federation to trigger an immediate poll.
 
 ![Settings: Federation tab for managing remote BayWatch instances](screenshots/settings-federation.png)
 
